@@ -2,14 +2,14 @@ import { useEffect, useRef } from "react";
 import { Link, useSearch } from "wouter";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/hooks/use-cart";
+import { useCart } from "@/lib/cart";
 export default function SuccessPage() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const sessionId = params.get("session_id");
-  const { clearCart } = useCart();
+  const { clear } = useCart();
   const clearedRef = useRef(false);
-  useEffect(() => { if (!clearedRef.current) { clearedRef.current = true; clearCart(); } }, [clearCart]);
+  useEffect(() => { if (!clearedRef.current) { clearedRef.current = true; clear(); } }, [clear]);
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
       <div className="max-w-md w-full rounded-2xl border bg-card p-8 text-center space-y-5 shadow-sm">

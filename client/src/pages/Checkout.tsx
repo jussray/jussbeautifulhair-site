@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Lock, Info, Instagram, Mail, Check } from "lucide-react";
+import { Lock, Info } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,10 @@ import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
 
 export default function Checkout() {
-  const { items, subtotal, shipping, total, clear } = useCart();
+  const { items, subtotal, shipping, total } = useCart();
   const [, navigate] = useLocation();
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [reservationId, setReservationId] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     customerName: "",
     email: "",
@@ -25,77 +24,6 @@ export default function Checkout() {
     zip: "",
     notes: "",
   });
-
-  // Reservation success screen — shown after the customer submits the form.
-  if (submitted) {
-    const orderSummary = items
-      .map((i) => `• ${i.name}${i.variant ? ` (${i.variant})` : ""} × ${i.qty} — ${formatPrice(i.price * i.qty)}`)
-      .join("\n");
-    const emailBody = encodeURIComponent(
-      `Hi Juss Beautiful Hair team,\n\nI just reserved an order on your site. Please send me a secure payment link.\n\nReservation #: ${reservationId}\nName: ${form.customerName}\nPhone: ${form.phone}\n\nOrder:\n${orderSummary}\n\nSubtotal: ${formatPrice(subtotal)}\nShipping: ${formatPrice(shipping)}\nTotal: ${formatPrice(total)}\n\nShip to:\n${form.street}\n${form.city}, ${form.state} ${form.zip}\n\n${form.notes ? `Notes: ${form.notes}\n\n` : ""}Thanks!`
-    );
-    const emailSubject = encodeURIComponent(`Order Reservation ${reservationId} — ${form.customerName}`);
-    const igMessage = encodeURIComponent(
-      `Hi! I just reserved order ${reservationId} on your site (${formatPrice(total)}). Can you send me a payment link?`
-    );
-    return (
-      <Layout>
-        <div className="mx-auto max-w-2xl px-6 py-16">
-          <div className="rounded-lg border border-card-border bg-card p-8 text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-secondary/30">
-              <Check className="h-7 w-7 text-primary" />
-            </div>
-            <h1 className="font-display text-3xl text-foreground mb-3">
-              Got it, {form.customerName.split(" ")[0] || "queen"} 💜
-            </h1>
-            <p className="text-muted-foreground mb-2">
-              Your reservation is saved.
-            </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              Reservation # <span className="font-mono font-semibold text-foreground">{reservationId}</span> · Total {formatPrice(total)}
-            </p>
-
-            <div className="rounded-md bg-secondary/20 px-5 py-4 text-left text-sm text-primary mb-6">
-              <p className="font-medium mb-2">One more step to confirm your order:</p>
-              <p>
-                DM us on Instagram or send a quick email with your reservation number. We'll reply with a secure Stripe payment link within an hour (faster during business hours).
-              </p>
-            </div>
-
-            <div className="grid sm:grid-cols-2 gap-3">
-              <a
-                href={`https://ig.me/m/jussbeautifulhair?text=${igMessage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-5 py-3 text-sm font-medium text-primary-foreground hover:opacity-90"
-              >
-                <Instagram className="h-4 w-4" />
-                DM @jussbeautifulhair
-              </a>
-              <a
-                href={`mailto:hello@jussbeautifulhair.com?subject=${emailSubject}&body=${emailBody}`}
-                className="inline-flex items-center justify-center gap-2 rounded-md border border-primary px-5 py-3 text-sm font-medium text-primary hover:bg-primary/5"
-              >
-                <Mail className="h-4 w-4" />
-                Email us
-              </a>
-            </div>
-
-            <p className="mt-6 text-xs text-muted-foreground">
-              Save your reservation number. Your cart has been cleared.
-            </p>
-            <Button
-              variant="ghost"
-              className="mt-4"
-              onClick={() => navigate("/shop")}
-            >
-              Keep Shopping
-            </Button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
 
   if (items.length === 0) {
     return (
@@ -113,21 +41,43 @@ export default function Checkout() {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const placeOrder = (e: React.FormEvent) => {
+  const placeOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    // Generate a short, human-friendly reservation ID locally — no backend needed.
-    const stamp = Date.now().toString(36).toUpperCase().slice(-4);
-    const rand = Math.random().toString(36).toUpperCase().slice(2, 6);
-    const id = `JBH-${stamp}${rand}`;
-    setReservationId(id);
-    // Brief delay so the button shows a submitting state, then show success.
-    setTimeout(() => {
-      clear();
-      setSubmitted(true);
+    setError(null);
+    try {
+      const orderItems = items.map((i) => ({
+        id: i.id,
+        name: i.name,
+        price: i.price,
+        quantity: i.qty,
+        image: i.image,
+      }));
+      const metadata: Record<string, string> = {
+        customer_name: form.customerName,
+        email: form.email,
+        phone: form.phone,
+        street: form.street,
+        city: form.city,
+        state: form.state,
+        zip: form.zip,
+        order_notes: form.notes,
+        order_items: items
+          .map((i) => `${i.name}${i.variant ? ` (${i.variant})` : ""} x${i.qty}`)
+          .join(", "),
+      };
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: orderItems, metadata, shippingFlat: shipping }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data?.error ?? "Checkout failed. Please try again.");
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 400);
+    }
   };
 
   return (
@@ -199,31 +149,13 @@ export default function Checkout() {
               </h2>
               <div className="flex items-start gap-3 rounded-md bg-secondary/30 px-4 py-3 text-sm text-primary">
                 <Info className="h-5 w-5 shrink-0 mt-0.5" />
-                <div data-testid="text-demo-notice" className="space-y-2">
-                  <p className="font-medium">
-                    Secure online checkout is launching soon.
-                  </p>
-                  <p>
-                    To place an order today, DM us on Instagram{" "}
-                    <a
-                      href="https://instagram.com/jussbeautifulhair"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline font-medium"
-                    >
-                      @jussbeautifulhair
-                    </a>{" "}
-                    or email{" "}
-                    <a
-                      href="mailto:hello@jussbeautifulhair.com"
-                      className="underline font-medium"
-                    >
-                      hello@jussbeautifulhair.com
-                    </a>
-                    . We'll confirm your order and send a secure payment link.
-                  </p>
-                </div>
+                <p>
+                  You'll be redirected to Stripe's secure checkout to complete your payment. Your order details and shipping address are saved with your payment so we know exactly what to fulfill.
+                </p>
               </div>
+              {error && (
+                <p className="mt-3 text-sm text-destructive">{error}</p>
+              )}
             </section>
           </div>
 
@@ -268,7 +200,7 @@ export default function Checkout() {
                 className="w-full font-semibold"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                {submitting ? "Submitting…" : `Reserve Order — ${formatPrice(total)}`}
+                {submitting ? "Redirecting…" : `Pay with Stripe — ${formatPrice(total)}`}
               </Button>
             </div>
           </div>

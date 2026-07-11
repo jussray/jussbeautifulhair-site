@@ -1,0 +1,36 @@
+language: "en-US"
+tone_instructions: >
+  Storefront correctness and Shopify contract integrity are primary concerns.
+  Flag any broken API call, missing error state, or checkout flow regression.
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+
+  path_filters:
+    - "!**/*.lock"
+    - "!**/dist/**"
+    - "!**/node_modules/**"
+
+  path_instructions:
+    - path: "src/api/**"
+      instructions: >
+        Shopify Storefront API calls. Flag any removed query field, changed
+        variable name, or missing error handling that could break checkout,
+        cart, or product display.
+    - path: "src/components/checkout/**"
+      instructions: >
+        Checkout is revenue-critical. Flag any change that could silently
+        break the add-to-cart, checkout, or payment flow.
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+
+chat:
+  auto_reply: true

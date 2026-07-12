@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
+import { assertApprovedCheckoutUrl } from "@/config/visionGuardrails";
 
 export default function Checkout() {
   const { items, subtotal, shipping, total } = useCart();
@@ -73,7 +74,7 @@ export default function Checkout() {
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data?.error ?? "Checkout failed. Please try again.");
-      window.location.href = data.url;
+      window.location.assign(assertApprovedCheckoutUrl(data.url));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setSubmitting(false);
@@ -91,7 +92,6 @@ export default function Checkout() {
         </p>
 
         <form onSubmit={placeOrder} className="grid lg:grid-cols-3 gap-10">
-          {/* Form */}
           <div className="lg:col-span-2 space-y-8">
             <section className="rounded-lg border border-card-border bg-card p-6">
               <h2 className="font-display text-xl text-foreground mb-4">
@@ -159,7 +159,6 @@ export default function Checkout() {
             </section>
           </div>
 
-          {/* Summary */}
           <div className="lg:col-span-1">
             <div className="rounded-lg border border-card-border bg-card p-6 sticky top-28">
               <h2 className="font-display text-xl text-foreground mb-4">

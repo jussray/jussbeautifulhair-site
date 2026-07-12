@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "client/src/config/visionGuardrails.ts",
+    "client/src/main.tsx",
+    "client/src/pages/Checkout.tsx"
+  ],
+  "exclude": ["node_modules", "build", "dist", "api", "e2e"]
+}

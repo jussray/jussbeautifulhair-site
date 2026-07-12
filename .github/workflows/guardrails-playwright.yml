@@ -8,6 +8,7 @@ on:
       - 'docs/VISION.md'
       - 'docs/GUARDRAILS.md'
       - 'package.json'
+      - 'tsconfig.guardrails.json'
       - 'playwright.config.ts'
       - '.github/workflows/guardrails-playwright.yml'
   workflow_dispatch:
@@ -26,16 +27,7 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npm install --no-save --package-lock=false @playwright/test@1.61.1
-      - name: Typecheck
-        shell: bash
-        run: set -o pipefail; npm run check 2>&1 | tee typecheck.log
-      - name: Upload typecheck log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jbh-typecheck-log
-          path: typecheck.log
-          if-no-files-found: ignore
+      - run: npm run check:guardrails
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:guardrails

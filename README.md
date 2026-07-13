@@ -12,7 +12,7 @@ Public storefront for [jussbeautifulhair.com](https://jussbeautifulhair.com).
 
 ## Strategy and research
 
-- [`docs/strategy/BEAUTY_SIGNALS_2026.md`](docs/strategy/BEAUTY_SIGNALS_2026.md) — evidence-ranked under-the-radar beauty signals, safety boundaries, and product opportunities
+- [`docs/industry-signals/beauty-under-the-radar-2026.md`](docs/industry-signals/beauty-under-the-radar-2026.md) — canonical evidence-ranked under-the-radar beauty signals, safety boundaries, and product opportunities
 
 ## Build
 

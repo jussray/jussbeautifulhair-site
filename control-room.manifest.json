@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "1.0",
+  "repository": "jussray/jussbeautifulhair-site",
+  "portfolioHub": "jussray/founder-control-room",
+  "role": "commerce-surface",
+  "authority": {
+    "sourceOfTruth": "Public storefront repository, Stripe redirect behavior, Cloudflare deployment evidence, and private operations kept outside this repo",
+    "portfolioMode": "sanitized-read-only-observer",
+    "productionMutation": "separate-founder-gate"
+  },
+  "controlRoom": {
+    "localSurface": false,
+    "surfaces": [
+      ".github/workflows",
+      "wrangler.toml"
+    ],
+    "privateContentAllowed": false
+  },
+  "evidence": {
+    "status": "at-risk",
+    "commit": "ebfa7f23270de246b381953322cb70c468bfb439",
+    "observedAt": "2026-07-12",
+    "proofRefs": [
+      ".github/workflows",
+      "wrangler.toml"
+    ]
+  },
+  "risk": {
+    "level": "high",
+    "blockers": [
+      "Guardrail PR #3 has focused Playwright proof but broad typecheck, unit, lint, and SonarQube failures",
+      "Production checkout, order notification, fulfillment, and rollback are not verified end to end",
+      "Public/private repository separation still requires explicit release evidence"
+    ]
+  },
+  "nextGate": "Repair broad quality gates, merge guardrails without product or secret drift, then run monitored test orders and rollback proof."
+}

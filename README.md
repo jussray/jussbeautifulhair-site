@@ -6,9 +6,13 @@
 
 Public storefront for [jussbeautifulhair.com](https://jussbeautifulhair.com).
 
-**Stack:** React + Vite + Tailwind CSS
-**Hosting:** Cloudflare Pages (static)
+**Stack:** React + Vite + Tailwind CSS  
+**Hosting:** Cloudflare Pages (static)  
 **Payments:** Stripe Payment Links (no secret keys in frontend)
+
+## Strategy and research
+
+- [`docs/strategy/BEAUTY_SIGNALS_2026.md`](docs/strategy/BEAUTY_SIGNALS_2026.md) — evidence-ranked under-the-radar beauty signals, safety boundaries, and product opportunities
 
 ## Build
 
@@ -21,7 +25,7 @@ Output: `dist/public/` — upload as a Cloudflare Pages deployment.
 
 ## Brand
 
-**Juss Beautiful Hair** — DBA Lawless & Flawless
+**Juss Beautiful Hair** — DBA Lawless & Flawless  
 Premium hair & beauty supply | ships nationwide from the US
 
 - Site: https://jussbeautifulhair.com
@@ -31,5 +35,5 @@ Premium hair & beauty supply | ships nationwide from the US
 
 ## License
 
-Copyright © 2024–2026 Juss Ray. All rights reserved.
+Copyright © 2024–2026 Juss Ray. All rights reserved.  
 Proprietary software — see [LICENSE](LICENSE).

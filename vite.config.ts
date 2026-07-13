@@ -1,3 +1,4 @@
+// Copyright © 2026 Juss Ray. All rights reserved. Proprietary and confidential.
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
@@ -14,7 +15,6 @@ export default defineConfig({
   root: path.resolve(import.meta.dirname, "client"),
   base: "/",
   build: {
-    // Vercel serves the static client from this directory.
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },

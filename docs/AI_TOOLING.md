@@ -3,11 +3,15 @@
 ## MCP servers
 
 - **GitHub:** repository, pull-request, Actions, and security evidence with lockdown mode.
+- **Bright Data:** VS Code/Codespaces only, prompted at runtime for `API_TOKEN`, and restricted to `GROUPS=code` for current npm and PyPI package metadata. It is not enabled for product scraping, competitor monitoring, customer research, browser automation, or ecommerce collection.
+- **Microsoft Learn:** current official Microsoft technical documentation and code samples; no authentication required.
 - **Figma:** approved storefront frames, variables, and design context.
 - **Cloudflare Docs, Builds, and Observability:** documentation and release evidence for the Cloudflare Pages storefront.
 - **Playwright:** pinned, isolated Chromium for responsive storefront and checkout-boundary verification.
 
 No generic database MCP is connected. The public storefront must not gain broad access to private vendor or admin systems.
+
+The committed root `.mcp.json` remains credential-free. MCP hosts other than VS Code/Codespaces must configure Bright Data locally and keep the API token outside the repository. Bright Data Pro Mode and broad browser, ecommerce, and web-data groups are intentionally disabled.
 
 ## GitHub Models
 

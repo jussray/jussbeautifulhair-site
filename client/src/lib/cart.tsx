@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useCallback, useMemo, useEffect } from "react";
 import type { ReactNode } from "react";
 
 export interface CartItem {
@@ -24,11 +24,44 @@ interface CartContextValue {
 
 const FREE_SHIP_THRESHOLD = 150;
 const FLAT_SHIP = 9.99;
+const STORAGE_KEY = "jbh_cart_v1";
+
+function readStorage(): CartItem[] {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStorage(items: CartItem[]): void {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // sessionStorage unavailable (private mode, iframe restrictions) — degrade gracefully
+  }
+}
+
+function clearStorage(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => readStorage());
+
+  // Persist every change to sessionStorage so cart survives Stripe redirect
+  useEffect(() => {
+    writeStorage(items);
+  }, [items]);
 
   const addItem = useCallback(
     (item: Omit<CartItem, "qty">, qty: number = 1) => {
@@ -63,7 +96,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const clear = useCallback(() => setItems([]), []);
+  const clear = useCallback(() => {
+    clearStorage();
+    setItems([]);
+  }, []);
 
   const value = useMemo<CartContextValue>(() => {
     const count = items.reduce((s, i) => s + i.qty, 0);

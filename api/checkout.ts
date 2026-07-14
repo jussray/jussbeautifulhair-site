@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Stripe from "stripe";
 import { z } from "zod";
-import { getProduct } from "../client/src/lib/catalog";
+import { getProduct } from "../shared/catalog";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY?.trim();
 const stripe = STRIPE_SECRET_KEY

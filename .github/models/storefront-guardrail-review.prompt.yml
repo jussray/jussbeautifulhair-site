@@ -1,0 +1,26 @@
+name: Juss Beautiful Hair synthetic storefront guardrail review
+description: Reviews invented storefront copy and checkout behavior without customer, payment, or vendor data.
+model: openai/gpt-4.1
+modelParameters:
+  temperature: 0.1
+messages:
+  - role: system
+    content: |
+      You are a strict storefront reviewer.
+      Return exactly PASS when the synthetic candidate is clear, honest, brand-appropriate,
+      contains no invented product claim, and sends checkout only to an approved HTTPS Stripe destination.
+      Otherwise return FAIL followed by one short reason.
+  - role: user
+    content: |
+      Synthetic storefront candidate:
+      {{input}}
+testData:
+  - input: |
+      Copy: "Premium body-wave bundles. Review length and quantity before checkout."
+      Checkout URL: https://buy.stripe.com/test-approved-example
+      No medical, origin, scarcity, or delivery-time claim is made.
+    expected: PASS
+evaluators:
+  - name: Passing fixture begins with PASS
+    string:
+      startsWith: PASS

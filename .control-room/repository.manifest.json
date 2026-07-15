@@ -30,6 +30,32 @@
       ],
       "requiredSignals": [
         "typecheck"
+      ],
+      "usageAssertions": [
+        {
+          "id": "app-mounts-shop-route",
+          "path": "client/src/App.tsx",
+          "marker": "<Route path=\"/shop\" component={Shop} />",
+          "description": "The public router mounts the shopping catalog."
+        },
+        {
+          "id": "app-mounts-cart-route",
+          "path": "client/src/App.tsx",
+          "marker": "<Route path=\"/cart\" component={Cart} />",
+          "description": "The public router mounts the cart flow."
+        },
+        {
+          "id": "app-mounts-checkout-route",
+          "path": "client/src/App.tsx",
+          "marker": "<Route path=\"/checkout\" component={Checkout} />",
+          "description": "The public router mounts the checkout review page."
+        },
+        {
+          "id": "app-wraps-routes-in-cart-provider",
+          "path": "client/src/App.tsx",
+          "marker": "<CartProvider>",
+          "description": "Shopping routes share the active cart state provider."
+        }
       ]
     },
     {
@@ -44,6 +70,38 @@
       ],
       "requiredSignals": [
         "typecheck"
+      ],
+      "usageAssertions": [
+        {
+          "id": "checkout-page-posts-catalog-identifiers",
+          "path": "client/src/pages/Checkout.tsx",
+          "marker": "fetch(\"/api/checkout\"",
+          "description": "The browser submits only catalog IDs, variants, quantities, and an attempt ID."
+        },
+        {
+          "id": "worker-routes-checkout-api",
+          "path": "worker/index.ts",
+          "marker": "url.pathname === \"/api/checkout\"",
+          "description": "The Cloudflare Worker routes checkout requests to the server handler."
+        },
+        {
+          "id": "worker-resolves-canonical-products",
+          "path": "worker/index.ts",
+          "marker": "getProduct(requested.id)",
+          "description": "Prices and product details are resolved from the server-owned catalog."
+        },
+        {
+          "id": "worker-enforces-origin-allowlist",
+          "path": "worker/index.ts",
+          "marker": "allowedOrigins.includes(origin)",
+          "description": "Checkout refuses browser origins outside the configured storefront allowlist."
+        },
+        {
+          "id": "worker-creates-idempotent-stripe-session",
+          "path": "worker/index.ts",
+          "marker": "idempotencyKey: `jbh-checkout-${reference}`",
+          "description": "Stripe session creation is tied to the client-generated checkout attempt ID."
+        }
       ]
     },
     {
@@ -53,10 +111,25 @@
       "evidencePaths": [
         "README.md",
         "LICENSE",
-        ".gitignore"
+        ".gitignore",
+        "client/src/App.tsx"
       ],
       "requiredSignals": [
         "typecheck"
+      ],
+      "usageAssertions": [
+        {
+          "id": "public-router-has-no-admin-import",
+          "path": "client/src/App.tsx",
+          "marker": "It lives in a separate local-only build",
+          "description": "The public router documents and preserves the local-only admin boundary."
+        },
+        {
+          "id": "checkout-states-no-public-customer-credentials",
+          "path": "client/src/pages/Checkout.tsx",
+          "marker": "does not place payment credentials or customer",
+          "description": "The public checkout surface states that Stripe collects sensitive payment/contact fields."
+        }
       ]
     },
     {
@@ -71,6 +144,32 @@
       ],
       "requiredSignals": [
         "typecheck"
+      ],
+      "usageAssertions": [
+        {
+          "id": "package-builds-vite-assets",
+          "path": "package.json",
+          "marker": "\"build\": \"vite build\"",
+          "description": "The repository build produces the static storefront bundle."
+        },
+        {
+          "id": "wrangler-points-to-checkout-worker",
+          "path": "wrangler.toml",
+          "marker": "main = \"worker/index.ts\"",
+          "description": "Cloudflare executes the Worker containing the checkout route."
+        },
+        {
+          "id": "wrangler-binds-static-assets",
+          "path": "wrangler.toml",
+          "marker": "binding = \"ASSETS\"",
+          "description": "The Worker is configured to serve the built public assets."
+        },
+        {
+          "id": "wrangler-runs-worker-for-api",
+          "path": "wrangler.toml",
+          "marker": "run_worker_first = [\"/api/*\"]",
+          "description": "API requests reach the Worker before static asset handling."
+        }
       ]
     },
     {
@@ -78,14 +177,16 @@
       "description": "Automated negative-origin, invalid-catalog, idempotency, cart, checkout, and success-flow tests.",
       "status": "planned",
       "evidencePaths": [],
-      "requiredSignals": []
+      "requiredSignals": [],
+      "usageAssertions": []
     },
     {
       "id": "storefront-lint-and-unit-suite",
       "description": "Executable lint and unit-test scripts matching the repository Quality Gate workflow.",
       "status": "planned",
       "evidencePaths": [],
-      "requiredSignals": []
+      "requiredSignals": [],
+      "usageAssertions": []
     }
   ],
   "buildAssist": {
@@ -114,6 +215,8 @@
       "capabilities.claimedStatus",
       "capabilities.observedStatus",
       "capabilities.evidencePaths",
+      "capabilities.usageAssertionIds",
+      "capabilities.failedUsageAssertionIds",
       "capabilities.reason"
     ],
     "forbiddenData": [
@@ -126,7 +229,8 @@
       "vendor identities or sourcing records",
       "private admin source",
       "factory pricing",
-      "payment card data"
+      "payment card data",
+      "usage assertion marker text in runner packets"
     ]
   }
 }

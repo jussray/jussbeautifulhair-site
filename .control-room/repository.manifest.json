@@ -1,0 +1,132 @@
+{
+  "schemaVersion": "1.0",
+  "projectId": "juss-beautiful-hair",
+  "repository": {
+    "provider": "github",
+    "identifier": "jussray/jussbeautifulhair-site",
+    "defaultBranch": "main"
+  },
+  "verification": {
+    "requiredSignals": [
+      {
+        "id": "typecheck",
+        "name": "Typecheck",
+        "required": true
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "id": "public-storefront-routing",
+      "description": "Serves the public shopping, product, cart, checkout, informational, and success routes.",
+      "status": "active",
+      "evidencePaths": [
+        "client/src/App.tsx",
+        "client/src/pages/Home.tsx",
+        "client/src/pages/Shop.tsx",
+        "client/src/pages/Product.tsx",
+        "client/src/pages/Cart.tsx",
+        "client/src/pages/Checkout.tsx"
+      ],
+      "requiredSignals": [
+        "typecheck"
+      ]
+    },
+    {
+      "id": "server-authoritative-stripe-checkout",
+      "description": "Accepts catalog IDs and quantities, resolves prices server-side, restricts origins, and creates Stripe-hosted checkout sessions without exposing secret keys.",
+      "status": "active",
+      "evidencePaths": [
+        "worker/index.ts",
+        "client/src/lib/catalog.ts",
+        "client/src/pages/Checkout.tsx",
+        "wrangler.toml"
+      ],
+      "requiredSignals": [
+        "typecheck"
+      ]
+    },
+    {
+      "id": "public-private-source-boundary",
+      "description": "Keeps private admin, vendor sourcing, customer exports, and owner controls outside the public storefront repository.",
+      "status": "active",
+      "evidencePaths": [
+        "README.md",
+        "LICENSE",
+        ".gitignore"
+      ],
+      "requiredSignals": [
+        "typecheck"
+      ]
+    },
+    {
+      "id": "cloudflare-storefront-deployment",
+      "description": "Builds static Vite assets and deploys them with the checkout Worker through Cloudflare.",
+      "status": "active",
+      "evidencePaths": [
+        "package.json",
+        "vite.config.ts",
+        "wrangler.toml",
+        "worker/index.ts"
+      ],
+      "requiredSignals": [
+        "typecheck"
+      ]
+    },
+    {
+      "id": "checkout-regression-suite",
+      "description": "Automated negative-origin, invalid-catalog, idempotency, cart, checkout, and success-flow tests.",
+      "status": "planned",
+      "evidencePaths": [],
+      "requiredSignals": []
+    },
+    {
+      "id": "storefront-lint-and-unit-suite",
+      "description": "Executable lint and unit-test scripts matching the repository Quality Gate workflow.",
+      "status": "planned",
+      "evidencePaths": [],
+      "requiredSignals": []
+    }
+  ],
+  "buildAssist": {
+    "enabled": true,
+    "preferredBuilder": "codex",
+    "riskLevel": "high"
+  },
+  "privacy": {
+    "allowlistedPacketFields": [
+      "projectId",
+      "repository.provider",
+      "repository.identifier",
+      "commitSha",
+      "branch",
+      "manifestHash",
+      "generatedAt",
+      "runner.provider",
+      "runner.runId",
+      "runner.detailsUrl",
+      "checks.id",
+      "checks.name",
+      "checks.required",
+      "checks.status",
+      "checks.detailsUrl",
+      "capabilities.id",
+      "capabilities.claimedStatus",
+      "capabilities.observedStatus",
+      "capabilities.evidencePaths",
+      "capabilities.reason"
+    ],
+    "forbiddenData": [
+      "Stripe secret keys",
+      "Stripe webhook secrets",
+      "Cloudflare API tokens",
+      "customer names or contact information",
+      "shipping or billing addresses",
+      "order exports",
+      "vendor identities or sourcing records",
+      "private admin source",
+      "factory pricing",
+      "payment card data"
+    ]
+  }
+}

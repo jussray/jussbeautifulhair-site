@@ -5,7 +5,7 @@ import { getProduct } from "../shared/catalog";
 
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY?.trim();
 const stripe = STRIPE_SECRET_KEY
-  ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2024-11-20.acacia" })
+  ? new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-02-24.acacia" })
   : null;
 
 const FREE_SHIPPING_THRESHOLD = 150;

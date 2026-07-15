@@ -12,6 +12,16 @@
         "id": "typecheck",
         "name": "Typecheck",
         "required": true
+      },
+      {
+        "id": "production-build",
+        "name": "Production Build",
+        "required": true
+      },
+      {
+        "id": "security-build",
+        "name": "Typecheck + build",
+        "required": true
       }
     ]
   },
@@ -29,7 +39,8 @@
         "client/src/pages/Checkout.tsx"
       ],
       "requiredSignals": [
-        "typecheck"
+        "typecheck",
+        "production-build"
       ],
       "usageAssertions": [
         {
@@ -69,7 +80,9 @@
         "wrangler.toml"
       ],
       "requiredSignals": [
-        "typecheck"
+        "typecheck",
+        "production-build",
+        "security-build"
       ],
       "usageAssertions": [
         {
@@ -115,7 +128,8 @@
         "client/src/App.tsx"
       ],
       "requiredSignals": [
-        "typecheck"
+        "typecheck",
+        "security-build"
       ],
       "usageAssertions": [
         {
@@ -143,7 +157,9 @@
         "worker/index.ts"
       ],
       "requiredSignals": [
-        "typecheck"
+        "typecheck",
+        "production-build",
+        "security-build"
       ],
       "usageAssertions": [
         {

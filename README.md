@@ -36,6 +36,7 @@ npm run verify:deploy
 - `workers_dev` is explicitly disabled;
 - public Preview URLs are explicitly disabled;
 - no temporary or aliased preview command is present in package scripts or GitHub Actions;
+- no deprecated Cloudflare Workers KV namespace-management route exists in source, scripts, workflows, or documentation;
 - no known private-admin or vendor artifact appears in `dist/public/`;
 - no private control-layer directory has been added to this repository.
 
@@ -65,6 +66,12 @@ ALLOWED_STOREFRONT_ORIGINS=https://<PRIMARY_STORE_ORIGIN>,https://<SECONDARY_STO
 ```
 
 Do not prefix secrets with `VITE_`. Vite variables are readable by browsers.
+
+### Workers KV management API
+
+The storefront currently contains no direct Cloudflare Workers KV namespace-management client. Runtime KV bindings, if added later, should be configured through Wrangler bindings. Any future direct Cloudflare API integration must use the documented `/storage/kv/namespaces` route and must keep `[CLOUDFLARE_API_TOKEN]`, namespace identifiers, stored event identifiers, and values out of source and logs.
+
+The deployment verifier fails when the deprecated namespace-management route is introduced anywhere in tracked repository text files.
 
 ## Checkout protections
 

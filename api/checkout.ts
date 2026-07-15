@@ -59,58 +59,74 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    return res.status(204).end();
-  }
+  if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST, OPTIONS");
-    return res.status(405).json({ error: "method_not_allowed" });
+    return res.status(405).json({ error: "Method not allowed" });
   }
-  if (!requestOrigin || !allowedOrigins.includes(requestOrigin)) {
-    return res.status(403).json({ error: "origin_not_allowed" });
+
+  if (!stripe || !storeOrigin) {
+    return res.status(503).json({ error: "Payments are not configured" });
   }
-  if (!storeOrigin) {
-    return res.status(503).json({ error: "store_origin_not_configured" });
-  }
-  if (!stripe) {
-    return res.status(503).json({ error: "stripe_not_configured" });
+
+  if (requestOrigin && !allowedOrigins.includes(requestOrigin)) {
+    return res.status(403).json({ error: "Origin not allowed" });
   }
 
   const parsed = checkoutSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: "invalid_checkout_request" });
+    return res.status(400).json({ error: "Invalid cart" });
   }
 
-  const resolvedItems = parsed.data.items.map((requested) => {
+  const canonicalItems = [] as Array<{
+    id: string;
+    name: string;
+    variant: string;
+    price: number;
+    quantity: number;
+    image: string;
+  }>;
+
+  for (const requested of parsed.data.items) {
     const product = getProduct(requested.id);
     const variant = product?.variants.find(
       (candidate) => candidate.option === requested.variant,
     );
-    return { requested, product, variant };
-  });
 
-  if (resolvedItems.some(({ product, variant }) => !product || !variant)) {
-    return res.status(400).json({ error: "invalid_catalog_item" });
+    if (!product || !variant) {
+      return res.status(400).json({ error: "Cart contains an unavailable item" });
+    }
+
+    canonicalItems.push({
+      id: product.id,
+      name: product.name,
+      variant: variant.option,
+      price: variant.price,
+      quantity: requested.quantity,
+      image: product.image,
+    });
   }
 
-  const subtotal = resolvedItems.reduce(
-    (sum, { requested, variant }) =>
-      sum + (variant?.price ?? 0) * requested.quantity,
-    0,
+  const subtotal = Number(
+    canonicalItems
+      .reduce((sum, item) => sum + item.price * item.quantity, 0)
+      .toFixed(2),
   );
-  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING;
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = resolvedItems.map(
-    ({ requested, product, variant }) => ({
-      quantity: requested.quantity,
+  const shipping =
+    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING;
+
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
+    canonicalItems.map((item) => ({
+      quantity: item.quantity,
       price_data: {
         currency: "usd",
-        unit_amount: Math.round((variant?.price ?? 0) * 100),
+        unit_amount: Math.round(item.price * 100),
         product_data: {
-          name: `${product?.name ?? requested.id} — ${requested.variant}`,
+          name: `${item.name} (${item.variant})`,
+          images: [new URL(item.image, storeOrigin).toString()],
         },
       },
-    }),
-  );
+    }));
 
   if (shipping > 0) {
     lineItems.push({
@@ -123,30 +139,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const reference = parsed.data.checkoutAttemptId;
-  const session = await stripe.checkout.sessions.create(
-    {
-      mode: "payment",
-      customer_creation: "always",
-      line_items: lineItems,
-      billing_address_collection: "required",
-      shipping_address_collection: { allowed_countries: ["US"] },
-      phone_number_collection: { enabled: true },
-      allow_promotion_codes: true,
-      client_reference_id: reference,
-      metadata: { checkout_attempt_id: reference },
-      payment_intent_data: {
-        metadata: { checkout_attempt_id: reference },
+  try {
+    const safeReference = parsed.data.checkoutAttemptId;
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        customer_creation: "always",
+        line_items: lineItems,
+        billing_address_collection: "required",
+        shipping_address_collection: { allowed_countries: ["US"] },
+        phone_number_collection: { enabled: true },
+        allow_promotion_codes: true,
+        client_reference_id: safeReference,
+        metadata: { checkout_attempt_id: safeReference },
+        payment_intent_data: {
+          metadata: { checkout_attempt_id: safeReference },
+        },
+        success_url: `${storeOrigin}/#/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${storeOrigin}/#/cart`,
       },
-      success_url: `${storeOrigin}/#/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${storeOrigin}/#/cart`,
-    },
-    { idempotencyKey: `jbh-checkout-${reference}` },
-  );
+      { idempotencyKey: `jbh-checkout-${safeReference}` },
+    );
 
-  if (!session.url) {
-    return res.status(502).json({ error: "stripe_session_missing_url" });
+    return res.status(200).json({ url: session.url });
+  } catch (error) {
+    const errorType = error instanceof Error ? error.name : "UnknownError";
+    console.error(`[CHECKOUT] Stripe session creation failed — ${errorType}`);
+    return res.status(500).json({ error: "Checkout failed. Please try again." });
   }
-
-  return res.status(200).json({ url: session.url });
 }

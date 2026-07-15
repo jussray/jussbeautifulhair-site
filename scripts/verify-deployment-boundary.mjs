@@ -4,6 +4,15 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
+const ignoredDirectories = new Set([
+  ".git",
+  ".wrangler",
+  "coverage",
+  "dist",
+  "node_modules",
+  "playwright-report",
+  "test-results",
+]);
 
 async function exists(relativePath) {
   try {
@@ -27,6 +36,7 @@ async function collectFiles(relativePath) {
   if (info.isFile()) return [relativePath];
 
   for (const entry of await readdir(absolute, { withFileTypes: true })) {
+    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
     const child = path.join(relativePath, entry.name);
     if (entry.isDirectory()) result.push(...(await collectFiles(child)));
     if (entry.isFile()) result.push(child);
@@ -82,6 +92,42 @@ for (const relativePath of commandFiles) {
   );
 }
 
+// Cloudflare deprecated the legacy Workers KV namespace-management route on
+// 2026-07-15. Runtime KV bindings are not affected, but any direct REST client,
+// CI script, infrastructure helper, or documentation command must use the
+// current storage/kv namespace-management route.
+const repositoryTextExtensions = new Set([
+  ".cjs",
+  ".css",
+  ".html",
+  ".js",
+  ".json",
+  ".jsx",
+  ".md",
+  ".mjs",
+  ".sh",
+  ".toml",
+  ".ts",
+  ".tsx",
+  ".txt",
+  ".yaml",
+  ".yml",
+]);
+const verifierPath = "scripts/verify-deployment-boundary.mjs";
+const repositoryFiles = await collectFiles(".");
+for (const relativePath of repositoryFiles) {
+  const normalized = relativePath.replaceAll("\\", "/").replace(/^\.\//, "");
+  if (normalized === verifierPath) continue;
+  if (!repositoryTextExtensions.has(path.extname(normalized).toLowerCase())) continue;
+
+  const text = await read(relativePath);
+  if (/\/workers\/namespaces(?:\/|\b)/i.test(text)) {
+    failures.push(
+      `${normalized} uses the deprecated Workers KV namespace API route; use /storage/kv/namespaces instead.`,
+    );
+  }
+}
+
 for (const privatePath of [
   "vendor-docs",
   "jbh-private",
@@ -126,4 +172,6 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("JBH deployment boundary verified: public host only, previews disabled, no private artifacts detected.");
+console.log(
+  "JBH deployment boundary verified: public host only, previews disabled, current KV API routes only, no private artifacts detected.",
+);

@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
+const exists = async (relativePath) => {
+  try {
+    await access(path.join(root, relativePath));
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const EXPECTED_STRIPE_API_VERSION = "2025-02-24.acacia";
 
@@ -23,23 +31,46 @@ test("client and Worker use the shared catalog without escaping the repository",
 
 test("catalog product identifiers are present and unique", async () => {
   const catalog = await read("shared/catalog.ts");
-  const productIds = [...catalog.matchAll(/^\s+id:\s*"([^"]+)"/gm)].map((match) => match[1]);
+  const productIds = [...catalog.matchAll(/^\s+id:\s*"([^"]+)"/gm)].map(
+    (match) => match[1],
+  );
   assert.ok(productIds.length >= 10, "expected the public catalog to contain products");
-  assert.equal(new Set(productIds).size, productIds.length, "catalog product IDs must be unique");
+  assert.equal(
+    new Set(productIds).size,
+    productIds.length,
+    "catalog product IDs must be unique",
+  );
 
-  const numericPrices = [...catalog.matchAll(/price:\s*(\d+(?:\.\d+)?)/g)].map((match) => Number(match[1]));
+  const numericPrices = [...catalog.matchAll(/price:\s*(\d+(?:\.\d+)?)/g)].map(
+    (match) => Number(match[1]),
+  );
   assert.ok(numericPrices.length > 0, "expected catalog prices");
-  assert.ok(numericPrices.every((price) => Number.isFinite(price) && price > 0), "catalog prices must be positive");
+  assert.ok(
+    numericPrices.every((price) => Number.isFinite(price) && price > 0),
+    "catalog prices must be positive",
+  );
 });
 
-test("Stripe SDK API version is consistent across server entry points", async () => {
-  const files = ["api/checkout.ts", "api/stripe/webhook.ts", "worker/index.ts"];
-  for (const relativePath of files) {
-    const text = await read(relativePath);
-    assert.match(
-      text,
-      new RegExp(`apiVersion:\\s*"${EXPECTED_STRIPE_API_VERSION.replaceAll(".", "\\.")}"`),
-      `${relativePath} must use ${EXPECTED_STRIPE_API_VERSION}`,
+test("the only public Stripe SDK entry point uses the pinned API version", async () => {
+  const worker = await read("worker/index.ts");
+  assert.match(
+    worker,
+    new RegExp(
+      `apiVersion:\\s*"${EXPECTED_STRIPE_API_VERSION.replaceAll(".", "\\.")}"`,
+    ),
+    `worker/index.ts must use ${EXPECTED_STRIPE_API_VERSION}`,
+  );
+
+  for (const forbiddenPath of [
+    "api/checkout.ts",
+    "api/stripe/webhook.ts",
+    "api/orders/[id].ts",
+    "vercel.json",
+  ]) {
+    assert.equal(
+      await exists(forbiddenPath),
+      false,
+      `${forbiddenPath} must not restore an alternate public server surface`,
     );
   }
 });
@@ -62,13 +93,17 @@ test("checkout pricing remains server authoritative", async () => {
   assert.match(worker, /idempotencyKey:\s*`jbh-checkout-\$\{reference\}`/);
 });
 
-test("webhook verifier uses the raw request body and does not log it", async () => {
-  const webhook = await read("api/stripe/webhook.ts");
-  assert.match(webhook, /bodyParser:\s*false/);
-  assert.match(webhook, /const rawBody = await readRawBody\(req\)/);
-  assert.match(webhook, /stripe\.webhooks\.constructEvent\([\s\S]*rawBody[\s\S]*signature[\s\S]*STRIPE_WEBHOOK_SECRET/);
-  assert.doesNotMatch(webhook, /console\.(?:log|error|warn)\([^\n]*rawBody/);
-  assert.doesNotMatch(webhook, /console\.(?:log|error|warn)\([^\n]*STRIPE_WEBHOOK_SECRET/);
+test("the public repository cannot regain an order webhook or numeric order lookup", async () => {
+  const verifier = await read("scripts/verify-deployment-boundary.mjs");
+  assert.match(verifier, /"api"/);
+  assert.match(verifier, /"vercel\.json"/);
+  assert.match(verifier, /"client\/src\/pages\/Confirmation\.tsx"/);
+  assert.match(verifier, /\/confirmation\\\/\\:id/i);
+  assert.match(verifier, /\/api\\\/orders\\\//i);
+  assert.doesNotMatch(
+    verifier,
+    /console\.(?:log|error|warn)\([^\n]*(?:customer|address|email|phone|rawBody)/i,
+  );
 });
 
 test("Cloudflare public preview surfaces stay disabled", async () => {

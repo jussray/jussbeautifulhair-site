@@ -11,7 +11,6 @@ import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
-import Confirmation from "@/pages/Confirmation";
 import SuccessPage from "@/pages/success";
 import About from "@/pages/About";
 import FAQ from "@/pages/FAQ";
@@ -20,7 +19,6 @@ import Shipping from "@/pages/Shipping";
 import Returns from "@/pages/Returns";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
-// It lives in a separate local-only build — see admin-local/ in the project root.
 
 function AppRouter() {
   return (
@@ -30,7 +28,6 @@ function AppRouter() {
       <Route path="/product/:id" component={Product} />
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />
-      <Route path="/confirmation/:id" component={Confirmation} />
       <Route path="/success" component={SuccessPage} />
       <Route path="/about" component={About} />
       <Route path="/faq" component={FAQ} />

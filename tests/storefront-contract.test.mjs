@@ -98,8 +98,8 @@ test("the public repository cannot regain an order webhook or numeric order look
   assert.match(verifier, /"api"/);
   assert.match(verifier, /"vercel\.json"/);
   assert.match(verifier, /"client\/src\/pages\/Confirmation\.tsx"/);
-  assert.match(verifier, /\/confirmation\\\/\\:id/i);
-  assert.match(verifier, /\/api\\\/orders\\\//i);
+  assert.match(verifier, /order-by-numeric-id confirmation route/i);
+  assert.match(verifier, /numeric order-lookup artifacts detected/i);
   assert.doesNotMatch(
     verifier,
     /console\.(?:log|error|warn)\([^\n]*(?:customer|address|email|phone|rawBody)/i,

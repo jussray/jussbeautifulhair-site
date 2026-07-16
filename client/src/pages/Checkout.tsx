@@ -49,27 +49,25 @@ export default function Checkout() {
       const orderItems = items.map((i) => ({
         id: i.id,
         name: i.name,
+        variant: i.variant,
         price: i.price,
-        quantity: i.qty,
+        qty: i.qty,
         image: i.image,
       }));
-      const metadata: Record<string, string> = {
-        customer_name: form.customerName,
+      const customer = {
+        customerName: form.customerName,
         email: form.email,
         phone: form.phone,
         street: form.street,
         city: form.city,
         state: form.state,
         zip: form.zip,
-        order_notes: form.notes,
-        order_items: items
-          .map((i) => `${i.name}${i.variant ? ` (${i.variant})` : ""} x${i.qty}`)
-          .join(", "),
+        notes: form.notes,
       };
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: orderItems, metadata, shippingFlat: shipping }),
+        body: JSON.stringify({ items: orderItems, shipping, customer }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data?.error ?? "Checkout failed. Please try again.");

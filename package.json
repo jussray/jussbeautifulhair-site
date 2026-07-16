@@ -7,6 +7,11 @@
     "dev": "vite",
     "build": "vite build",
     "check": "tsc",
+    "lint": "npm run check && node scripts/lint-storefront.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "quality": "npm run lint && npm test && npm run verify:deploy",
+    "security:deploy-boundary": "node scripts/verify-deployment-boundary.mjs",
+    "verify:deploy": "npm run build && npm run security:deploy-boundary",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

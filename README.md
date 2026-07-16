@@ -28,14 +28,32 @@ The private owner/admin and vendor control source belongs only in `jbh-private`.
 ```bash
 npm ci
 npm run check
-npm run build
+npm run verify:deploy
 ```
+
+`verify:deploy` builds the storefront and then checks that:
+
+- `workers_dev` is explicitly disabled;
+- public Preview URLs are explicitly disabled;
+- no temporary or aliased preview command is present in package scripts or GitHub Actions;
+- no deprecated Cloudflare Workers KV namespace-management route exists in source, scripts, workflows, or documentation;
+- no known private-admin or vendor artifact appears in `dist/public/`;
+- no private control-layer directory has been added to this repository.
 
 The Vite storefront builds to `dist/public/`. Wrangler deploys that directory with `worker/index.ts` handling `/api/checkout` before static assets.
 
-## Cloudflare configuration
+## Cloudflare production-only configuration
 
-`wrangler.toml` defines the public `STORE_ORIGIN`. Configure the following in Cloudflare without placing values in GitHub:
+`wrangler.toml` explicitly sets:
+
+```toml
+workers_dev = false
+preview_urls = false
+```
+
+Cloudflare must serve this Worker only through the approved custom storefront hostname. The Worker independently rejects requests whose hostname is not derived from `STORE_ORIGIN` or `ALLOWED_STOREFRONT_ORIGINS`. This makes a mistakenly created `workers.dev` or temporary preview hostname return a generic `404` instead of serving storefront assets or Checkout.
+
+Configure the following in Cloudflare without placing values in GitHub:
 
 ```bash
 wrangler secret put STRIPE_SECRET_KEY
@@ -49,10 +67,17 @@ ALLOWED_STOREFRONT_ORIGINS=https://<PRIMARY_STORE_ORIGIN>,https://<SECONDARY_STO
 
 Do not prefix secrets with `VITE_`. Vite variables are readable by browsers.
 
+### Workers KV management API
+
+The storefront currently contains no direct Cloudflare Workers KV namespace-management client. Runtime KV bindings, if added later, should be configured through Wrangler bindings. Any future direct Cloudflare API integration must use the documented `/storage/kv/namespaces` route and must keep `[CLOUDFLARE_API_TOKEN]`, namespace identifiers, stored event identifiers, and values out of source and logs.
+
+The deployment verifier fails when the deprecated namespace-management route is introduced anywhere in tracked repository text files.
+
 ## Checkout protections
 
 The Worker:
 
+- serves only approved storefront hostnames plus local loopback development;
 - accepts product ID, variant, and quantity only;
 - resolves prices and shipping from the server-side catalog;
 - rejects unknown products, variants, oversized payloads, and unapproved origins;
@@ -68,10 +93,10 @@ The order-mutation webhook and private admin controls do not belong in this publ
 Cloudflare Workers Builds should run:
 
 ```bash
-npm run build
+npm run verify:deploy
 ```
 
-Wrangler then deploys the Worker and `dist/public/` assets using `wrangler.toml`.
+Wrangler may then deploy the verified Worker and `dist/public/` assets using `wrangler.toml`. Do not use temporary deployments, Preview URLs, preview aliases, or a `workers.dev` production route.
 
 ## License
 

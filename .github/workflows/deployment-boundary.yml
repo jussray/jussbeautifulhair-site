@@ -1,0 +1,33 @@
+name: Deployment Boundary
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  verify-deployment-boundary:
+    name: Block temporary, private, and legacy KV paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Verify source and configuration boundary
+        run: npm run security:deploy-boundary
+      - run: npm run build
+      - name: Verify public build boundary
+        if: always()
+        run: npm run security:deploy-boundary

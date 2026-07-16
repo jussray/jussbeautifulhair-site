@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { z } from "zod";
-import { getProduct } from "../client/src/lib/catalog";
+import { getProduct } from "../shared/catalog";
 
 interface AssetBinding {
   fetch(request: Request): Promise<Response>;
@@ -58,6 +58,34 @@ function getAllowedOrigins(env: Env): string[] {
         return [];
       }
     });
+}
+
+function isApprovedRequestHost(request: Request, env: Env): boolean {
+  const requestHostname = new URL(request.url).hostname.toLowerCase();
+
+  // Preserve local Wrangler/Vite development without allowing workers.dev or
+  // temporary preview hostnames in production.
+  if (requestHostname === "localhost" || requestHostname === "127.0.0.1") {
+    return true;
+  }
+
+  const approvedHosts = new Set(
+    getAllowedOrigins(env).map((origin) => new URL(origin).hostname.toLowerCase()),
+  );
+
+  return approvedHosts.has(requestHostname);
+}
+
+function rejectedHostResponse(): Response {
+  return new Response("Not found", {
+    status: 404,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+    },
+  });
 }
 
 function secureAssetResponse(response: Response): Response {
@@ -192,7 +220,7 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
 
   try {
     const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: "2024-11-20.acacia",
+      apiVersion: "2025-02-24.acacia",
       httpClient: Stripe.createFetchHttpClient(),
     });
     const reference = parsed.data.checkoutAttemptId;
@@ -226,6 +254,10 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    if (!isApprovedRequestHost(request, env)) {
+      return rejectedHostResponse();
+    }
+
     const url = new URL(request.url);
 
     if (url.pathname === "/api/checkout") {

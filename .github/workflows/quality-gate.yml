@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -16,10 +19,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
+      - run: npm run check
 
   lint:
     name: "Lint"
@@ -28,8 +31,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: npm
       - run: npm ci
       - run: npm run lint
 
@@ -40,35 +43,46 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: npm
       - run: npm ci
-      - run: npm test -- --coverage --reporter=json --outputFile=test-results.json
+      - name: Run repository contract tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test-results.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: test-results
-          path: test-results.json
+          path: test-results.txt
+          if-no-files-found: error
+          retention-days: 7
 
   sonarqube:
     name: "SonarQube – Storefront Standard"
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Record optional scanner status
+        if: ${{ env.SONAR_TOKEN == '' || env.SONAR_HOST_URL == '' }}
+        run: echo "SonarQube is not configured for this repository; required local quality gates still run separately."
       - uses: actions/setup-node@v4
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: npm
       - run: npm ci
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
       - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
         with:
           args: >
             -Dsonar.projectKey=jussbeautifulhair-site
             -Dsonar.qualitygate.wait=true
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info

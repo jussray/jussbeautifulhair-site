@@ -4,9 +4,30 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures = [];
-const ignoredDirectories = new Set([".git", ".wrangler", "coverage", "dist", "node_modules", "playwright-report", "test-results"]);
-const sourceRoots = ["api", "client/src", "shared", "worker", ".github/workflows"];
-const textExtensions = new Set([".cjs", ".js", ".json", ".jsx", ".md", ".mjs", ".sh", ".toml", ".ts", ".tsx", ".yaml", ".yml"]);
+const ignoredDirectories = new Set([
+  ".git",
+  ".wrangler",
+  "coverage",
+  "dist",
+  "node_modules",
+  "playwright-report",
+  "test-results",
+]);
+const sourceRoots = ["client/src", "shared", "worker", ".github/workflows"];
+const textExtensions = new Set([
+  ".cjs",
+  ".js",
+  ".json",
+  ".jsx",
+  ".md",
+  ".mjs",
+  ".sh",
+  ".toml",
+  ".ts",
+  ".tsx",
+  ".yaml",
+  ".yml",
+]);
 
 async function exists(relativePath) {
   try {
@@ -47,10 +68,22 @@ function forbidMatch(text, pattern, message) {
 
 const files = (await Promise.all(sourceRoots.map(collectFiles))).flat();
 const forbiddenPatterns = [
-  { pattern: /sk_(?:live|test)_[A-Za-z0-9]{12,}/i, label: "Stripe secret-looking value" },
-  { pattern: /whsec_[A-Za-z0-9]{12,}/i, label: "webhook secret-looking value" },
-  { pattern: /VITE_[A-Z0-9_]*(?:SECRET|TOKEN|PRIVATE|PASSWORD|API_KEY)\b/, label: "client-exposed secret variable" },
-  { pattern: /(?:^|["'`/])(vendor-docs|admin-local)(?:["'`/]|$)/i, label: "private control-layer path" },
+  {
+    pattern: /sk_(?:live|test)_[A-Za-z0-9]{12,}/i,
+    label: "Stripe secret-looking value",
+  },
+  {
+    pattern: /whsec_[A-Za-z0-9]{12,}/i,
+    label: "webhook secret-looking value",
+  },
+  {
+    pattern: /VITE_[A-Z0-9_]*(?:SECRET|TOKEN|PRIVATE|PASSWORD|API_KEY)\b/,
+    label: "client-exposed secret variable",
+  },
+  {
+    pattern: /(?:^|["'`/])(vendor-docs|admin-local)(?:["'`/]|$)/i,
+    label: "private control-layer path",
+  },
 ];
 
 for (const relativePath of files) {
@@ -59,10 +92,17 @@ for (const relativePath of files) {
   for (const { pattern, label } of forbiddenPatterns) {
     if (pattern.test(text)) failures.push(`${relativePath} contains a forbidden ${label}.`);
   }
-  if (relativePath.startsWith(".github/workflows/") && /uses:\s*[^\s]+@master\b/i.test(text)) {
+  if (
+    relativePath.startsWith(".github/workflows/") &&
+    /uses:\s*[^\s]+@master\b/i.test(text)
+  ) {
     failures.push(`${relativePath} uses an unpinned @master GitHub Action.`);
   }
-  if (/console\.(?:log|error|warn)\([^\n]*(?:rawBody|request\.body|req\.body|Stripe-Signature|STRIPE_WEBHOOK_SECRET|STRIPE_SECRET_KEY)/i.test(text)) {
+  if (
+    /console\.(?:log|error|warn)\([^\n]*(?:rawBody|request\.body|req\.body|Stripe-Signature|STRIPE_WEBHOOK_SECRET|STRIPE_SECRET_KEY)/i.test(
+      text,
+    )
+  ) {
     failures.push(`${relativePath} appears to log a sensitive payment or webhook value.`);
   }
 }
@@ -80,18 +120,34 @@ forbidMatch(
 );
 
 const worker = await read("worker/index.ts");
-requireMatch(worker, /from "\.\.\/shared\/catalog"/, "Cloudflare Worker must import the shared catalog directly.");
-forbidMatch(worker, /client\/src\/lib\/catalog/, "Cloudflare Worker must not depend on the client catalog bridge.");
+requireMatch(
+  worker,
+  /from "\.\.\/shared\/catalog"/,
+  "Cloudflare Worker must import the shared catalog directly.",
+);
+forbidMatch(
+  worker,
+  /client\/src\/lib\/catalog/,
+  "Cloudflare Worker must not depend on the client catalog bridge.",
+);
 
-const stripeFiles = ["api/checkout.ts", "api/stripe/webhook.ts", "worker/index.ts"];
 const expectedStripeVersion = "2025-02-24.acacia";
-for (const relativePath of stripeFiles) {
-  const text = await read(relativePath);
-  requireMatch(
-    text,
-    new RegExp(`apiVersion:\\s*"${expectedStripeVersion.replaceAll(".", "\\.")}"`),
-    `${relativePath} must use the Stripe API version pinned by the installed Stripe SDK.`,
-  );
+requireMatch(
+  worker,
+  new RegExp(`apiVersion:\\s*"${expectedStripeVersion.replaceAll(".", "\\.")}"`),
+  "worker/index.ts must use the Stripe API version pinned by the installed Stripe SDK.",
+);
+
+for (const forbiddenPath of [
+  "api",
+  "vercel.json",
+  "drizzle.config.ts",
+  "shared/schema.ts",
+  "client/src/pages/Confirmation.tsx",
+]) {
+  if (await exists(forbiddenPath)) {
+    failures.push(`Public repository contains a forbidden alternate server/data path: ${forbiddenPath}`);
+  }
 }
 
 if (failures.length) {
@@ -100,4 +156,6 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("JBH storefront static analysis passed: catalog, payment version, workflow pinning, and sensitive-log boundaries verified.");
+console.log(
+  "JBH storefront static analysis passed: catalog, single Cloudflare payment entry, workflow pinning, and sensitive-log boundaries verified.",
+);

@@ -16,7 +16,7 @@ env:
 
 jobs:
   verify:
-    name: Typecheck and build
+    name: MCP guardrails, typecheck, and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +25,14 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
+      - name: MCP configuration guardrails
+        id: mcp
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p ci-diagnostics
+          set -o pipefail
+          npm run verify:mcp 2>&1 | tee ci-diagnostics/mcp-guardrails.log
       - name: Typecheck
         id: typecheck
         continue-on-error: true
@@ -42,7 +50,7 @@ jobs:
           set -o pipefail
           npm run build 2>&1 | tee ci-diagnostics/build.log
       - name: Upload bounded failure diagnostics
-        if: ${{ steps.typecheck.outcome != 'success' || steps.build.outcome != 'success' }}
+        if: ${{ steps.mcp.outcome != 'success' || steps.typecheck.outcome != 'success' || steps.build.outcome != 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: storefront-check-diagnostics
@@ -53,7 +61,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [[ "${{ steps.typecheck.outcome }}" != "success" || "${{ steps.build.outcome }}" != "success" ]]; then
-            echo "Typecheck or build failed. See the bounded diagnostics artifact."
+          if [[ "${{ steps.mcp.outcome }}" != "success" || "${{ steps.typecheck.outcome }}" != "success" || "${{ steps.build.outcome }}" != "success" ]]; then
+            echo "MCP guardrails, typecheck, or build failed. See the bounded diagnostics artifact."
             exit 1
           fi

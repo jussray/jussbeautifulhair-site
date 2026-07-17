@@ -73,10 +73,10 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci
-      - name: Install Playwright verifier
-        run: npm install --no-save --legacy-peer-deps playwright@1.55.0
+      - name: Install pinned Playwright verifier
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npm exec -- playwright install --with-deps chromium
       - name: Verify blended moat and product separation
         run: npm run verify:playwright
 

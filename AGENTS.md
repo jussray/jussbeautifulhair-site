@@ -9,3 +9,9 @@ Preserve existing work. Do not delete, deploy, publish, merge, expose data, chan
 Repository role: The public React/Vite storefront and minimal Cloudflare payment-session Worker for jussbeautifulhair.com.
 
 Apply the skill's non-negotiable boundaries, verification rules, and truthful output format.
+
+## Figma build and implementation
+
+For every Figma, design-system, storefront-design, design-to-code, Code Connect, or visual QA task, also read `.agents/skills/figma-build-implement/SKILL.md` and `.figma/repository-profile.json`.
+
+Figma must remain public-storefront-only. It may not absorb private admin, vendor, sourcing, order, customer, secret, or payment-authority data. An editable design or prototype is not checkout, catalog, Worker, domain, or deployment proof.

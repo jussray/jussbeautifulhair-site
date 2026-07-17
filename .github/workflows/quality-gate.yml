@@ -59,6 +59,27 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  playwright:
+    name: "Playwright Brand Moat"
+    runs-on: ubuntu-latest
+    needs:
+      - typecheck
+      - lint
+      - unit-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright verifier
+        run: npm install --no-save --legacy-peer-deps playwright@1.55.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify blended moat and product separation
+        run: npm run verify:playwright
+
   sonarqube:
     name: "SonarQube – Storefront Standard"
     runs-on: ubuntu-latest

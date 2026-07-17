@@ -12,6 +12,7 @@
     "quality": "npm run lint && npm test && npm run verify:deploy",
     "security:deploy-boundary": "node scripts/verify-deployment-boundary.mjs",
     "verify:deploy": "npm run build && npm run security:deploy-boundary",
+    "verify:mcp": "node scripts/verify-mcp-config.mjs",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

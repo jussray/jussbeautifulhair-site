@@ -3,13 +3,30 @@
   "repository": "jussray/jussbeautifulhair-site",
   "defaultPolicy": "deny-undeclared",
   "scanRoots": ["client", "worker", "api"],
-  "allowedCookieWriters": [],
-  "cookies": [],
+  "allowedCookieWriters": ["client/src/components/ui/sidebar.tsx"],
+  "cookies": [
+    {
+      "name": "sidebar_state",
+      "classification": "functional_preference",
+      "purpose": "Remember whether the optional desktop sidebar UI primitive is expanded or collapsed.",
+      "owner": "frontend",
+      "providers": [],
+      "sensitive": false,
+      "httpOnly": false,
+      "secure": "not_required_non_sensitive",
+      "sameSite": "browser_default_lax",
+      "path": "/",
+      "maxAgeSeconds": 604800,
+      "cacheControl": "not_applicable_client_write",
+      "csrf": "not_authoritative_and_not_used_for_server_mutations",
+      "deletion": "Expires after seven days or is overwritten when the sidebar preference changes."
+    }
+  ],
   "nonCookieState": [
     {
-      "name": "cart-and-ui-state",
+      "name": "cart-state",
       "mechanism": "React client state or explicitly reviewed local browser storage",
-      "purpose": "Keep non-sensitive storefront continuity client-side without creating a first-party identity cookie.",
+      "purpose": "Keep cart continuity client-side without creating a first-party identity or checkout cookie.",
       "sensitive": false
     }
   ],
@@ -24,6 +41,7 @@
   "prohibited": [
     "first-party authentication cookies",
     "customer, order, vendor, sourcing, margin, payment, or webhook data in cookies",
+    "using sidebar_state for authorization, pricing, cart, checkout, or analytics",
     "tracking or advertising cookies without a separately approved consent system",
     "forwarding Set-Cookie headers from the static asset binding"
   ]

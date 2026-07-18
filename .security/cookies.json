@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "repository": "jussray/jussbeautifulhair-site",
+  "defaultPolicy": "deny-undeclared",
+  "scanRoots": ["client", "worker", "api"],
+  "allowedCookieWriters": [],
+  "cookies": [],
+  "nonCookieState": [
+    {
+      "name": "cart-and-ui-state",
+      "mechanism": "React client state or explicitly reviewed local browser storage",
+      "purpose": "Keep non-sensitive storefront continuity client-side without creating a first-party identity cookie.",
+      "sensitive": false
+    }
+  ],
+  "externalCookieProviders": [
+    {
+      "provider": "Stripe Checkout",
+      "origin": "https://checkout.stripe.com",
+      "purpose": "Hosted payment and fraud-prevention flow after the customer leaves the storefront origin.",
+      "firstPartyWriter": false
+    }
+  ],
+  "prohibited": [
+    "first-party authentication cookies",
+    "customer, order, vendor, sourcing, margin, payment, or webhook data in cookies",
+    "tracking or advertising cookies without a separately approved consent system",
+    "forwarding Set-Cookie headers from the static asset binding"
+  ]
+}

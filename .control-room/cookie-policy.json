@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "repository": "jussray/jussbeautifulhair-site",
+  "runtimeClass": "static_spa",
+  "firstPartyCookies": [],
+  "platformManagedCookies": [
+    {
+      "provider": "Cloudflare",
+      "purpose": "Cloudflare may set strictly necessary security or bot-management cookies at the edge; storefront code does not read or control them.",
+      "classification": "strictly_necessary",
+      "control": "provider_managed"
+    },
+    {
+      "provider": "Stripe Checkout",
+      "purpose": "Stripe may set strictly necessary checkout, fraud-prevention, or payment-session cookies on Stripe-controlled domains after handoff.",
+      "classification": "strictly_necessary",
+      "control": "provider_managed"
+    }
+  ],
+  "browserStorage": [],
+  "forbidden": [
+    "first-party authentication, cart, checkout, analytics, advertising, fingerprinting, or replay cookies",
+    "reading or branching on the Cookie header in worker/index.ts or api/checkout.ts",
+    "setting Set-Cookie from the storefront or checkout boundary",
+    "copying Cloudflare or Stripe cookie values into application logs, metadata, or customer records",
+    "using a cookie as payment, inventory, price, shipping, or order authority"
+  ],
+  "notes": [
+    "Checkout remains explicit and stateless: Origin validation, canonical catalog lookup, and checkoutAttemptId idempotency are authoritative.",
+    "Provider-managed cookies do not grant the repository permission to inspect or reproduce them.",
+    "A future customer account requires a separately approved server identity boundary and new manifest."
+  ]
+}

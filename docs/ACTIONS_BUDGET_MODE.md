@@ -9,9 +9,9 @@ This private repository keeps GitHub Actions checks available without spending h
 - Cloudflare build/deploy logs are the practical deployment evidence when available outside GitHub Actions.
 - Manual Actions runs are reserved for release candidates, exact-SHA proof, runner-health checks, or founder-requested verification.
 
-## Merge authority
+## Review evidence
 
-A passing manual workflow is evidence, not automatic approval. Founder/Control Room review still decides whether a branch can merge.
+A passing manual workflow is evidence for review. Founder/Control Room records the final status for the exact branch and SHA.
 
 ## Runner-startup classification
 

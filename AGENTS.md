@@ -90,3 +90,27 @@ If those conditions are not met, keep working or leave the PR open with the exac
 Do not deploy, roll back production, run destructive migrations, alter auth/RLS, rotate or expose secrets, spend funds, publish externally, send external communications, delete user material, or change production routing without explicit approval for that exact action.
 
 Never delete Ray/Juss material without explicit approval for that specific deletion.
+
+## Repository role
+
+This is the public React/Vite storefront and minimal Cloudflare payment-session Worker for jussbeautifulhair.com.
+
+Before nontrivial work, read:
+
+- `.agents/skills/jbh-storefront-operator/SKILL.md` for 5W1H, public-storefront identity, proof, and rollback;
+- `.agents/skills/sales/SKILL.md` for positioning, merchandising, offer clarity, checkout support, conversion, and retention;
+- `.agents/skills/devil/SKILL.md` for premise and selected-plan attacks before material public commercial changes.
+
+For commercial work add to the founder stack:
+
+```text
+/sales /devil
+```
+
+Keep private admin pages, vendors, costs, sourcing records, customer/order exports, credentials, and strategy in the private repository. Keep Juss Beautiful Hair and Untold Stories catalogs, customers, suppliers, checkout, and fulfillment separate. Never use dark patterns, deceptive urgency, unsupported claims, sensitive traits, or private customer content for persuasion.
+
+## Figma build and implementation
+
+For every Figma, design-system, storefront-design, design-to-code, Code Connect, or visual QA task, also read `.agents/skills/figma-build-implement/SKILL.md` and `.figma/repository-profile.json`.
+
+Figma must remain public-storefront-only. It may not absorb private admin, vendor, sourcing, order, customer, secret, or payment-authority data. An editable design or prototype is not checkout, catalog, Worker, domain, or deployment proof.

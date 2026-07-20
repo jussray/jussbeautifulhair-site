@@ -26,4 +26,10 @@ Repository role: the public React/Vite storefront and minimal Cloudflare payment
 
 Keep private admin pages, vendors, costs, sourcing records, customer/order exports, credentials, and strategy in the private repository. Keep Juss Beautiful Hair and Untold Stories catalogs, customers, suppliers, checkout, and fulfillment separate. Never use dark patterns, deceptive urgency, unsupported claims, sensitive traits, or private customer content for persuasion.
 
-Apply all three skills’ verification rules, truthful output format, disqualifiers, explicit unknowns, and separate approval gates.
+Apply all three skills' verification rules, truthful output format, disqualifiers, explicit unknowns, and separate approval gates.
+
+## Figma build and implementation
+
+For every Figma, design-system, storefront-design, design-to-code, Code Connect, or visual QA task, also read `.agents/skills/figma-build-implement/SKILL.md` and `.figma/repository-profile.json`.
+
+Figma must remain public-storefront-only. It may not absorb private admin, vendor, sourcing, order, customer, secret, or payment-authority data. An editable design or prototype is not checkout, catalog, Worker, domain, or deployment proof.

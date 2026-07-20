@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "repository": "jussray/jussbeautifulhair-site",
+  "role": "public hair and beauty storefront",
+  "figmaMode": "responsive_public_commerce",
+  "runtime": ["React", "Vite", "Cloudflare payment-session Worker"],
+  "designTargets": ["homepage", "catalog", "product detail", "About and story", "quality care proof moat", "cart and checkout handoff", "success and error states"],
+  "implementationTargets": ["current React components", "current catalog source", "current styles and tokens", "current Cloudflare checkout handoff"],
+  "requiredSkills": ["figma-use", "figma-generate-library"],
+  "conditionalSkills": ["figma-generate-design", "figma-code-connect", "product-design-design-qa"],
+  "prohibitedData": ["customer or order data", "vendor identities", "vendor prices", "sourcing records", "Stripe secrets", "webhook data", "private admin controls", "unpublished business strategy"],
+  "codeConnectPolicy": "published_public_react_components_only",
+  "verification": ["typecheck", "lint", "unit and contract tests", "production build", "Playwright desktop and mobile", "deployment-boundary checks"],
+  "truthBoundary": "Figma does not authorize catalog, price, promotion, payment, Worker, route, domain, or deployment changes."
+}

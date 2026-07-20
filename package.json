@@ -9,8 +9,9 @@
     "check": "tsc",
     "lint": "npm run check && node scripts/lint-storefront.mjs",
     "test": "node --test tests/*.test.mjs",
-    "quality": "npm run lint && npm test && npm run verify:deploy",
+    "quality": "npm run verify:cookies && npm run lint && npm test && npm run verify:deploy",
     "security:deploy-boundary": "node scripts/verify-deployment-boundary.mjs",
+    "verify:cookies": "node scripts/verify-cookie-contract.mjs",
     "verify:deploy": "npm run build && npm run security:deploy-boundary",
     "verify:mcp": "node scripts/verify-mcp-config.mjs",
     "db:push": "drizzle-kit push"

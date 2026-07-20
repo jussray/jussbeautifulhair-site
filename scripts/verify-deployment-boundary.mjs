@@ -128,16 +128,32 @@ for (const relativePath of repositoryFiles) {
   }
 }
 
-for (const privatePath of [
+// This repository is Cloudflare-only. Legacy Vercel handlers previously
+// included an unauthenticated numeric order lookup and database code. Keep the
+// entire alternate deployment/data path out of the public repository.
+for (const forbiddenPath of [
+  "api",
+  "vercel.json",
+  "setup.sh",
+  "drizzle.config.ts",
+  "shared/schema.ts",
+  "client/src/pages/Confirmation.tsx",
   "vendor-docs",
   "jbh-private",
   "admin-local",
   "jbh-admin.html",
 ]) {
-  if (await exists(privatePath)) {
-    failures.push(`Private path must not exist in the public repository: ${privatePath}`);
+  if (await exists(forbiddenPath)) {
+    failures.push(`Forbidden public-repository path exists: ${forbiddenPath}`);
   }
 }
+
+const appRouter = await read("client/src/App.tsx");
+forbidMatch(
+  appRouter,
+  /\/confirmation\/:id/i,
+  "The public router must not restore an order-by-numeric-id confirmation route.",
+);
 
 const distFiles = await collectFiles("dist/public");
 const textExtensions = new Set([".html", ".js", ".css", ".json", ".map", ".txt"]);
@@ -148,6 +164,8 @@ const forbiddenBuildMarkers = [
   /jbh\.admin\.auth/i,
   /vendor sourcing master/i,
   /gatekept factory/i,
+  /\/api\/orders\//i,
+  /\/confirmation\/:id/i,
 ];
 
 for (const relativePath of distFiles) {
@@ -161,7 +179,7 @@ for (const relativePath of distFiles) {
   const text = await read(relativePath);
   for (const marker of forbiddenBuildMarkers) {
     if (marker.test(text)) {
-      failures.push(`Private marker ${marker} found in public build file ${normalized}`);
+      failures.push(`Private or legacy marker ${marker} found in public build file ${normalized}`);
     }
   }
 }
@@ -173,5 +191,5 @@ if (failures.length) {
 }
 
 console.log(
-  "JBH deployment boundary verified: public host only, previews disabled, current KV API routes only, no private artifacts detected.",
+  "JBH deployment boundary verified: Cloudflare-only public host, previews disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts detected.",
 );

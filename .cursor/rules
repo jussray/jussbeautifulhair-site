@@ -1,0 +1,30 @@
+# Cursor Rules — jussbeautifulhair-site
+
+## 5W1H Operating Contract
+
+Before every nontrivial edit, establish and state:
+
+- **Who** — requester, decision owner, affected data subjects, execution authority
+- **What** — exact outcome, deliverable, non-goals, preserved work
+- **Where** — `jussray/jussbeautifulhair-site`, exact branch, environment, deployment boundary
+- **When** — lifecycle state, ordering constraint, rollback window
+- **Why** — verified user problem and evidence
+- **How** — smallest safe implementation, verification plan, rollback
+
+## Repository Identity
+
+Public React/Vite storefront + Cloudflare payment-session Worker for jussbeautifulhair.com. Private admin, vendors, and sourcing stay in `jbh-private`.
+
+## Rules
+
+- Keep private admin, vendor, sourcing, and customer data in `jbh-private` — never in this repo.
+- Keep JBH and Untold Stories catalogs separate.
+- Cloudflare Worker is sole checkout authority — no alternate payment surfaces.
+- All changes via branch + PR, never direct to `main`.
+- Read `.agents/skills/jbh-storefront-operator/SKILL.md` before nontrivial work.
+- Run `typecheck`, `lint`, `build`, and Playwright before PR.
+- Do not weaken tests, lint, type checks, or auth/checkout gates.
+
+## Approval Gates
+
+Require explicit founder approval before: merging, deploying, catalog/pricing changes, secret rotation, domain changes, or customer communications.

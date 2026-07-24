@@ -2,6 +2,12 @@
 
 Use these instructions whenever Claude, Codex, ChatGPT, Perplexity, GitHub-connected agents, or other AI coding agents work in this repository.
 
+## Founder Intelligence Constitution
+
+Before material planning, implementation, review, automation, product or price presentation, publishing, checkout work, customer communication, deployment, or cross-repository coordination, read [`AGENTS_FOUNDER_INTELLIGENCE.md`](./AGENTS_FOUNDER_INTELLIGENCE.md) and [`docs/FOUNDER_INTELLIGENCE_CONSTITUTION.md`](./docs/FOUNDER_INTELLIGENCE_CONSTITUTION.md).
+
+The constitution adds the required `/human → /futureyou → /truthmode → /confess → /billgates → /elonmusk` remembrance loop. It supplements the repository rules below and never weakens customer agency, truthful commerce, privacy, security, brand ownership, payment boundaries, evidence, rollback, or founder approval.
+
 ## Founder operating stack
 
 Use the full founder stack for nontrivial work:

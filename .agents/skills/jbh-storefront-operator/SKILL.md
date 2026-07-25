@@ -1,3 +1,8 @@
+---
+name: jbh-storefront-operator
+description: Operate the public Juss Beautiful Hair storefront using 5W1H, exact evidence, public-private separation, proportional verification, and reversible founder-gated changes.
+---
+
 # jbh-storefront-operator
 
 ## Trigger

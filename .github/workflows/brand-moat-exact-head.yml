@@ -1,0 +1,76 @@
+name: Brand Moat Exact-Head Proof
+
+on:
+  pull_request:
+    paths:
+      - "brand/BRAND_MOAT_FUTUREYOU.md"
+      - "client/src/components/BrandMoatSection.tsx"
+      - "client/src/lib/brandMoat.ts"
+      - "client/src/pages/Home.tsx"
+      - "client/src/pages/About.tsx"
+      - "scripts/brand-moat-playwright.mjs"
+      - "tests/brand-moat-contract.test.mjs"
+      - ".github/workflows/brand-moat-exact-head.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: brand-moat-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  verify:
+    name: Verify brand moat on desktop and mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Record and verify exact head
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run check
+
+      - name: Run brand truth contract
+        run: node --test tests/brand-moat-contract.test.mjs
+
+      - name: Build storefront
+        run: npm run build
+
+      - name: Install pinned browser proof dependency
+        run: |
+          npm install --no-save --package-lock=false playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: Run desktop and mobile browser proof
+        run: node scripts/brand-moat-playwright.mjs
+
+      - name: Upload immutable proof artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brand-moat-proof-${{ env.EXPECTED_HEAD_SHA }}
+          path: artifacts/brand-moat
+          if-no-files-found: error
+          retention-days: 30

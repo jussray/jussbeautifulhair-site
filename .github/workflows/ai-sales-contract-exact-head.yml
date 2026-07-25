@@ -1,0 +1,54 @@
+name: AI Sales Contract Exact-Head Gate
+
+on:
+  pull_request:
+    paths:
+      - '.agents/skills/**'
+      - 'artifacts/billgates/SALES_PLATFORM_LEVERAGE.md'
+      - 'artifacts/l99/SALES_AUTHORITY_MODEL.md'
+      - 'artifacts/lindymode/SALES_DURABILITY.md'
+      - 'artifacts/ooda/SALES_EXECUTION_LOOP.md'
+      - 'artifacts/redteam/SALES_DEVIL_ATTACK.md'
+      - 'artifacts/ultrathink/SALES_DEVIL_SYNTHESIS.md'
+      - 'scripts/verify-ai-skills.mjs'
+      - 'package.json'
+      - '.github/workflows/ai-sales-contract-exact-head.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-sales-contract-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  verify:
+    name: Verify discoverable sales and devil contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Record and verify exact head
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Validate package metadata
+        run: node -e "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8'))"
+
+      - name: Verify AI sales contract
+        run: npm run verify:ai-skills

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Instagram, MapPin, Check } from "lucide-react";
+import { Mail, Instagram, MapPin, Check, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,17 +11,30 @@ import { BRAND } from "@/lib/catalog";
 
 export default function Contact() {
   const { toast } = useToast();
-  const [sent, setSent] = useState(false);
+  const [received, setReceived] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", message: "" });
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
+
+    setSubmitting(true);
     try {
       await apiRequest("POST", "/api/contact", form);
-      setSent(true);
-      toast({ title: "Message sent 💜", description: "We'll get back to you within 1 business day." });
+      setReceived(true);
+      toast({
+        title: "Message received 💜",
+        description: "Your note is saved securely for our team to review.",
+      });
     } catch {
-      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+      toast({
+        title: "We couldn't save your message",
+        description: "Please retry or send us a DM on Instagram.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -34,14 +47,13 @@ export default function Contact() {
           </p>
           <h1 className="font-display text-4xl sm:text-5xl">Let's Talk</h1>
           <p className="mt-4 text-primary-foreground/80 max-w-lg mx-auto">
-            Have a question, need styling advice, or want to collab? We'd love to
-            hear from you.
+            Have a question, need styling advice, or want to collab? Send us a
+            note here and we'll review it directly.
           </p>
         </div>
       </section>
 
       <div className="mx-auto max-w-5xl px-6 py-14 grid md:grid-cols-2 gap-12">
-        {/* Info */}
         <div className="space-y-6">
           <a href={`mailto:${BRAND.email}`} className="flex items-center gap-3 text-foreground hover:text-primary">
             <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-secondary/40 text-primary">
@@ -57,7 +69,7 @@ export default function Contact() {
               <Instagram className="h-5 w-5" />
             </span>
             <span>
-              <span className="block text-sm text-muted-foreground">Instagram — DM us</span>
+              <span className="block text-sm text-muted-foreground">Fast backup — DM us</span>
               {BRAND.instagram}
             </span>
           </a>
@@ -72,36 +84,50 @@ export default function Contact() {
           </div>
           <div className="rounded-lg bg-secondary/20 p-4 text-sm text-muted-foreground">
             <strong className="text-foreground">Wholesale &amp; stylists:</strong>{" "}
-            email {BRAND.wholesaleEmail} for our pricing sheet.
+            use this form and include “wholesale” in your message.
           </div>
         </div>
 
-        {/* Form */}
         <div className="rounded-lg border border-card-border bg-card p-6">
-          {sent ? (
-            <div className="text-center py-10" data-testid="text-contact-sent">
+          {received ? (
+            <div className="text-center py-10" data-testid="text-contact-sent" role="status">
               <Check className="h-10 w-10 text-gold mx-auto mb-3" />
-              <h2 className="font-display text-2xl text-foreground">Message sent 💜</h2>
+              <h2 className="font-display text-2xl text-foreground">Message received 💜</h2>
               <p className="mt-2 text-muted-foreground">
-                We'll get back to you within 1 business day.
+                Your note is saved securely. We'll reply using the email address you provided.
               </p>
+              <a
+                href="https://instagram.com/jussbeautifulhair"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-block text-sm font-semibold text-primary hover:underline"
+              >
+                Need a faster response? DM us on Instagram.
+              </a>
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
               <div>
                 <Label htmlFor="cname">Name</Label>
-                <Input id="cname" required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} data-testid="input-contact-name" className="mt-1.5" />
+                <Input id="cname" required maxLength={100} autoComplete="name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} data-testid="input-contact-name" className="mt-1.5" />
               </div>
               <div>
                 <Label htmlFor="cemail">Email</Label>
-                <Input id="cemail" type="email" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} data-testid="input-contact-email" className="mt-1.5" />
+                <Input id="cemail" type="email" required maxLength={254} autoComplete="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} data-testid="input-contact-email" className="mt-1.5" />
               </div>
               <div>
                 <Label htmlFor="cmsg">Message</Label>
-                <Textarea id="cmsg" required rows={5} value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} data-testid="input-contact-message" className="mt-1.5" />
+                <Textarea id="cmsg" required minLength={2} maxLength={5000} rows={5} value={form.message} onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))} data-testid="input-contact-message" className="mt-1.5" />
               </div>
-              <Button type="submit" size="lg" className="w-full font-semibold" data-testid="button-send-contact">
-                Send Message
+              <Button type="submit" size="lg" disabled={submitting} className="w-full font-semibold" data-testid="button-send-contact">
+                {submitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Saving message…
+                  </span>
+                ) : (
+                  "Send Message"
+                )}
               </Button>
             </form>
           )}

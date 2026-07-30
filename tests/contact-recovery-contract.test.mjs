@@ -5,8 +5,9 @@ import test from "node:test";
 const read = (path) => readFile(path, "utf8");
 
 test("public contact recovery preserves the private customer-data boundary", async () => {
-  const [contact, worker, handoff] = await Promise.all([
+  const [contact, layout, worker, handoff] = await Promise.all([
     read("client/src/pages/Contact.tsx"),
+    read("client/src/components/Layout.tsx"),
     read("worker/index.ts"),
     read("docs/CONTACT_RECOVERY_FUTUREYOU.md"),
   ]);
@@ -31,6 +32,10 @@ test("public contact recovery preserves the private customer-data boundary", asy
   assert.match(contact, /url\.protocol !== "https:" && !local/);
   assert.match(contact, /Privacy Policy/);
   assert.match(contact, /DM us on Instagram/);
+
+  assert.match(layout, /Wholesale &amp; stylists:/);
+  assert.match(layout, /use the contact form/);
+  assert.doesNotMatch(layout, /BRAND\.wholesaleEmail/);
 
   for (const heading of [
     "## Who",

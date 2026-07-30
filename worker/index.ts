@@ -11,6 +11,7 @@ interface Env {
   STRIPE_SECRET_KEY: string;
   STORE_ORIGIN?: string;
   ALLOWED_STOREFRONT_ORIGINS?: string;
+  CONTACT_API_ORIGIN?: string;
 }
 
 const FREE_SHIPPING_THRESHOLD = 150;
@@ -60,6 +61,18 @@ function getAllowedOrigins(env: Env): string[] {
     });
 }
 
+function getContactApiOrigin(env: Env): string | undefined {
+  if (!env.CONTACT_API_ORIGIN) return undefined;
+
+  try {
+    const url = new URL(env.CONTACT_API_ORIGIN);
+    if (url.protocol !== "https:") return undefined;
+    return url.origin;
+  } catch {
+    return undefined;
+  }
+}
+
 function isApprovedRequestHost(request: Request, env: Env): boolean {
   const requestHostname = new URL(request.url).hostname.toLowerCase();
 
@@ -88,8 +101,15 @@ function rejectedHostResponse(): Response {
   });
 }
 
-function secureAssetResponse(response: Response): Response {
+function secureAssetResponse(response: Response, env: Env): Response {
   const secured = new Response(response.body, response);
+  const contactApiOrigin = getContactApiOrigin(env);
+  const connectSources = [
+    "'self'",
+    "https://challenges.cloudflare.com",
+    ...(contactApiOrigin ? [contactApiOrigin] : []),
+  ].join(" ");
+
   secured.headers.set("X-Content-Type-Options", "nosniff");
   secured.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   secured.headers.set("X-Frame-Options", "DENY");
@@ -99,9 +119,11 @@ function secureAssetResponse(response: Response): Response {
   secured.headers.set(
     "Content-Security-Policy",
     "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; " +
-      "script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+      "script-src 'self' https://challenges.cloudflare.com; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
       "font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; " +
-      "connect-src 'self'; form-action 'self' https://checkout.stripe.com; upgrade-insecure-requests",
+      `connect-src ${connectSources}; frame-src https://challenges.cloudflare.com; ` +
+      "form-action 'self' https://checkout.stripe.com; upgrade-insecure-requests",
   );
   secured.headers.set("Content-Signal", "ai-train=no, search=yes, ai-input=no");
   return secured;
@@ -268,6 +290,6 @@ export default {
       return json({ error: "Not found" }, 404);
     }
 
-    return secureAssetResponse(await env.ASSETS.fetch(request));
+    return secureAssetResponse(await env.ASSETS.fetch(request), env);
   },
 };

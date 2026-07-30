@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "client/src/pages/Contact.tsx"
+      - "client/src/components/Layout.tsx"
       - "worker/index.ts"
       - "docs/CONTACT_RECOVERY_FUTUREYOU.md"
       - "tests/contact-recovery-contract.test.mjs"

@@ -1,0 +1,322 @@
+{
+  "schemaVersion": "1.0",
+  "projectId": "juss-beautiful-hair",
+  "repository": {
+    "provider": "github",
+    "identifier": "jussray/jussbeautifulhair-site",
+    "defaultBranch": "main"
+  },
+  "verification": {
+    "requiredSignals": [
+      {
+        "id": "current-main-storefront-contract",
+        "name": "Verify current-main storefront contract",
+        "required": true
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "id": "public-storefront-routing",
+      "description": "Serves the public catalog, product, cart, checkout, success, policy, and contact routes through one shared application shell and cart provider.",
+      "status": "active",
+      "evidencePaths": [
+        "client/src/App.tsx",
+        "client/src/pages/Home.tsx",
+        "client/src/pages/Shop.tsx",
+        "client/src/pages/Product.tsx",
+        "client/src/pages/Cart.tsx",
+        "client/src/pages/Checkout.tsx",
+        "client/src/pages/success.tsx"
+      ],
+      "requiredSignals": [
+        "current-main-storefront-contract"
+      ],
+      "usageAssertions": [
+        {
+          "id": "app-mounts-shop-route",
+          "path": "client/src/App.tsx",
+          "marker": "<Route path=\"/shop\" component={Shop} />",
+          "description": "The public router mounts the catalog."
+        },
+        {
+          "id": "app-mounts-cart-route",
+          "path": "client/src/App.tsx",
+          "marker": "<Route path=\"/cart\" component={Cart} />",
+          "description": "The public router mounts the cart."
+        },
+        {
+          "id": "app-mounts-checkout-route",
+          "path": "client/src/App.tsx",
+          "marker": "<Route path=\"/checkout\" component={Checkout} />",
+          "description": "The public router mounts checkout review."
+        },
+        {
+          "id": "app-mounts-success-route",
+          "path": "client/src/App.tsx",
+          "marker": "<Route path=\"/success\" component={SuccessPage} />",
+          "description": "The public router mounts the post-checkout status page."
+        },
+        {
+          "id": "app-shares-cart-provider",
+          "path": "client/src/App.tsx",
+          "marker": "<CartProvider>",
+          "description": "Shopping routes share the active cart state provider."
+        }
+      ]
+    },
+    {
+      "id": "server-authoritative-stripe-checkout",
+      "description": "Accepts catalog identifiers and quantities, resolves products and prices server-side, restricts origins and hosts, and creates idempotent Stripe-hosted Checkout Sessions.",
+      "status": "active",
+      "evidencePaths": [
+        "client/src/pages/Checkout.tsx",
+        "worker/index.ts",
+        "shared/catalog.ts",
+        "wrangler.toml"
+      ],
+      "requiredSignals": [
+        "current-main-storefront-contract"
+      ],
+      "usageAssertions": [
+        {
+          "id": "checkout-posts-to-worker",
+          "path": "client/src/pages/Checkout.tsx",
+          "marker": "fetch(\"/api/checkout\"",
+          "description": "The browser requests a server-created Checkout Session."
+        },
+        {
+          "id": "checkout-sends-attempt-id",
+          "path": "client/src/pages/Checkout.tsx",
+          "marker": "checkoutAttemptId: createCheckoutAttemptId()",
+          "description": "Each checkout attempt carries a UUID for idempotency."
+        },
+        {
+          "id": "worker-routes-checkout",
+          "path": "worker/index.ts",
+          "marker": "url.pathname === \"/api/checkout\"",
+          "description": "The Worker owns the public checkout endpoint."
+        },
+        {
+          "id": "worker-resolves-canonical-product",
+          "path": "worker/index.ts",
+          "marker": "getProduct(requested.id)",
+          "description": "Products and prices resolve from the shared server-owned catalog."
+        },
+        {
+          "id": "worker-enforces-origin-allowlist",
+          "path": "worker/index.ts",
+          "marker": "allowedOrigins.includes(origin)",
+          "description": "Checkout rejects browser origins outside the approved list."
+        },
+        {
+          "id": "worker-enforces-host-boundary",
+          "path": "worker/index.ts",
+          "marker": "isApprovedRequestHost(request, env)",
+          "description": "The Worker rejects unapproved request hostnames before serving assets or APIs."
+        },
+        {
+          "id": "worker-uses-idempotency-key",
+          "path": "worker/index.ts",
+          "marker": "idempotencyKey: `jbh-checkout-${reference}`",
+          "description": "Stripe session creation is idempotent per checkout attempt."
+        }
+      ]
+    },
+    {
+      "id": "public-private-source-boundary",
+      "description": "Keeps private administration, order processing, webhooks, customer records, vendors, and sourcing operations outside the public storefront repository.",
+      "status": "active",
+      "evidencePaths": [
+        "README.md",
+        "AGENTS.md",
+        "scripts/verify-deployment-boundary.mjs",
+        "worker/index.ts"
+      ],
+      "requiredSignals": [
+        "current-main-storefront-contract"
+      ],
+      "usageAssertions": [
+        {
+          "id": "readme-defines-minimal-public-worker",
+          "path": "README.md",
+          "marker": "the minimal Cloudflare payment-session Worker",
+          "description": "The repository contract limits public backend authority."
+        },
+        {
+          "id": "readme-excludes-order-webhooks",
+          "path": "README.md",
+          "marker": "The order-mutation webhook and owner/admin APIs do not belong",
+          "description": "Order mutation and owner APIs remain private."
+        },
+        {
+          "id": "worker-api-default-deny",
+          "path": "worker/index.ts",
+          "marker": "url.pathname.startsWith(\"/api/\")",
+          "description": "Unknown public API routes fail closed."
+        }
+      ]
+    },
+    {
+      "id": "production-only-cloudflare-deployment",
+      "description": "Builds Vite assets into the Wrangler-bound directory and prevents workers.dev, public preview URLs, temporary aliases, legacy KV management routes, and private artifacts from becoming public deployment paths.",
+      "status": "active",
+      "evidencePaths": [
+        "package.json",
+        "vite.config.ts",
+        "wrangler.toml",
+        "scripts/verify-deployment-boundary.mjs",
+        ".github/workflows/deployment-boundary.yml"
+      ],
+      "requiredSignals": [
+        "current-main-storefront-contract"
+      ],
+      "usageAssertions": [
+        {
+          "id": "vite-builds-public-assets",
+          "path": "vite.config.ts",
+          "marker": "outDir: path.resolve(import.meta.dirname, \"dist/public\")",
+          "description": "Vite writes the storefront to the Wrangler asset directory."
+        },
+        {
+          "id": "wrangler-runs-storefront-worker",
+          "path": "wrangler.toml",
+          "marker": "main = \"worker/index.ts\"",
+          "description": "Wrangler executes the storefront Worker."
+        },
+        {
+          "id": "wrangler-disables-workers-dev",
+          "path": "wrangler.toml",
+          "marker": "workers_dev = false",
+          "description": "The default workers.dev hostname is disabled."
+        },
+        {
+          "id": "wrangler-disables-preview-urls",
+          "path": "wrangler.toml",
+          "marker": "preview_urls = false",
+          "description": "Public Worker preview URLs are disabled."
+        },
+        {
+          "id": "wrangler-routes-api-first",
+          "path": "wrangler.toml",
+          "marker": "run_worker_first = [\"/api/*\"]",
+          "description": "API traffic reaches the Worker before static assets."
+        },
+        {
+          "id": "deployment-workflow-builds-after-boundary-check",
+          "path": ".github/workflows/deployment-boundary.yml",
+          "marker": "name: Block temporary, private, and legacy KV paths",
+          "description": "The deployment contract verifies source, builds, and verifies output."
+        }
+      ]
+    },
+    {
+      "id": "repository-quality-contracts",
+      "description": "Provides executable TypeScript, lint, repository contract tests, AI sales/adversarial skill checks, deployment-boundary checks, and production build commands.",
+      "status": "active",
+      "evidencePaths": [
+        "package.json",
+        ".github/workflows/quality-gate.yml",
+        ".github/workflows/deployment-boundary.yml",
+        "scripts/lint-storefront.mjs",
+        "scripts/verify-ai-skills.mjs",
+        "scripts/verify-deployment-boundary.mjs"
+      ],
+      "requiredSignals": [
+        "current-main-storefront-contract"
+      ],
+      "usageAssertions": [
+        {
+          "id": "package-defines-typecheck",
+          "path": "package.json",
+          "marker": "\"check\": \"tsc\"",
+          "description": "TypeScript is executable."
+        },
+        {
+          "id": "package-defines-lint",
+          "path": "package.json",
+          "marker": "\"lint\": \"npm run check && node scripts/lint-storefront.mjs\"",
+          "description": "The storefront lint contract is executable."
+        },
+        {
+          "id": "package-defines-tests",
+          "path": "package.json",
+          "marker": "\"test\": \"node --test tests/*.test.mjs\"",
+          "description": "Repository contract tests are executable."
+        },
+        {
+          "id": "package-defines-ai-skill-check",
+          "path": "package.json",
+          "marker": "\"verify:ai-skills\": \"node scripts/verify-ai-skills.mjs\"",
+          "description": "Sales and adversarial AI skill boundaries are machine checked."
+        },
+        {
+          "id": "package-defines-deployment-proof",
+          "path": "package.json",
+          "marker": "\"verify:deploy\": \"npm run build && npm run security:deploy-boundary\"",
+          "description": "The production build and deployment boundary are jointly executable."
+        }
+      ]
+    },
+    {
+      "id": "checkout-redirect-integrity",
+      "description": "Browser-side validation of the server-returned Stripe Checkout URL immediately before navigation.",
+      "status": "planned",
+      "evidencePaths": [],
+      "requiredSignals": [],
+      "usageAssertions": []
+    },
+    {
+      "id": "private-contact-ingress",
+      "description": "A separately deployed private service that verifies anti-abuse controls and persists contact submissions without giving the public payment Worker customer-data authority.",
+      "status": "planned",
+      "evidencePaths": [],
+      "requiredSignals": [],
+      "usageAssertions": []
+    }
+  ],
+  "buildAssist": {
+    "enabled": true,
+    "preferredBuilder": "codex",
+    "riskLevel": "high"
+  },
+  "privacy": {
+    "allowlistedPacketFields": [
+      "projectId",
+      "repository.provider",
+      "repository.identifier",
+      "commitSha",
+      "branch",
+      "manifestHash",
+      "generatedAt",
+      "runner.provider",
+      "runner.runId",
+      "runner.detailsUrl",
+      "checks.id",
+      "checks.name",
+      "checks.required",
+      "checks.status",
+      "checks.detailsUrl",
+      "capabilities.id",
+      "capabilities.claimedStatus",
+      "capabilities.observedStatus",
+      "capabilities.evidencePaths",
+      "capabilities.usageAssertionIds",
+      "capabilities.failedUsageAssertionIds",
+      "capabilities.reason"
+    ],
+    "forbiddenData": [
+      "Stripe secret keys",
+      "Stripe webhook secrets",
+      "Cloudflare API tokens",
+      "customer names or contact information",
+      "shipping or billing addresses",
+      "order exports",
+      "vendor identities or sourcing records",
+      "private admin source",
+      "factory pricing",
+      "payment card data",
+      "source code or marker contents in verification packets"
+    ]
+  }
+}

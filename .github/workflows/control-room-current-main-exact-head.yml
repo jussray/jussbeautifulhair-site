@@ -1,0 +1,123 @@
+name: Control Room Current-Main Exact-Head Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".control-room/repository.manifest.json"
+      - ".github/workflows/control-room-current-main-exact-head.yml"
+      - ".github/workflows/quality-gate.yml"
+      - ".github/workflows/deployment-boundary.yml"
+      - "client/src/App.tsx"
+      - "client/src/pages/Checkout.tsx"
+      - "client/src/pages/success.tsx"
+      - "worker/index.ts"
+      - "shared/catalog.ts"
+      - "README.md"
+      - "AGENTS.md"
+      - "package.json"
+      - "vite.config.ts"
+      - "wrangler.toml"
+      - "scripts/lint-storefront.mjs"
+      - "scripts/verify-ai-skills.mjs"
+      - "scripts/verify-deployment-boundary.mjs"
+      - "scripts/verify-control-room-manifest.mjs"
+      - "docs/CONTROL_ROOM_FUTUREYOU.md"
+  push:
+    branches:
+      - main
+    paths:
+      - ".control-room/repository.manifest.json"
+      - ".github/workflows/control-room-current-main-exact-head.yml"
+      - ".github/workflows/quality-gate.yml"
+      - ".github/workflows/deployment-boundary.yml"
+      - "client/src/App.tsx"
+      - "client/src/pages/Checkout.tsx"
+      - "client/src/pages/success.tsx"
+      - "worker/index.ts"
+      - "shared/catalog.ts"
+      - "README.md"
+      - "AGENTS.md"
+      - "package.json"
+      - "vite.config.ts"
+      - "wrangler.toml"
+      - "scripts/lint-storefront.mjs"
+      - "scripts/verify-ai-skills.mjs"
+      - "scripts/verify-deployment-boundary.mjs"
+      - "scripts/verify-control-room-manifest.mjs"
+      - "docs/CONTROL_ROOM_FUTUREYOU.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: control-room-current-main-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-current-main-storefront-contract:
+    name: Verify current-main storefront contract
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out immutable target head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Record and verify immutable head
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run TypeScript
+        run: npm run check
+
+      - name: Run storefront lint contract
+        run: npm run lint
+
+      - name: Run repository contract tests
+        run: npm test
+
+      - name: Verify AI sales and adversarial boundaries
+        run: npm run verify:ai-skills
+
+      - name: Verify source deployment boundary
+        run: npm run security:deploy-boundary
+
+      - name: Build production storefront
+        run: npm run build
+
+      - name: Verify built deployment boundary
+        run: npm run security:deploy-boundary
+
+      - name: Verify Control Room manifest and create sanitized packet
+        env:
+          CONTROL_ROOM_REPORT_PATH: control-room-verification-packet.json
+        run: node scripts/verify-control-room-manifest.mjs
+
+      - name: Upload sanitized verification packet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-room-current-main-${{ env.EXPECTED_HEAD_SHA }}
+          path: control-room-verification-packet.json
+          if-no-files-found: warn
+          retention-days: 30

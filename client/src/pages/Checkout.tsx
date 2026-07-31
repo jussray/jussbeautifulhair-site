@@ -5,6 +5,7 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
+import { assertApprovedCheckoutRedirect } from "@/lib/checkoutRedirect.mjs";
 
 function createCheckoutAttemptId(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
@@ -60,7 +61,7 @@ export default function Checkout() {
         throw new Error(data.error || "Checkout failed. Please try again.");
       }
 
-      window.location.assign(data.url);
+      window.location.assign(assertApprovedCheckoutRedirect(data.url));
     } catch (checkoutError) {
       setError(
         checkoutError instanceof Error

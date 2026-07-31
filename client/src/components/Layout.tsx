@@ -142,7 +142,10 @@ function Footer() {
           </a>
           <p className="text-sm text-primary-foreground/60 mt-3">📍 {BRAND.location} — shipping nationwide</p>
           <p className="text-sm text-primary-foreground/60 mt-1">
-            Wholesale: {BRAND.wholesaleEmail}
+            Wholesale &amp; stylists:{" "}
+            <Link href="/contact" className="underline hover:text-gold">
+              use the contact form
+            </Link>
           </p>
         </div>
       </div>

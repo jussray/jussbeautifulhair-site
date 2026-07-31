@@ -1,0 +1,57 @@
+name: Contact Recovery Exact-Head Gate
+
+on:
+  pull_request:
+    paths:
+      - "client/src/pages/Contact.tsx"
+      - "client/src/components/Layout.tsx"
+      - "worker/index.ts"
+      - "docs/CONTACT_RECOVERY_FUTUREYOU.md"
+      - "tests/contact-recovery-contract.test.mjs"
+      - ".github/workflows/contact-recovery-exact-head.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contact-recovery-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+jobs:
+  verify:
+    name: Verify public contact boundary
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Record and verify exact head
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install repository dependencies
+        run: npm ci
+
+      - name: Run TypeScript
+        run: npm run check
+
+      - name: Run focused public-private boundary test
+        run: node --test tests/contact-recovery-contract.test.mjs
+
+      - name: Build storefront
+        run: npm run build

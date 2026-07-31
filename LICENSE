@@ -1,61 +1,51 @@
-CLOSED / PROPRIETARY — NO REUSE WITHOUT WRITTEN PERMISSION.
-
-No use, copying, modification, distribution, AI training, or other reuse of this repository or its contents is permitted without the prior express written permission of Juss Ray.
-
-PROPRIETARY SOFTWARE LICENSE
+JUSS BEAUTIFUL HAIR FIRST-PARTY MATERIALS
+PROPRIETARY — NO REUSE LICENSE GRANTED
 
 Copyright © 2024–2026 Juss Ray. All rights reserved.
 
-This software, its source code, documentation, assets, and all associated
-files (collectively, the "Software") are the exclusive proprietary property
-of Juss Ray and are protected by copyright law and international copyright
-treaties.
+## First-party materials
 
-NO PERMISSION IS GRANTED — express, implied, or otherwise — to any person
-obtaining a copy of this Software to:
+Except where a file or component states otherwise, the original source code,
+documentation, written content, visual assets, brand materials, and other
+authored materials in this repository are proprietary first-party materials.
 
-  • use, execute, or run the Software;
-  • copy, reproduce, or duplicate the Software or any portion of it;
-  • modify, adapt, translate, or create derivative works based on the Software;
-  • merge the Software into another work;
-  • publish, display, or make the Software available to the public;
-  • distribute, sublicense, sell, rent, lease, lend, or otherwise transfer
-    the Software or any rights in it;
-  • reverse-engineer, decompile, disassemble, or otherwise attempt to derive
-    the source code from a compiled or distributed form of the Software;
-  • use the Software, or any part of it, to train, fine-tune, or otherwise
-    develop machine-learning or artificial-intelligence models;
-  • include the Software in any dataset, benchmark, evaluation corpus, or
-    data-collection pipeline;
-  • scrape, crawl, extract, or otherwise harvest the Software for the purpose
-    of replication or model development; or
-  • create competing or derivative products based on the Software
+No license is granted to copy, modify, distribute, sublicense, sell, publish,
+create derivative works from, use for machine-learning training, or otherwise
+reuse those first-party materials without prior written permission from the
+rights holder.
 
-without the prior express written permission of Juss Ray.
+This notice does not claim ownership of third-party software, third-party
+trademarks, public facts, general ideas, methods, or functionality that are not
+protected as first-party expression.
 
-Any use not explicitly authorized in writing by the copyright owner is
-prohibited and constitutes infringement of copyright.
+## Hosted storefront use
 
-LEGAL REALITY NOTICE
-Copyright protects the specific expression in this Software — source code,
-documentation, artwork, and other authored content. It does not automatically
-protect underlying product ideas, workflows, or general functionality.
-Trademark, trade-secret practices, access controls, contracts, and patents
-may protect additional dimensions of the intellectual property contained
-herein.
+Customers and visitors may use an authorized, owner-operated deployment of the
+storefront for ordinary browsing, permitted form submissions, and lawful
+purchases under the policies and terms displayed on that deployment. That
+limited hosted-service use does not grant permission to copy or reuse the
+repository, source code, brand assets, or other first-party materials.
 
-THIRD-PARTY COMPONENTS
-This Software incorporates third-party libraries and components that are
-licensed separately under their own terms (including but not limited to MIT,
-Apache 2.0, BSD, and ISC licenses). This license applies solely to the
-first-party source code and content authored by Juss Ray. All required
-third-party notices and license texts are preserved in their respective
-package directories and are not affected by this license.
+## Third-party components
 
-DISCLAIMER
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED. IN NO EVENT SHALL THE COPYRIGHT OWNER BE LIABLE FOR ANY CLAIM,
-DAMAGES, OR OTHER LIABILITY ARISING FROM, OUT OF, OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OF IT.
+Third-party packages and components remain governed by their own licenses and
+notices. This first-party notice does not replace, restrict, or extend those
+third-party terms. See `THIRD_PARTY_NOTICES.md`, the dependency manifests, and
+the installed package metadata for attribution and license information.
 
-For licensing inquiries, contact: hello@jussbeautifulhair.com
+Because third-party inventories and license obligations can change, this
+repository does not represent the notice file as a complete legal review of
+every transitive dependency.
+
+## Warranty disclaimer
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE FIRST-PARTY MATERIALS
+ARE PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. THE RIGHTS HOLDER SHALL
+NOT BE LIABLE FOR CLAIMS OR DAMAGES ARISING FROM UNAUTHORIZED REUSE OF THE
+FIRST-PARTY MATERIALS.
+
+## Permission requests
+
+Any broader permission must be granted in writing by the rights holder. A
+public repository, preview deployment, evaluation, conversation, or access to
+a copy does not by itself grant additional rights.

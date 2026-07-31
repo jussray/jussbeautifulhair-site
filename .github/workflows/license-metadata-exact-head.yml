@@ -1,0 +1,78 @@
+name: License Metadata Exact-Head Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+      - "docs/legal/LICENSE_AUDIT_2026.md"
+      - "docs/industry-signals/beauty-under-the-radar-2026.md"
+      - "scripts/verify-license-metadata.mjs"
+      - ".github/workflows/license-metadata-exact-head.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "package.json"
+      - "package-lock.json"
+      - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+      - "docs/legal/LICENSE_AUDIT_2026.md"
+      - "docs/industry-signals/beauty-under-the-radar-2026.md"
+      - "scripts/verify-license-metadata.mjs"
+      - ".github/workflows/license-metadata-exact-head.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: license-metadata-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-license-metadata:
+    name: Verify license metadata consistency
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out immutable target head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Record and verify immutable head
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Verify license and dependency metadata
+        run: node scripts/verify-license-metadata.mjs
+
+      - name: Run TypeScript
+        run: npm run check
+
+      - name: Run repository tests
+        run: npm test
+
+      - name: Build production storefront
+        run: npm run build

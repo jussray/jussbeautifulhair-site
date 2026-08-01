@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "repository": "jussray/jussbeautifulhair-site",
   "defaultPolicy": "deny-undeclared",
-  "scanRoots": ["client", "worker", "api"],
+  "scanRoots": ["client", "worker"],
   "allowedCookieWriters": ["client/src/components/ui/sidebar.tsx"],
   "cookies": [
     {

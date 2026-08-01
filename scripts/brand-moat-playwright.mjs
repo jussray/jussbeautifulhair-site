@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import process from "node:process";
 import { chromium } from "playwright";
 
@@ -7,14 +8,20 @@ const host = "127.0.0.1";
 const port = Number(process.env.PLAYWRIGHT_PORT || 4173);
 const baseURL = `http://${host}:${port}`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const outputDir = "artifacts/brand-moat";
+const vitePath = fileURLToPath(
+  new URL("../node_modules/vite/bin/vite.js", import.meta.url),
+);
 let serverOutput = "";
 
-const server = spawn(npmCommand, ["run", "dev", "--", "--host", host, "--port", String(port)], {
-  env: { ...process.env },
-  stdio: ["ignore", "pipe", "pipe"],
-});
+const server = spawn(
+  process.execPath,
+  [vitePath, "--host", host, "--port", String(port)],
+  {
+    env: { ...process.env },
+    stdio: ["ignore", "pipe", "pipe"],
+  },
+);
 
 for (const stream of [server.stdout, server.stderr]) {
   stream.on("data", (chunk) => {
@@ -39,6 +46,20 @@ async function waitForServer(timeoutMs = 60_000) {
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error(`Timed out waiting for ${baseURL}.\n${serverOutput}`);
+}
+
+async function stopServer(timeoutMs = 5_000) {
+  if (server.exitCode !== null) return;
+  const exited = new Promise((resolve) => server.once("exit", resolve));
+  server.kill("SIGTERM");
+  await Promise.race([
+    exited,
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+  if (server.exitCode === null) {
+    server.kill("SIGKILL");
+    await exited;
+  }
 }
 
 function assert(condition, message) {
@@ -68,9 +89,9 @@ try {
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-  await page.goto(baseURL, { waitUntil: "networkidle" });
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
   const moat = page.getByTestId("brand-moat");
-  assert(await moat.isVisible(), "Brand moat section is not visible on desktop.");
+  await moat.waitFor({ state: "visible" });
   assert((await moat.innerText()).includes("Story. Quality. Care. Proof."), "Brand moat heading is missing.");
   for (const pillar of ["story", "quality", "care", "proof"]) {
     assert(await page.getByTestId(`brand-moat-${pillar}`).isVisible(), `Brand moat pillar ${pillar} is missing.`);
@@ -84,15 +105,15 @@ try {
   await assertNoHorizontalOverflow(page, "desktop homepage");
   await page.screenshot({ path: `${outputDir}/home-desktop.png`, fullPage: true });
 
-  await page.goto(`${baseURL}/#/about`, { waitUntil: "networkidle" });
+  await page.goto(`${baseURL}/#/about`, { waitUntil: "domcontentloaded" });
   const aboutText = await page.locator("body").innerText();
   assert(aboutText.includes("Beauty can carry memory."), "Evidence-aware brand story is missing from About.");
   assert(aboutText.includes("Story, Quality, Care, and Proof"), "Shared brand pillars are missing from About.");
   await page.screenshot({ path: `${outputDir}/about-desktop.png`, fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(baseURL, { waitUntil: "networkidle" });
-  assert(await page.getByTestId("button-shop-hero-mobile").isVisible(), "Mobile shop CTA is not visible.");
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  await page.getByTestId("button-shop-hero-mobile").waitFor({ state: "visible" });
   assert(await page.getByTestId("brand-moat").isVisible(), "Brand moat is not visible on mobile.");
   await assertNoHorizontalOverflow(page, "mobile homepage");
   await page.screenshot({ path: `${outputDir}/home-mobile.png`, fullPage: true });
@@ -119,5 +140,5 @@ try {
   console.log(`Brand moat Playwright proof passed for ${expectedHead}.`);
 } finally {
   await browser?.close();
-  if (server.exitCode === null) server.kill("SIGTERM");
+  await stopServer();
 }

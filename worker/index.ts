@@ -182,6 +182,7 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
   if (!parsed.success) return json({ error: "Invalid cart" }, 400, origin);
 
   const canonicalItems = [] as Array<{
+    id: string;
     name: string;
     variant: string;
     price: number;
@@ -200,6 +201,7 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
     }
 
     canonicalItems.push({
+      id: product.id,
       name: product.name,
       variant: variant.option,
       price: variant.price,
@@ -225,6 +227,11 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
         product_data: {
           name: `${item.name} (${item.variant})`,
           images: [new URL(item.image, storeOrigin).toString()],
+          metadata: {
+            kind: "product",
+            product_id: item.id,
+            variant: item.variant,
+          },
         },
       },
     }));
@@ -235,7 +242,10 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
       price_data: {
         currency: "usd",
         unit_amount: Math.round(shipping * 100),
-        product_data: { name: "Shipping" },
+        product_data: {
+          name: "Shipping",
+          metadata: { kind: "shipping" },
+        },
       },
     });
   }
@@ -269,7 +279,7 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
     return json({ url: session.url }, 200, origin);
   } catch (error) {
     const errorType = error instanceof Error ? error.name : "UnknownError";
-    console.error(`[CHECKOUT] Stripe session creation failed — ${errorType}`);
+    console.error(`[CHECKOUT] Stripe session creation failed - ${errorType}`);
     return json({ error: "Checkout failed. Please try again." }, 500, origin);
   }
 }

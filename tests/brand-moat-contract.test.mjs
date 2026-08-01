@@ -31,7 +31,7 @@ test("brand moat is wired with four evidence-grounded pillars", async () => {
   assert.match(content, /Missing proof stays missing until verified\./);
   assert.match(home, /import \{ BrandMoatSection \}/);
   assert.match(home, /<BrandMoatSection \/>/);
-  assert.match(about, /Story, Quality, Care, and Proof/);
+  assert.match(about, /Story,\s+Quality,\s+Care,\s+and Proof/);
 
   const publicCopy = `${home}\n${about}\n${content}`;
   for (const claim of riskyClaims) {

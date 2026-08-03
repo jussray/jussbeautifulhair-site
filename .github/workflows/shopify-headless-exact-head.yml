@@ -3,6 +3,7 @@ name: Shopify Headless Exact-Head Gate
 on:
   pull_request:
     paths:
+      - "client/src/components/Layout.tsx"
       - "client/src/lib/shopifyStorefront.ts"
       - "client/src/pages/HairMatch.tsx"
       - "client/src/App.tsx"

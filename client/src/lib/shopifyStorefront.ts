@@ -7,6 +7,11 @@ interface ShopifyMoney {
   currencyCode: string;
 }
 
+export interface ShopifyCartAttribute {
+  key: "hair_goal" | "preferred_length" | "budget" | "maintenance";
+  value: string;
+}
+
 interface ShopifyCartCreateResponse {
   data?: {
     cartCreate?: {
@@ -36,12 +41,35 @@ function storefrontEndpoint(): string {
   return `https://${normalizedDomain}/api/${API_VERSION}/graphql.json`;
 }
 
+function normalizeAttributes(
+  attributes: ShopifyCartAttribute[],
+): Array<{ key: string; value: string }> {
+  const normalized = attributes.map(({ key, value }) => ({
+    key,
+    value: value.trim().slice(0, 120),
+  }));
+
+  if (normalized.some(({ value }) => !value)) {
+    throw new Error("Please complete your Hair Match preferences.");
+  }
+
+  return [
+    { key: "source", value: "jussbeautifulhair.com" },
+    { key: "offer", value: "jbh-hair-match-v1" },
+    ...normalized,
+  ];
+}
+
 export async function createShopifyCheckout(
   merchandiseId: string,
   quantity = 1,
+  attributes: ShopifyCartAttribute[] = [],
 ): Promise<{ checkoutUrl: string; total: ShopifyMoney }> {
   if (!merchandiseId.startsWith("gid://shopify/ProductVariant/")) {
     throw new Error("This Shopify product is not configured correctly.");
+  }
+  if (quantity !== 1) {
+    throw new Error("Hair Match checkout supports one session at a time.");
   }
 
   const response = await fetch(storefrontEndpoint(), {
@@ -74,7 +102,7 @@ export async function createShopifyCheckout(
       variables: {
         input: {
           lines: [{ merchandiseId, quantity }],
-          attributes: [{ key: "source", value: "jussbeautifulhair.com" }],
+          attributes: normalizeAttributes(attributes),
         },
       },
     }),

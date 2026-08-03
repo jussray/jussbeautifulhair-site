@@ -10,6 +10,10 @@ const hairMatch = await readFile(
   new URL("../client/src/pages/HairMatch.tsx", import.meta.url),
   "utf8",
 );
+const layout = await readFile(
+  new URL("../client/src/components/Layout.tsx", import.meta.url),
+  "utf8",
+);
 const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "utf8");
 
 test("Shopify Storefront Cart API owns the bridge-offer checkout", () => {
@@ -32,4 +36,12 @@ test("Shopify configuration remains environment-bound and explicitly public", ()
   assert.match(storefront, /VITE_SHOPIFY_STOREFRONT_ACCESS/);
   assert.doesNotMatch(storefront, /VITE_SHOPIFY_STOREFRONT_TOKEN/);
   assert.match(hairMatch, /VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID/);
+});
+
+test("shared storefront chrome does not overstate launch or fulfillment status", () => {
+  assert.match(layout, /href: "\/hair-match", label: "Hair Match"/);
+  assert.match(layout, /Founding-client Hair Match/);
+  assert.doesNotMatch(layout, /Now Open/i);
+  assert.doesNotMatch(layout, /shipped from the US/i);
+  assert.doesNotMatch(layout, /shipping nationwide/i);
 });

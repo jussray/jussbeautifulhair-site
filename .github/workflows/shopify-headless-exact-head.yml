@@ -6,6 +6,7 @@ on:
       - "client/src/lib/shopifyStorefront.ts"
       - "client/src/pages/HairMatch.tsx"
       - "client/src/App.tsx"
+      - "scripts/shopify-headless-playwright.mjs"
       - "tests/shopify-headless-contract.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
@@ -25,7 +26,7 @@ jobs:
   verify:
     name: Verify Shopify headless bridge
     runs-on: ubuntu-22.04
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - name: Check out exact requested head
         uses: actions/checkout@v4
@@ -40,7 +41,32 @@ jobs:
           node-version: "24"
           cache: npm
 
-      - run: npm ci
-      - run: npm run check
-      - run: node --test tests/shopify-headless-contract.test.mjs
-      - run: npm run build
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Verify Shopify code contract
+        run: node --test tests/shopify-headless-contract.test.mjs
+
+      - name: Build production storefront
+        run: npm run build
+
+      - name: Install pinned browser verifier
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+
+      - name: Install Chromium
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Verify rendered Hair Match checkout flow
+        run: node scripts/shopify-headless-playwright.mjs
+
+      - name: Upload exact-head browser proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shopify-headless-${{ env.EXPECTED_HEAD_SHA }}
+          path: artifacts/shopify-headless/
+          if-no-files-found: error
+          retention-days: 30

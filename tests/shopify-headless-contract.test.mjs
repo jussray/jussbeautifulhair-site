@@ -16,11 +16,13 @@ const layout = await readFile(
 );
 const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "utf8");
 
-test("Shopify Storefront Cart API owns the bridge-offer checkout", () => {
-  assert.match(storefront, /mutation CreateCart/);
-  assert.match(storefront, /cartCreate\(input: \$input\)/);
+test("tokenless Shopify cart permalink owns the bridge-offer checkout", () => {
+  assert.match(storefront, /\/cart\/\$\{variantId\}:\$\{quantity\}/);
+  assert.match(storefront, /gid:\\\/\\\/shopify\\\/ProductVariant\\\/(\\d\+)/);
+  assert.match(storefront, /checkout\.searchParams\.set\(`attributes\[\$\{key\}\]`/);
   assert.match(storefront, /checkoutUrl/);
-  assert.match(storefront, /X-Shopify-Storefront-Access-Token/);
+  assert.doesNotMatch(storefront, /X-Shopify-Storefront-Access-Token/);
+  assert.doesNotMatch(storefront, /VITE_SHOPIFY_STOREFRONT_(?:ACCESS|TOKEN)/);
   assert.doesNotMatch(storefront, /STRIPE_SECRET_KEY/);
 });
 
@@ -38,14 +40,15 @@ test("Hair Match preferences are bounded non-sensitive cart attributes", () => {
   }
   assert.match(storefront, /offer", value: "jbh-hair-match-v1/);
   assert.match(storefront, /value\.trim\(\)\.slice\(0, 120\)/);
+  assert.match(storefront, /ref", "jbh-hair-match-v1/);
   assert.doesNotMatch(hairMatch, /race|ethnicity|medical|health|income|address/i);
 });
 
-test("Shopify configuration remains environment-bound and explicitly public", () => {
+test("Shopify configuration requires only public store and variant identifiers", () => {
   assert.match(storefront, /VITE_SHOPIFY_STORE_DOMAIN/);
-  assert.match(storefront, /VITE_SHOPIFY_STOREFRONT_ACCESS/);
-  assert.doesNotMatch(storefront, /VITE_SHOPIFY_STOREFRONT_TOKEN/);
+  assert.match(storefront, /\.myshopify\\\.com/);
   assert.match(hairMatch, /VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID/);
+  assert.doesNotMatch(storefront, /API_VERSION|STOREFRONT_ACCESS|access_token/);
 });
 
 test("shared storefront chrome does not overstate launch or fulfillment status", () => {

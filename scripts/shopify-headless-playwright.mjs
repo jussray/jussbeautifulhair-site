@@ -10,6 +10,7 @@ const baseURL = `http://${host}:${port}`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-headless";
 const variantId = "gid://shopify/ProductVariant/50196622344435";
+const numericVariantId = "50196622344435";
 const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let serverOutput = "";
 
@@ -17,8 +18,6 @@ const server = spawn(process.execPath, [vitePath, "--host", host, "--port", Stri
   env: {
     ...process.env,
     VITE_SHOPIFY_STORE_DOMAIN: "jbh-25.myshopify.com",
-    VITE_SHOPIFY_STOREFRONT_ACCESS: "browser-safe-test-access",
-    VITE_SHOPIFY_STOREFRONT_API_VERSION: "2026-07",
     VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID: variantId,
   },
   stdio: ["ignore", "pipe", "pipe"],
@@ -73,41 +72,20 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
-async function configureShopifyMocks(page, evidence) {
-  await page.route("https://jbh-25.myshopify.com/api/**/graphql.json", async (route) => {
-    const request = route.request();
-    const payload = request.postDataJSON();
-    const input = payload?.variables?.input;
-    const access = request.headers()["x-shopify-storefront-access-token"];
+async function configureShopifyPermalinkMock(page, evidence) {
+  await page.route("https://jbh-25.myshopify.com/cart/**", async (route) => {
+    const checkout = new URL(route.request().url());
+    evidence.checkoutRequests += 1;
+    evidence.checkoutNavigation = checkout.toString();
+    evidence.checkoutPath = checkout.pathname;
+    evidence.ref = checkout.searchParams.get("ref");
+    evidence.accessTokenPresent = checkout.searchParams.has("access_token");
+    evidence.attributes = {};
+    for (const [key, value] of checkout.searchParams.entries()) {
+      const match = key.match(/^attributes\[(.+)\]$/);
+      if (match) evidence.attributes[match[1]] = value;
+    }
 
-    evidence.graphqlRequests += 1;
-    evidence.accessHeaderPresent = access === "browser-safe-test-access";
-    evidence.requestedVariant = input?.lines?.[0]?.merchandiseId || null;
-    evidence.usesCartCreate = String(payload?.query || "").includes("cartCreate");
-    evidence.attributes = Object.fromEntries(
-      (input?.attributes || []).map(({ key, value }) => [key, value]),
-    );
-
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        data: {
-          cartCreate: {
-            cart: {
-              id: "gid://shopify/Cart/test-cart",
-              checkoutUrl: "https://checkout.shopify.com/c/jbh-hair-match-test",
-              cost: { totalAmount: { amount: "25.00", currencyCode: "USD" } },
-            },
-            userErrors: [],
-          },
-        },
-      }),
-    });
-  });
-
-  await page.route("https://checkout.shopify.com/**", async (route) => {
-    evidence.checkoutNavigation = route.request().url();
     await route.fulfill({
       status: 200,
       contentType: "text/html",
@@ -119,12 +97,12 @@ async function configureShopifyMocks(page, evidence) {
 let browser;
 const consoleErrors = [];
 const evidence = {
-  graphqlRequests: 0,
-  accessHeaderPresent: false,
-  requestedVariant: null,
-  usesCartCreate: false,
-  attributes: {},
+  checkoutRequests: 0,
   checkoutNavigation: null,
+  checkoutPath: null,
+  attributes: {},
+  ref: null,
+  accessTokenPresent: false,
 };
 
 try {
@@ -137,7 +115,7 @@ try {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   desktop.on("pageerror", (error) => consoleErrors.push(error.message));
-  await configureShopifyMocks(desktop, evidence);
+  await configureShopifyPermalinkMock(desktop, evidence);
 
   await desktop.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
   const bodyText = await desktop.locator("body").innerText();
@@ -167,14 +145,17 @@ try {
   await desktop.screenshot({ path: `${outputDir}/hair-match-desktop.png`, fullPage: true });
 
   await Promise.all([
-    desktop.waitForURL("https://checkout.shopify.com/**"),
+    desktop.waitForURL("https://jbh-25.myshopify.com/cart/**"),
     checkoutButton.click(),
   ]);
 
-  assert(evidence.graphqlRequests === 1, "Expected exactly one Shopify cartCreate request.");
-  assert(evidence.accessHeaderPresent, "Public Storefront access header was missing.");
-  assert(evidence.usesCartCreate, "Shopify cartCreate was not used.");
-  assert(evidence.requestedVariant === variantId, "Unexpected Shopify variant was requested.");
+  assert(evidence.checkoutRequests === 1, "Expected exactly one Shopify checkout navigation.");
+  assert(
+    evidence.checkoutPath === `/cart/${numericVariantId}:1`,
+    "Unexpected Shopify cart permalink path.",
+  );
+  assert(evidence.accessTokenPresent === false, "Checkout URL exposed a Storefront token.");
+  assert(evidence.ref === "jbh-hair-match-v1", "Referral marker is missing.");
   assert(evidence.attributes.source === "jussbeautifulhair.com", "Source attribute is missing.");
   assert(evidence.attributes.offer === "jbh-hair-match-v1", "Offer attribute is missing.");
   assert(evidence.attributes.hair_goal === "wig", "Hair goal attribute is wrong.");
@@ -182,8 +163,8 @@ try {
   assert(evidence.attributes.budget === "150-250", "Budget attribute is wrong.");
   assert(evidence.attributes.maintenance === "low-maintenance", "Maintenance attribute is wrong.");
   assert(
-    evidence.checkoutNavigation?.startsWith("https://checkout.shopify.com/"),
-    "Browser did not navigate to an HTTPS Shopify checkout.",
+    evidence.checkoutNavigation?.startsWith("https://jbh-25.myshopify.com/cart/"),
+    "Browser did not navigate to an HTTPS Shopify cart permalink.",
   );
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -213,12 +194,12 @@ try {
         assertions: [
           "truthful consultation and future-credit disclosure rendered",
           "four bounded non-sensitive preferences rendered",
-          "preferences attached to Shopify cart attributes",
+          "preferences attached to Shopify cart permalink attributes",
+          "no Storefront access token exposed",
+          "approved numeric Shopify variant and quantity used",
           "unsupported launch and fulfillment claims absent",
           "Hair Match navigation visible on desktop and mobile",
-          "Shopify cartCreate used with the approved variant",
-          "public Storefront access header supplied",
-          "HTTPS Shopify checkout navigation occurred",
+          "HTTPS Shopify cart permalink navigation occurred",
           "desktop and mobile layouts have no horizontal overflow",
           "browser console remained clean",
         ],
@@ -228,7 +209,7 @@ try {
     )}\n`,
   );
 
-  console.log(`Shopify headless Playwright proof passed for ${expectedHead}.`);
+  console.log(`Shopify permalink Playwright proof passed for ${expectedHead}.`);
 } finally {
   await browser?.close();
   await stopServer();

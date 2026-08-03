@@ -10,12 +10,12 @@ Configure these build-time variables only after the Shopify Headless storefront 
 
 ```dotenv
 VITE_SHOPIFY_STORE_DOMAIN=jbh-25.myshopify.com
-VITE_SHOPIFY_STOREFRONT_TOKEN=<public Storefront API token>
+VITE_SHOPIFY_STOREFRONT_ACCESS=<public Storefront API access value>
 VITE_SHOPIFY_STOREFRONT_API_VERSION=2026-07
 VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID=gid://shopify/ProductVariant/50196622344435
 ```
 
-The Storefront token must be the public browser-safe token issued for this storefront. Never use an Admin API token, private Storefront token, app secret, Shopify account password, or customer data in a `VITE_` variable.
+`VITE_SHOPIFY_STOREFRONT_ACCESS` must contain only the public browser-safe Storefront access value issued for this storefront. Never use an Admin API token, private Storefront token, app secret, Shopify account password, or customer data in a `VITE_` variable.
 
 ## Runtime flow
 
@@ -32,7 +32,7 @@ Do not publish the product or advertise the route until all are true:
 
 - Shopify store is upgraded from trial and checkout is available.
 - Hair Match product is active and published to the Headless sales channel.
-- Public Storefront API token and permissions are configured.
+- Public Storefront API access and permissions are configured.
 - Desktop and mobile Playwright verification passes on the exact branch head.
 - A real test checkout proves the correct product, price, disclosure, and Shopify checkout domain.
 - Paid-order webhook delivery to `jbh-private` is verified without exposing vendor or customer data publicly.

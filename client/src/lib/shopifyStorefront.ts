@@ -1,5 +1,5 @@
 const SHOP_DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN?.trim();
-const STOREFRONT_TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN?.trim();
+const STOREFRONT_ACCESS = import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS?.trim();
 const API_VERSION = import.meta.env.VITE_SHOPIFY_STOREFRONT_API_VERSION?.trim() || "2026-07";
 
 interface ShopifyMoney {
@@ -24,11 +24,11 @@ interface ShopifyCartCreateResponse {
 }
 
 export function isShopifyStorefrontConfigured(): boolean {
-  return Boolean(SHOP_DOMAIN && STOREFRONT_TOKEN);
+  return Boolean(SHOP_DOMAIN && STOREFRONT_ACCESS);
 }
 
 function storefrontEndpoint(): string {
-  if (!SHOP_DOMAIN || !STOREFRONT_TOKEN) {
+  if (!SHOP_DOMAIN || !STOREFRONT_ACCESS) {
     throw new Error("Shopify checkout is not configured yet.");
   }
 
@@ -48,7 +48,7 @@ export async function createShopifyCheckout(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Shopify-Storefront-Access-Token": STOREFRONT_TOKEN as string,
+      "X-Shopify-Storefront-Access-Token": STOREFRONT_ACCESS as string,
     },
     body: JSON.stringify({
       query: `

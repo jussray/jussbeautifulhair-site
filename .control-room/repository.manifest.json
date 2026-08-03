@@ -260,11 +260,49 @@
     },
     {
       "id": "checkout-redirect-integrity",
-      "description": "Browser-side validation of the server-returned Stripe Checkout URL immediately before navigation.",
-      "status": "planned",
-      "evidencePaths": [],
-      "requiredSignals": [],
-      "usageAssertions": []
+      "description": "Validates the server-returned Stripe Checkout URL immediately before navigation and fails closed for malformed, insecure, credentialed, ported, arbitrary, and lookalike destinations.",
+      "status": "active",
+      "evidencePaths": [
+        "client/src/pages/Checkout.tsx",
+        "client/src/lib/checkoutRedirect.mjs",
+        "tests/checkout-redirect-contract.test.mjs",
+        ".github/workflows/checkout-redirect-exact-head.yml"
+      ],
+      "requiredSignals": [
+        "current-main-storefront-contract"
+      ],
+      "usageAssertions": [
+        {
+          "id": "checkout-validates-returned-url",
+          "path": "client/src/pages/Checkout.tsx",
+          "marker": "window.location.assign(assertApprovedCheckoutRedirect(data.url));",
+          "description": "Browser navigation uses the shared fail-closed validator."
+        },
+        {
+          "id": "redirect-requires-exact-stripe-origin",
+          "path": "client/src/lib/checkoutRedirect.mjs",
+          "marker": "url.origin !== APPROVED_CHECKOUT_ORIGIN",
+          "description": "Only the exact configured Stripe Checkout origin is accepted."
+        },
+        {
+          "id": "redirect-requires-https",
+          "path": "client/src/lib/checkoutRedirect.mjs",
+          "marker": "url.protocol !== \"https:\"",
+          "description": "Insecure redirect protocols are rejected."
+        },
+        {
+          "id": "redirect-rejects-credentials-and-ports",
+          "path": "client/src/lib/checkoutRedirect.mjs",
+          "marker": "url.username ||",
+          "description": "Credentialed destinations are rejected before navigation."
+        },
+        {
+          "id": "redirect-contract-covers-lookalikes",
+          "path": "tests/checkout-redirect-contract.test.mjs",
+          "marker": "fails closed for malformed, insecure, credentialed, ported, and lookalike URLs",
+          "description": "The focused contract exercises the negative redirect cases."
+        }
+      ]
     },
     {
       "id": "private-contact-ingress",

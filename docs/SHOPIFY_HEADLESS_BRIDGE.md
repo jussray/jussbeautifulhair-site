@@ -20,11 +20,23 @@ VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID=gid://shopify/ProductVariant/50196622344435
 ## Runtime flow
 
 1. Customer opens `/#/hair-match`.
-2. The page calls Shopify Storefront API `cartCreate` with the approved Hair Match variant.
-3. Shopify returns the canonical total and `checkoutUrl`.
-4. The browser redirects to Shopify Web Checkout.
-5. Shopify owns payment, tax, checkout identity, and order creation.
-6. Private order and fulfillment routing belongs in `jbh-private` through verified Shopify webhooks.
+2. The customer optionally refines four bounded, non-sensitive preferences: product goal, length range, future-order budget band, and maintenance preference. “Not sure yet” remains valid.
+3. The page calls Shopify Storefront API `cartCreate` with the approved Hair Match variant and those preferences as cart attributes.
+4. Shopify returns the canonical total and `checkoutUrl`.
+5. The browser redirects to Shopify Web Checkout.
+6. Shopify owns payment, tax, checkout identity, and order creation.
+7. Private paid-service ingestion belongs in `jbh-private`; a Hair Match consultation must stay excluded from vendor routing.
+
+## Preference boundary
+
+Only these cart attributes are allowed:
+
+- `hair_goal`
+- `preferred_length`
+- `budget`
+- `maintenance`
+
+The client also binds `source=jussbeautifulhair.com` and `offer=jbh-hair-match-v1`. Values are enumerated in the UI and truncated before transmission. Do not collect sensitive traits, medical information, free-form private notes, addresses, or payment data through these attributes.
 
 ## Activation gates
 
@@ -34,8 +46,9 @@ Do not publish the product or advertise the route until all are true:
 - Hair Match product is active and published to the Headless sales channel.
 - Public Storefront API access and permissions are configured.
 - Desktop and mobile Playwright verification passes on the exact branch head.
-- A real test checkout proves the correct product, price, disclosure, and Shopify checkout domain.
+- A real test checkout proves the correct product, price, disclosure, preference attributes, and Shopify checkout domain.
 - Paid-order webhook delivery to `jbh-private` is verified without exposing vendor or customer data publicly.
+- The paid consultation is recorded as a service with vendor routing marked not applicable.
 
 ## MCP boundary
 

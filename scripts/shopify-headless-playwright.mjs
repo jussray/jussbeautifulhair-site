@@ -157,6 +157,14 @@ try {
       bodyText.includes("no hair product ships from this purchase"),
     "Non-physical-product disclosure is incomplete.",
   );
+  assert(bodyText.includes("Founding-client Hair Match"), "Truthful Hair Match announcement is missing.");
+  for (const retiredClaim of ["Now Open", "shipped from the US", "shipping nationwide"]) {
+    assert(!bodyText.includes(retiredClaim), `Unsupported storefront claim remains: ${retiredClaim}`);
+  }
+  assert(
+    await desktop.getByTestId("link-nav-hair-match").isVisible(),
+    "Desktop Hair Match navigation is missing.",
+  );
 
   const checkoutButton = desktop.getByTestId("button-hair-match-checkout");
   await checkoutButton.waitFor({ state: "visible" });
@@ -188,6 +196,12 @@ try {
   mobile.on("pageerror", (error) => consoleErrors.push(error.message));
   await mobile.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("button-hair-match-checkout").waitFor({ state: "visible" });
+  await mobile.getByTestId("button-menu").click();
+  assert(
+    await mobile.getByTestId("link-mobnav-hair-match").isVisible(),
+    "Mobile Hair Match navigation is missing.",
+  );
+  await mobile.getByTestId("button-menu").click();
   await assertNoHorizontalOverflow(mobile, "mobile Hair Match page");
   await mobile.screenshot({
     path: `${outputDir}/hair-match-mobile.png`,
@@ -207,6 +221,8 @@ try {
         evidence,
         assertions: [
           "truthful consultation and future-credit disclosure rendered",
+          "unsupported launch and fulfillment claims absent",
+          "Hair Match navigation visible on desktop and mobile",
           "configured CTA enabled",
           "Shopify cartCreate used with the approved variant",
           "public Storefront access header supplied",

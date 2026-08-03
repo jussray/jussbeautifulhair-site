@@ -5,24 +5,43 @@ import { Button } from "@/components/ui/button";
 import {
   createShopifyCheckout,
   isShopifyStorefrontConfigured,
+  type ShopifyCartAttribute,
 } from "@/lib/shopifyStorefront";
 
 const HAIR_MATCH_VARIANT_ID = import.meta.env.VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID?.trim();
 
+const SELECT_CLASS =
+  "mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+
 export default function HairMatch() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hairGoal, setHairGoal] = useState("not-sure");
+  const [preferredLength, setPreferredLength] = useState("not-sure");
+  const [budget, setBudget] = useState("not-sure");
+  const [maintenance, setMaintenance] = useState("low-maintenance");
 
   const configured = isShopifyStorefrontConfigured() && Boolean(HAIR_MATCH_VARIANT_ID);
 
   async function startCheckout() {
     if (!HAIR_MATCH_VARIANT_ID) return;
 
+    const preferences: ShopifyCartAttribute[] = [
+      { key: "hair_goal", value: hairGoal },
+      { key: "preferred_length", value: preferredLength },
+      { key: "budget", value: budget },
+      { key: "maintenance", value: maintenance },
+    ];
+
     setSubmitting(true);
     setError(null);
 
     try {
-      const { checkoutUrl } = await createShopifyCheckout(HAIR_MATCH_VARIANT_ID, 1);
+      const { checkoutUrl } = await createShopifyCheckout(
+        HAIR_MATCH_VARIANT_ID,
+        1,
+        preferences,
+      );
       window.location.assign(checkoutUrl);
     } catch (checkoutError) {
       setError(
@@ -66,6 +85,76 @@ export default function HairMatch() {
                   </div>
                 ))}
               </div>
+
+              <fieldset className="mt-10 border-t border-border pt-8">
+                <legend className="font-display text-xl text-foreground">
+                  Give Juss a head start
+                </legend>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Choose what fits today. “Not sure yet” is always okay.
+                </p>
+
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <label className="text-sm font-medium text-foreground">
+                    What are you considering?
+                    <select
+                      className={SELECT_CLASS}
+                      value={hairGoal}
+                      onChange={(event) => setHairGoal(event.target.value)}
+                      data-testid="select-hair-goal"
+                    >
+                      <option value="not-sure">Not sure yet</option>
+                      <option value="wig">Wig</option>
+                      <option value="bundles">Bundles</option>
+                      <option value="closure-frontal">Closure or frontal</option>
+                    </select>
+                  </label>
+
+                  <label className="text-sm font-medium text-foreground">
+                    Preferred length
+                    <select
+                      className={SELECT_CLASS}
+                      value={preferredLength}
+                      onChange={(event) => setPreferredLength(event.target.value)}
+                      data-testid="select-preferred-length"
+                    >
+                      <option value="not-sure">Not sure yet</option>
+                      <option value="short-10-14">Short · 10–14 inches</option>
+                      <option value="medium-16-20">Medium · 16–20 inches</option>
+                      <option value="long-22-plus">Long · 22+ inches</option>
+                    </select>
+                  </label>
+
+                  <label className="text-sm font-medium text-foreground">
+                    Future-order budget
+                    <select
+                      className={SELECT_CLASS}
+                      value={budget}
+                      onChange={(event) => setBudget(event.target.value)}
+                      data-testid="select-budget"
+                    >
+                      <option value="not-sure">Not sure yet</option>
+                      <option value="under-150">Under $150</option>
+                      <option value="150-250">$150–$250</option>
+                      <option value="250-plus">$250+</option>
+                    </select>
+                  </label>
+
+                  <label className="text-sm font-medium text-foreground">
+                    Maintenance preference
+                    <select
+                      className={SELECT_CLASS}
+                      value={maintenance}
+                      onChange={(event) => setMaintenance(event.target.value)}
+                      data-testid="select-maintenance"
+                    >
+                      <option value="low-maintenance">Keep it low-maintenance</option>
+                      <option value="flexible">I am flexible</option>
+                      <option value="not-sure">Not sure yet</option>
+                    </select>
+                  </label>
+                </div>
+              </fieldset>
             </div>
 
             <aside className="flex flex-col justify-center border-t border-card-border bg-secondary/20 p-7 sm:p-10 lg:border-l lg:border-t-0 lg:p-12">

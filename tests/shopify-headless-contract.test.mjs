@@ -27,8 +27,9 @@ test("Hair Match route preserves truthful non-physical-product disclosure", () =
   assert.match(hairMatch, /Secure checkout powered by Shopify/);
 });
 
-test("Shopify configuration remains environment-bound", () => {
+test("Shopify configuration remains environment-bound and explicitly public", () => {
   assert.match(storefront, /VITE_SHOPIFY_STORE_DOMAIN/);
-  assert.match(storefront, /VITE_SHOPIFY_STOREFRONT_TOKEN/);
+  assert.match(storefront, /VITE_SHOPIFY_STOREFRONT_ACCESS/);
+  assert.doesNotMatch(storefront, /VITE_SHOPIFY_STOREFRONT_TOKEN/);
   assert.match(hairMatch, /VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID/);
 });

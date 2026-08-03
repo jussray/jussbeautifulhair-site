@@ -1,44 +1,34 @@
 const SHOP_DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN?.trim();
-const STOREFRONT_ACCESS = import.meta.env.VITE_SHOPIFY_STOREFRONT_ACCESS?.trim();
-const API_VERSION = import.meta.env.VITE_SHOPIFY_STOREFRONT_API_VERSION?.trim() || "2026-07";
-
-interface ShopifyMoney {
-  amount: string;
-  currencyCode: string;
-}
 
 export interface ShopifyCartAttribute {
   key: "hair_goal" | "preferred_length" | "budget" | "maintenance";
   value: string;
 }
 
-interface ShopifyCartCreateResponse {
-  data?: {
-    cartCreate?: {
-      cart?: {
-        id: string;
-        checkoutUrl: string;
-        cost: {
-          totalAmount: ShopifyMoney;
-        };
-      };
-      userErrors?: Array<{ field?: string[]; message: string }>;
-    };
-  };
-  errors?: Array<{ message: string }>;
-}
-
 export function isShopifyStorefrontConfigured(): boolean {
-  return Boolean(SHOP_DOMAIN && STOREFRONT_ACCESS);
+  return Boolean(SHOP_DOMAIN);
 }
 
-function storefrontEndpoint(): string {
-  if (!SHOP_DOMAIN || !STOREFRONT_ACCESS) {
+function normalizedShopDomain(): string {
+  if (!SHOP_DOMAIN) {
     throw new Error("Shopify checkout is not configured yet.");
   }
 
-  const normalizedDomain = SHOP_DOMAIN.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  return `https://${normalizedDomain}/api/${API_VERSION}/graphql.json`;
+  const domain = SHOP_DOMAIN.replace(/^https?:\/\//, "")
+    .replace(/\/$/, "")
+    .toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(domain)) {
+    throw new Error("Shopify checkout is not configured correctly.");
+  }
+  return domain;
+}
+
+function numericVariantId(merchandiseId: string): string {
+  const match = merchandiseId.match(/^gid:\/\/shopify\/ProductVariant\/(\d+)$/);
+  if (!match) {
+    throw new Error("This Shopify product is not configured correctly.");
+  }
+  return match[1];
 }
 
 function normalizeAttributes(
@@ -64,66 +54,19 @@ export async function createShopifyCheckout(
   merchandiseId: string,
   quantity = 1,
   attributes: ShopifyCartAttribute[] = [],
-): Promise<{ checkoutUrl: string; total: ShopifyMoney }> {
-  if (!merchandiseId.startsWith("gid://shopify/ProductVariant/")) {
-    throw new Error("This Shopify product is not configured correctly.");
-  }
+): Promise<{ checkoutUrl: string }> {
   if (quantity !== 1) {
     throw new Error("Hair Match checkout supports one session at a time.");
   }
 
-  const response = await fetch(storefrontEndpoint(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Shopify-Storefront-Access-Token": STOREFRONT_ACCESS as string,
-    },
-    body: JSON.stringify({
-      query: `
-        mutation CreateCart($input: CartInput!) {
-          cartCreate(input: $input) {
-            cart {
-              id
-              checkoutUrl
-              cost {
-                totalAmount {
-                  amount
-                  currencyCode
-                }
-              }
-            }
-            userErrors {
-              field
-              message
-            }
-          }
-        }
-      `,
-      variables: {
-        input: {
-          lines: [{ merchandiseId, quantity }],
-          attributes: normalizeAttributes(attributes),
-        },
-      },
-    }),
-  });
+  const domain = normalizedShopDomain();
+  const variantId = numericVariantId(merchandiseId);
+  const checkout = new URL(`https://${domain}/cart/${variantId}:${quantity}`);
 
-  const payload = (await response.json()) as ShopifyCartCreateResponse;
-  const userError = payload.data?.cartCreate?.userErrors?.[0]?.message;
-  const graphqlError = payload.errors?.[0]?.message;
-  const cart = payload.data?.cartCreate?.cart;
-
-  if (!response.ok || !cart?.checkoutUrl) {
-    throw new Error(userError || graphqlError || "Shopify checkout could not be started.");
+  for (const { key, value } of normalizeAttributes(attributes)) {
+    checkout.searchParams.set(`attributes[${key}]`, value);
   }
+  checkout.searchParams.set("ref", "jbh-hair-match-v1");
 
-  const checkout = new URL(cart.checkoutUrl);
-  if (checkout.protocol !== "https:") {
-    throw new Error("Shopify returned an unsafe checkout URL.");
-  }
-
-  return {
-    checkoutUrl: checkout.toString(),
-    total: cart.cost.totalAmount,
-  };
+  return { checkoutUrl: checkout.toString() };
 }

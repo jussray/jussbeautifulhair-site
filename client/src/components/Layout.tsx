@@ -8,6 +8,7 @@ import { BRAND } from "@/lib/catalog";
 const NAV = [
   { href: "/", label: "Home" },
   { href: "/shop", label: "Shop" },
+  { href: "/hair-match", label: "Hair Match" },
   { href: "/about", label: "About" },
   { href: "/faq", label: "FAQ" },
   { href: "/contact", label: "Contact" },
@@ -20,10 +21,10 @@ function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
-      {/* Announcement strip */}
-      <div className="bg-primary text-primary-foreground text-center text-[11px] sm:text-xs tracking-[0.2em] uppercase py-2 px-4">
-        Now Open · Free US Shipping Over $150 · Code{" "}
-        <span className="text-gold font-semibold">{BRAND.promoCode}</span> for 10% Off
+      <div className="bg-primary text-primary-foreground text-center text-[11px] sm:text-xs tracking-[0.16em] uppercase py-2 px-4">
+        <Link href="/hair-match" className="hover:text-gold transition-colors">
+          Founding-client Hair Match · $25 credit toward an eligible future order
+        </Link>
       </div>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
@@ -32,12 +33,12 @@ function Header() {
             <Logo />
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden md:flex items-center gap-7">
             {NAV.map((n) => (
               <Link
                 key={n.href}
                 href={n.href}
-                data-testid={`link-nav-${n.label.toLowerCase()}`}
+                data-testid={`link-nav-${n.label.toLowerCase().replace(/\s+/g, "-")}`}
                 className={`text-sm tracking-wide uppercase transition-colors ${
                   location === n.href
                     ? "text-primary font-semibold"
@@ -84,7 +85,7 @@ function Header() {
             <Link
               key={n.href}
               href={n.href}
-              data-testid={`link-mobnav-${n.label.toLowerCase()}`}
+              data-testid={`link-mobnav-${n.label.toLowerCase().replace(/\s+/g, "-")}`}
               onClick={() => setOpen(false)}
               className="py-3 text-sm uppercase tracking-wide text-foreground border-b border-border last:border-0"
             >
@@ -106,8 +107,8 @@ function Footer() {
             <Logo />
           </div>
           <p className="mt-4 text-sm text-primary-foreground/70 leading-relaxed">
-            Premium hair &amp; beauty supply, hand-selected and shipped from the US.
-            Made for the woman who knows what she wants.
+            Personalized hair guidance and a growing catalog built around Story,
+            Quality, Care, and Proof.
           </p>
         </div>
         <div>
@@ -140,7 +141,9 @@ function Footer() {
           <a href="https://instagram.com/jussbeautifulhair" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary-foreground/80 hover:text-gold mb-2">
             <Instagram className="h-4 w-4" /> {BRAND.instagram}
           </a>
-          <p className="text-sm text-primary-foreground/60 mt-3">📍 {BRAND.location} — shipping nationwide</p>
+          <p className="text-sm text-primary-foreground/60 mt-3">
+            Online support available through the contact form.
+          </p>
           <p className="text-sm text-primary-foreground/60 mt-1">
             Wholesale &amp; stylists:{" "}
             <Link href="/contact" className="underline hover:text-gold">

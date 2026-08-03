@@ -150,16 +150,23 @@ try {
 
   await desktop.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
   const bodyText = await desktop.locator("body").innerText();
-  assert(bodyText.includes("Juss Hair Match Session"), "Hair Match title is missing.");
+  const normalizedText = bodyText.toLowerCase();
+  assert(normalizedText.includes("juss hair match session"), "Hair Match title is missing.");
   assert(bodyText.includes("$25"), "Hair Match price is missing.");
   assert(
-    bodyText.includes("not an order for physical hair") &&
-      bodyText.includes("no hair product ships from this purchase"),
+    normalizedText.includes("not an order for physical hair") &&
+      normalizedText.includes("no hair product ships from this purchase"),
     "Non-physical-product disclosure is incomplete.",
   );
-  assert(bodyText.includes("Founding-client Hair Match"), "Truthful Hair Match announcement is missing.");
-  for (const retiredClaim of ["Now Open", "shipped from the US", "shipping nationwide"]) {
-    assert(!bodyText.includes(retiredClaim), `Unsupported storefront claim remains: ${retiredClaim}`);
+  assert(
+    normalizedText.includes("founding-client hair match"),
+    "Truthful Hair Match announcement is missing.",
+  );
+  for (const retiredClaim of ["now open", "shipped from the us", "shipping nationwide"]) {
+    assert(
+      !normalizedText.includes(retiredClaim),
+      `Unsupported storefront claim remains: ${retiredClaim}`,
+    );
   }
   assert(
     await desktop.getByTestId("link-nav-hair-match").isVisible(),

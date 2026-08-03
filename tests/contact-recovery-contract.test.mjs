@@ -56,7 +56,14 @@ test("public contact recovery preserves the private customer-data boundary", asy
     assert.match(handoff, new RegExp(heading));
   }
 
+  assert.match(handoff, /jussray\/jbh-private/);
+  assert.match(handoff, /PR #35/);
+  assert.match(handoff, /issue #36/);
+  assert.match(handoff, /29e38dfafa9809277f98a4c72fb86ff7de998c69/);
   assert.match(handoff, /jussray\/jussbeautifulhair1/);
-  assert.match(handoff, /private PR #6/i);
+  assert.match(handoff, /historical/i);
+  assert.match(handoff, /must not deploy `jbh-contact-ingress`/i);
+  assert.match(handoff, /64ea67290e161debdae5cb9a9e3f8f27fab4842b/);
   assert.match(handoff, /not authorized/i);
+  assert.doesNotMatch(handoff, /private PR #6/i);
 });

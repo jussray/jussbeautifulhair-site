@@ -31,6 +31,16 @@ test("Hair Match route preserves truthful non-physical-product disclosure", () =
   assert.match(hairMatch, /Secure checkout powered by Shopify/);
 });
 
+test("Hair Match preferences are bounded non-sensitive cart attributes", () => {
+  for (const key of ["hair_goal", "preferred_length", "budget", "maintenance"]) {
+    assert.match(storefront, new RegExp(key));
+    assert.match(hairMatch, new RegExp(`key: "${key}"`));
+  }
+  assert.match(storefront, /offer", value: "jbh-hair-match-v1/);
+  assert.match(storefront, /value\.trim\(\)\.slice\(0, 120\)/);
+  assert.doesNotMatch(hairMatch, /race|ethnicity|medical|health|income|address/i);
+});
+
 test("Shopify configuration remains environment-bound and explicitly public", () => {
   assert.match(storefront, /VITE_SHOPIFY_STORE_DOMAIN/);
   assert.match(storefront, /VITE_SHOPIFY_STOREFRONT_ACCESS/);

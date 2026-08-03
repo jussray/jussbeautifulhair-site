@@ -1,0 +1,46 @@
+name: Shopify Headless Exact-Head Gate
+
+on:
+  pull_request:
+    paths:
+      - "client/src/lib/shopifyStorefront.ts"
+      - "client/src/pages/HairMatch.tsx"
+      - "client/src/App.tsx"
+      - "tests/shopify-headless-contract.test.mjs"
+      - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
+      - ".github/workflows/shopify-headless-exact-head.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shopify-headless-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  verify:
+    name: Verify Shopify headless bridge
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - name: Check out exact requested head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Verify exact head
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check
+      - run: node --test tests/shopify-headless-contract.test.mjs
+      - run: npm run build

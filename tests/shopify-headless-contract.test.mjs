@@ -18,7 +18,12 @@ const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "u
 
 test("tokenless Shopify cart permalink owns the bridge-offer checkout", () => {
   assert.match(storefront, /\/cart\/\$\{variantId\}:\$\{quantity\}/);
-  assert.match(storefront, /gid:\\\/\\\/shopify\\\/ProductVariant\\\/(\\d\+)/);
+  assert.ok(
+    storefront.includes(
+      "merchandiseId.match(/^gid:\\/\\/shopify\\/ProductVariant\\/(\\d+)$/)",
+    ),
+    "Shopify variant GID must be reduced to a numeric permalink variant ID.",
+  );
   assert.match(storefront, /checkout\.searchParams\.set\(`attributes\[\$\{key\}\]`/);
   assert.match(storefront, /checkoutUrl/);
   assert.doesNotMatch(storefront, /X-Shopify-Storefront-Access-Token/);

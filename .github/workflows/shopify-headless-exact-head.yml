@@ -1,4 +1,4 @@
-name: Shopify Headless Exact-Head Gate
+name: Shopify Checkout Bridge Exact-Head Gate
 
 on:
   pull_request:
@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: shopify-headless-${{ github.event.pull_request.number || github.ref }}
+  group: shopify-checkout-bridge-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -25,7 +25,7 @@ env:
 
 jobs:
   verify:
-    name: Verify Shopify headless bridge
+    name: Verify tokenless Shopify checkout bridge
     runs-on: ubuntu-22.04
     timeout-minutes: 18
     steps:
@@ -48,7 +48,7 @@ jobs:
       - name: Typecheck
         run: npm run check
 
-      - name: Verify Shopify code contract
+      - name: Verify Shopify checkout code contract
         run: node --test tests/shopify-headless-contract.test.mjs
 
       - name: Build production storefront
@@ -60,14 +60,14 @@ jobs:
       - name: Install Chromium
         run: npm exec -- playwright install --with-deps chromium
 
-      - name: Verify rendered Hair Match checkout flow
+      - name: Verify rendered Hair Match permalink flow
         run: node scripts/shopify-headless-playwright.mjs
 
       - name: Upload exact-head browser proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: shopify-headless-${{ env.EXPECTED_HEAD_SHA }}
+          name: shopify-checkout-bridge-${{ env.EXPECTED_HEAD_SHA }}
           path: artifacts/shopify-headless/
           if-no-files-found: error
           retention-days: 30

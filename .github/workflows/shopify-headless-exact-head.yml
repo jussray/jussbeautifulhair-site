@@ -1,0 +1,73 @@
+name: Shopify Checkout Bridge Exact-Head Gate
+
+on:
+  pull_request:
+    paths:
+      - "client/src/components/Layout.tsx"
+      - "client/src/lib/shopifyStorefront.ts"
+      - "client/src/pages/HairMatch.tsx"
+      - "client/src/App.tsx"
+      - "scripts/shopify-headless-playwright.mjs"
+      - "tests/shopify-headless-contract.test.mjs"
+      - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
+      - ".github/workflows/shopify-headless-exact-head.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shopify-checkout-bridge-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  verify:
+    name: Verify tokenless Shopify checkout bridge
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - name: Check out exact requested head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Verify exact head
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Verify Shopify checkout code contract
+        run: node --test tests/shopify-headless-contract.test.mjs
+
+      - name: Build production storefront
+        run: npm run build
+
+      - name: Install pinned browser verifier
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+
+      - name: Install Chromium
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Verify rendered Hair Match permalink flow
+        run: node scripts/shopify-headless-playwright.mjs
+
+      - name: Upload exact-head browser proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shopify-checkout-bridge-${{ env.EXPECTED_HEAD_SHA }}
+          path: artifacts/shopify-headless/
+          if-no-files-found: error
+          retention-days: 30

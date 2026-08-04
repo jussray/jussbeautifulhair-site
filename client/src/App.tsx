@@ -11,6 +11,7 @@ import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
+import HairMatch from "@/pages/HairMatch";
 import SuccessPage from "@/pages/success";
 import About from "@/pages/About";
 import FAQ from "@/pages/FAQ";
@@ -28,6 +29,7 @@ function AppRouter() {
       <Route path="/product/:id" component={Product} />
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />
+      <Route path="/hair-match" component={HairMatch} />
       <Route path="/success" component={SuccessPage} />
       <Route path="/about" component={About} />
       <Route path="/faq" component={FAQ} />

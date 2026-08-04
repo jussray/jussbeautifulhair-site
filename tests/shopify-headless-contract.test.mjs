@@ -16,19 +16,24 @@ const layout = await readFile(
 );
 const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "utf8");
 
-test("tokenless Shopify cart permalink owns the bridge-offer checkout", () => {
-  assert.match(storefront, /\/cart\/\$\{variantId\}:\$\{quantity\}/);
-  assert.ok(
-    storefront.includes(
-      "merchandiseId.match(/^gid:\\/\\/shopify\\/ProductVariant\\/(\\d+)$/)",
-    ),
-    "Shopify variant GID must be reduced to a numeric permalink variant ID.",
-  );
-  assert.match(storefront, /checkout\.searchParams\.set\(`attributes\[\$\{key\}\]`/);
-  assert.match(storefront, /checkoutUrl/);
+test("approved tokenless Shopify contract owns the Hair Match checkout", () => {
+  for (const required of [
+    'shopDomain: "jbh-25.myshopify.com"',
+    'variantGid: "gid://shopify/ProductVariant/50196622344435"',
+    'offerCode: "jbh-hair-match-v1"',
+    'source: "jussbeautifulhair.com"',
+    'quantity: 1',
+    'priceUsd: "25.00"',
+    "createHairMatchCheckout",
+    "/cart/${variantId}:${HAIR_MATCH_SHOPIFY_CONTRACT.quantity}",
+    "checkout.searchParams.set(`attributes[${key}]`, value)",
+  ]) {
+    assert.ok(storefront.includes(required), `missing Shopify contract: ${required}`);
+  }
+
   assert.doesNotMatch(storefront, /X-Shopify-Storefront-Access-Token/);
-  assert.doesNotMatch(storefront, /VITE_SHOPIFY_STOREFRONT_(?:ACCESS|TOKEN)/);
-  assert.doesNotMatch(storefront, /STRIPE_SECRET_KEY/);
+  assert.doesNotMatch(storefront, /VITE_SHOPIFY|import\.meta\.env/);
+  assert.doesNotMatch(storefront, /STRIPE_SECRET_KEY|access_token/);
 });
 
 test("Hair Match route preserves truthful non-physical-product disclosure", () => {
@@ -38,22 +43,22 @@ test("Hair Match route preserves truthful non-physical-product disclosure", () =
   assert.match(hairMatch, /Secure checkout powered by Shopify/);
 });
 
-test("Hair Match preferences are bounded non-sensitive cart attributes", () => {
+test("Hair Match preferences are complete, unique, bounded, and non-sensitive", () => {
   for (const key of ["hair_goal", "preferred_length", "budget", "maintenance"]) {
     assert.match(storefront, new RegExp(key));
     assert.match(hairMatch, new RegExp(`key: "${key}"`));
   }
-  assert.match(storefront, /offer", value: "jbh-hair-match-v1/);
+  assert.match(storefront, /seen\.has\(key\)/);
+  assert.match(storefront, /normalized\.length !== expectedKeys\.size/);
   assert.match(storefront, /value\.trim\(\)\.slice\(0, 120\)/);
-  assert.match(storefront, /ref", "jbh-hair-match-v1/);
   assert.doesNotMatch(hairMatch, /race|ethnicity|medical|health|income|address/i);
 });
 
-test("Shopify configuration requires only public store and variant identifiers", () => {
-  assert.match(storefront, /VITE_SHOPIFY_STORE_DOMAIN/);
-  assert.match(storefront, /\.myshopify\\\.com/);
-  assert.match(hairMatch, /VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID/);
-  assert.doesNotMatch(storefront, /API_VERSION|STOREFRONT_ACCESS|access_token/);
+test("approved checkout is deploy-ready without unproven build variables", () => {
+  assert.match(hairMatch, /createHairMatchCheckout\(preferences\)/);
+  assert.match(hairMatch, /disabled=\{submitting\}/);
+  assert.doesNotMatch(hairMatch, /VITE_SHOPIFY|import\.meta\.env/);
+  assert.doesNotMatch(hairMatch, /Checkout opens after the Shopify storefront connection/);
 });
 
 test("shared storefront chrome does not overstate launch or fulfillment status", () => {

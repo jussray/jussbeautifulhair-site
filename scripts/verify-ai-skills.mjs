@@ -28,6 +28,7 @@ for (const file of [...requiredFiles, ...operatorFiles]) {
   try { texts.set(file, await readFile(file, 'utf8')); } catch {}
 }
 const agents = texts.get('AGENTS.md') ?? '';
+const operator = operatorFiles.length === 1 ? texts.get(operatorFiles[0]) ?? '' : '';
 const sales = texts.get('.agents/skills/sales/SKILL.md') ?? '';
 const devil = texts.get('.agents/skills/devil/SKILL.md') ?? '';
 const all = [...texts.values()].join('\n').toLowerCase();
@@ -44,9 +45,22 @@ for (const [label, source, phrases] of [
   const lower = source.toLowerCase();
   for (const phrase of phrases) if (!lower.includes(phrase)) failures.push(`${label} skill missing: ${phrase}`);
 }
+for (const [label, source] of [['AGENTS.md', agents], ['repository operator', operator]]) {
+  const lower = source.toLowerCase();
+  for (const phrase of ['exact-fix doctrine', 'exact evidence-backed fix', 'full correctness boundary']) {
+    if (!lower.includes(phrase)) failures.push(`${label} missing exact-fix contract: ${phrase}`);
+  }
+}
 if (!agents.toLowerCase().includes('separate')) failures.push('AGENTS.md must preserve explicit project or data separation');
-for (const forbidden of ['guaranteed conversion', 'bypass founder approval', 'automatic outreach without approval']) {
-  if (all.includes(forbidden)) failures.push(`forbidden unsafe contract text: ${forbidden}`);
+for (const forbidden of [
+  'guaranteed conversion',
+  'bypass founder approval',
+  'automatic outreach without approval',
+  'the smallest safe implementation',
+  'choose the smallest reversible action',
+  'make the smallest coherent, reversible change',
+]) {
+  if (all.includes(forbidden)) failures.push(`forbidden unsafe or partial-fix contract text: ${forbidden}`);
 }
 if (failures.length) {
   console.error('AI skill contract failed:');

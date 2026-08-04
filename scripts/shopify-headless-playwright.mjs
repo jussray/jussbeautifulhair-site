@@ -9,17 +9,12 @@ const port = Number(process.env.PLAYWRIGHT_PORT || 4174);
 const baseURL = `http://${host}:${port}`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-headless";
-const variantId = "gid://shopify/ProductVariant/50196622344435";
 const numericVariantId = "50196622344435";
 const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let serverOutput = "";
 
 const server = spawn(process.execPath, [vitePath, "--host", host, "--port", String(port)], {
-  env: {
-    ...process.env,
-    VITE_SHOPIFY_STORE_DOMAIN: "jbh-25.myshopify.com",
-    VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID: variantId,
-  },
+  env: process.env,
   stdio: ["ignore", "pipe", "pipe"],
 });
 
@@ -97,6 +92,7 @@ async function configureShopifyPermalinkMock(page, evidence) {
 let browser;
 const consoleErrors = [];
 const evidence = {
+  configurationSource: "repository-approved-public-contract",
   checkoutRequests: 0,
   checkoutNavigation: null,
   checkoutPath: null,
@@ -140,7 +136,7 @@ try {
 
   const checkoutButton = desktop.getByTestId("button-hair-match-checkout");
   await checkoutButton.waitFor({ state: "visible" });
-  assert(await checkoutButton.isEnabled(), "Configured Shopify checkout is disabled.");
+  assert(await checkoutButton.isEnabled(), "Repository-approved Shopify checkout is disabled.");
   await assertNoHorizontalOverflow(desktop, "desktop Hair Match page");
   await desktop.screenshot({ path: `${outputDir}/hair-match-desktop.png`, fullPage: true });
 
@@ -174,6 +170,10 @@ try {
   mobile.on("pageerror", (error) => consoleErrors.push(error.message));
   await mobile.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("select-hair-goal").waitFor({ state: "visible" });
+  assert(
+    await mobile.getByTestId("button-hair-match-checkout").isEnabled(),
+    "Mobile repository-approved Shopify checkout is disabled.",
+  );
   await mobile.getByTestId("button-menu").click();
   assert(await mobile.getByTestId("link-mobnav-hair-match").isVisible(), "Mobile navigation is missing.");
   await mobile.getByTestId("button-menu").click();
@@ -195,6 +195,7 @@ try {
           "truthful consultation and future-credit disclosure rendered",
           "four bounded non-sensitive preferences rendered",
           "preferences attached to Shopify cart permalink attributes",
+          "approved public Shopify contract works without build variables",
           "no Storefront access token exposed",
           "approved numeric Shopify variant and quantity used",
           "unsupported launch and fulfillment claims absent",

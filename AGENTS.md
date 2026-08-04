@@ -59,7 +59,7 @@ The target is the **exact evidence-backed fix**, not the smallest diff, fewest f
 - Include every coupled change required for correctness, security, data integrity, user experience, operability, verification, rollout, and rollback.
 - Remove unrelated work, but never remove required work merely to make the patch look smaller.
 - Do not call a partial mitigation complete while a known required gap remains.
-- A fix may be delivered in reversible stages, but the correctness boundary must remain the full required outcome.
+- A fix may be delivered in reversible stages, but the full correctness boundary must remain intact until the required outcome is satisfied.
 - Expand or contract the implementation when evidence changes; optimize for exactness, not patch size.
 
 ## Codex provider baseline

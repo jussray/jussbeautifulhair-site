@@ -27,6 +27,7 @@ on:
       - "scripts/verify-mcp-config.mjs"
       - "scripts/verify-deployment-boundary.mjs"
       - "scripts/verify-control-room-manifest.mjs"
+      - "scripts/verify-control-room-tests.mjs"
       - "docs/CONTROL_ROOM_FUTUREYOU.md"
   push:
     branches:
@@ -54,6 +55,7 @@ on:
       - "scripts/verify-mcp-config.mjs"
       - "scripts/verify-deployment-boundary.mjs"
       - "scripts/verify-control-room-manifest.mjs"
+      - "scripts/verify-control-room-tests.mjs"
       - "docs/CONTROL_ROOM_FUTUREYOU.md"
   workflow_dispatch:
 
@@ -63,6 +65,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  CONTROL_ROOM_TEST_REPORT_PATH: control-room-test-catalog.json
 
 concurrency:
   group: control-room-current-main-${{ github.event.pull_request.number || github.ref }}
@@ -122,16 +125,21 @@ jobs:
       - name: Verify built deployment boundary
         run: npm run security:deploy-boundary
 
+      - name: Verify repo-local test catalog
+        run: node scripts/verify-control-room-tests.mjs
+
       - name: Verify Control Room manifests and create sanitized packet
         env:
           CONTROL_ROOM_REPORT_PATH: control-room-verification-packet.json
         run: node scripts/verify-control-room-manifest.mjs
 
-      - name: Upload sanitized verification packet
+      - name: Upload sanitized Control Room evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: control-room-current-main-${{ env.EXPECTED_HEAD_SHA }}
-          path: control-room-verification-packet.json
+          path: |
+            control-room-verification-packet.json
+            control-room-test-catalog.json
           if-no-files-found: warn
           retention-days: 30

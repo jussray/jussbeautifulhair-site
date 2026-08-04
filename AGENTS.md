@@ -51,6 +51,17 @@ Continue working the requested task until it is done or until a real blocker is 
 
 Every handoff must state what was changed, what was verified, what remains blocked, and the next gate.
 
+## Exact-fix doctrine
+
+The target is the **exact evidence-backed fix**, not the smallest diff, fewest files, shortest answer, or lowest-effort patch.
+
+- Define the complete root-cause fix before reducing scope.
+- Include every coupled change required for correctness, security, data integrity, user experience, operability, verification, rollout, and rollback.
+- Remove unrelated work, but never remove required work merely to make the patch look smaller.
+- Do not call a partial mitigation complete while a known required gap remains.
+- A fix may be delivered in reversible stages, but the correctness boundary must remain the full required outcome.
+- Expand or contract the implementation when evidence changes; optimize for exactness, not patch size.
+
 ## Codex provider baseline
 
 When a repo-running Codex agent needs model-provider configuration, keep it machine-local and use OpenAI/Codex as the default coding engine:
@@ -87,7 +98,7 @@ If those conditions are not met, keep working or leave the PR open with the exac
 ## Provider roles
 
 - Claude: long-context repo reasoning, focused implementation, refactor planning, and documentation. Read `AGENTS.md` and any local `CLAUDE.md` before acting.
-- Codex: code edits, tests, Playwright, CI triage, and repository operations. Keep patches focused and evidence-backed. Use the Codex provider baseline above when local model-provider configuration is needed.
+- Codex: code edits, tests, Playwright, CI triage, and repository operations. Keep fixes exact, complete, reversible, and evidence-backed. Use the Codex provider baseline above when local model-provider configuration is needed.
 - ChatGPT: reasoning, review, debugging, threat modeling, data analysis, and founder-readable decisions. Separate fact, inference, and action.
 - Perplexity: current public research and source discovery. It is not private repository, account, Supabase, Cloudflare, or production truth unless those systems are explicitly connected and inspected.
 

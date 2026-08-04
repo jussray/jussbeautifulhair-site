@@ -24,7 +24,7 @@ Inspect repository and runtime truth for unknowns. Ask only when a missing answe
 
 ## Exact-fix doctrine
 
-Define and implement the complete fix required by the evidence. Do not optimize for the smallest diff, fewest files, shortest response, or lowest effort when that leaves a known requirement unresolved. Remove unrelated scope only after the full correctness boundary is understood. Reversible stages are allowed; partial correctness presented as completion is not.
+Define and implement the exact evidence-backed fix required by the evidence. Do not optimize for the smallest diff, fewest files, shortest response, or lowest effort when that leaves a known requirement unresolved. Remove unrelated scope only after the full correctness boundary is understood. Reversible stages are allowed; partial correctness presented as completion is not.
 
 ## Repository identity
 

@@ -3,12 +3,9 @@ import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import {
-  createShopifyCheckout,
-  isShopifyStorefrontConfigured,
+  createHairMatchCheckout,
   type ShopifyCartAttribute,
 } from "@/lib/shopifyStorefront";
-
-const HAIR_MATCH_VARIANT_ID = import.meta.env.VITE_SHOPIFY_HAIR_MATCH_VARIANT_ID?.trim();
 
 const SELECT_CLASS =
   "mt-2 h-11 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -21,11 +18,7 @@ export default function HairMatch() {
   const [budget, setBudget] = useState("not-sure");
   const [maintenance, setMaintenance] = useState("low-maintenance");
 
-  const configured = isShopifyStorefrontConfigured() && Boolean(HAIR_MATCH_VARIANT_ID);
-
-  async function startCheckout() {
-    if (!HAIR_MATCH_VARIANT_ID) return;
-
+  function startCheckout() {
     const preferences: ShopifyCartAttribute[] = [
       { key: "hair_goal", value: hairGoal },
       { key: "preferred_length", value: preferredLength },
@@ -37,11 +30,7 @@ export default function HairMatch() {
     setError(null);
 
     try {
-      const { checkoutUrl } = await createShopifyCheckout(
-        HAIR_MATCH_VARIANT_ID,
-        1,
-        preferences,
-      );
+      const { checkoutUrl } = createHairMatchCheckout(preferences);
       window.location.assign(checkoutUrl);
     } catch (checkoutError) {
       setError(
@@ -182,19 +171,13 @@ export default function HairMatch() {
               <Button
                 size="lg"
                 className="mt-6 w-full font-semibold"
-                disabled={!configured || submitting}
+                disabled={submitting}
                 onClick={startCheckout}
                 data-testid="button-hair-match-checkout"
               >
                 {submitting ? "Opening secure checkout…" : "Reserve My Hair Match"}
                 {!submitting && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
-
-              {!configured && (
-                <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Checkout opens after the Shopify storefront connection is approved.
-                </p>
-              )}
 
               <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <ShieldCheck className="h-4 w-4" /> Secure checkout powered by Shopify

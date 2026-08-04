@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - "control-room.manifest.json"
       - ".control-room/repository.manifest.json"
       - ".github/workflows/control-room-current-main-exact-head.yml"
       - ".github/workflows/quality-gate.yml"
@@ -19,8 +20,11 @@ on:
       - "package.json"
       - "vite.config.ts"
       - "wrangler.toml"
+      - ".security/cookies.json"
       - "scripts/lint-storefront.mjs"
+      - "scripts/verify-cookie-contract.mjs"
       - "scripts/verify-ai-skills.mjs"
+      - "scripts/verify-mcp-config.mjs"
       - "scripts/verify-deployment-boundary.mjs"
       - "scripts/verify-control-room-manifest.mjs"
       - "docs/CONTROL_ROOM_FUTUREYOU.md"
@@ -28,6 +32,7 @@ on:
     branches:
       - main
     paths:
+      - "control-room.manifest.json"
       - ".control-room/repository.manifest.json"
       - ".github/workflows/control-room-current-main-exact-head.yml"
       - ".github/workflows/quality-gate.yml"
@@ -42,8 +47,11 @@ on:
       - "package.json"
       - "vite.config.ts"
       - "wrangler.toml"
+      - ".security/cookies.json"
       - "scripts/lint-storefront.mjs"
+      - "scripts/verify-cookie-contract.mjs"
       - "scripts/verify-ai-skills.mjs"
+      - "scripts/verify-mcp-config.mjs"
       - "scripts/verify-deployment-boundary.mjs"
       - "scripts/verify-control-room-manifest.mjs"
       - "docs/CONTROL_ROOM_FUTUREYOU.md"
@@ -96,8 +104,14 @@ jobs:
       - name: Run repository contract tests
         run: npm test
 
+      - name: Verify cookie contract
+        run: npm run verify:cookies
+
       - name: Verify AI sales and adversarial boundaries
         run: npm run verify:ai-skills
+
+      - name: Verify MCP contract
+        run: npm run verify:mcp
 
       - name: Verify source deployment boundary
         run: npm run security:deploy-boundary
@@ -108,7 +122,7 @@ jobs:
       - name: Verify built deployment boundary
         run: npm run security:deploy-boundary
 
-      - name: Verify Control Room manifest and create sanitized packet
+      - name: Verify Control Room manifests and create sanitized packet
         env:
           CONTROL_ROOM_REPORT_PATH: control-room-verification-packet.json
         run: node scripts/verify-control-room-manifest.mjs

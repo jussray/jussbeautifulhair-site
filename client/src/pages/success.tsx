@@ -3,47 +3,23 @@ import { Link, useSearch } from "wouter";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
+import { getCheckoutSessionId } from "@/lib/checkoutSuccess";
 
 /**
  * Stripe success_url is: https://domain.com/#/success?session_id={CHECKOUT_SESSION_ID}
  *
  * In hash-router mode, wouter's useSearch() returns the query string that
- * follows the hash path (everything after "#/success"). Most browsers treat
- * "?" after "#" as part of the hash fragment, so window.location.search is
- * typically empty and window.location.hash contains the full fragment
- * including the query string. We try useSearch() first (wouter normalises
- * this correctly), then fall back to parsing window.location.hash directly.
+ * follows the hash path. Browsers can also leave the query inside
+ * window.location.hash, so the parser supports both forms.
  */
-function getSessionId(): string | null {
-  // Primary: wouter's useSearch — works when wouter parses hash query strings
-  // (called inside the component so we can use the hook, but we also need a
-  // standalone version for the fallback below — see component body).
-  return null; // placeholder; real logic is in the component
-}
-
 export default function SuccessPage() {
   const search = useSearch();
   const { clear } = useCart();
   const clearedRef = useRef(false);
-
-  // Resolve session_id from wouter's search string or from the raw hash
-  const sessionId = (() => {
-    // 1. Try wouter's normalised search string (e.g. "?session_id=cs_live_xxx")
-    if (search) {
-      const id = new URLSearchParams(search).get("session_id");
-      if (id) return id;
-    }
-    // 2. Fallback: parse window.location.hash directly
-    //    hash is something like "#/success?session_id=cs_live_xxx"
-    try {
-      const hashQuery = window.location.hash.split("?")[1] ?? "";
-      const id = new URLSearchParams(hashQuery).get("session_id");
-      if (id) return id;
-    } catch {
-      // not in a browser context (SSR/test) — ignore
-    }
-    return null;
-  })();
+  const sessionId = getCheckoutSessionId(
+    search,
+    typeof window === "undefined" ? "" : window.location.hash,
+  );
 
   useEffect(() => {
     if (!clearedRef.current) {

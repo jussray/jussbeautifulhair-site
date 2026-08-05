@@ -1,0 +1,55 @@
+name: Public Vendor Privacy Exact-Head Gate
+
+on:
+  pull_request:
+    paths:
+      - "worker/index.ts"
+      - "tests/vendor-privacy-boundary.test.mjs"
+      - ".github/workflows/public-vendor-privacy-exact-head.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-vendor-privacy-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  verify:
+    name: Verify storefront cannot expose vendor operations
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - name: Check out exact requested head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Record and verify exact head
+        shell: bash
+        run: |
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run public boundary contracts
+        run: npm test
+
+      - name: Typecheck storefront and worker
+        run: npm run check
+
+      - name: Build public storefront
+        run: npm run build

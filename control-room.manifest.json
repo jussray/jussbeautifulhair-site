@@ -36,7 +36,7 @@
       {"id": "production-build", "name": "Production storefront build", "kind": "build", "command": "npm run build", "required": true, "status": "active", "evidencePaths": ["package.json", "vite.config.ts", ".github/workflows/control-room-current-main-exact-head.yml"]},
       {"id": "deployment-boundary-built", "name": "Built deployment boundary", "kind": "deployment", "command": "npm run security:deploy-boundary", "required": true, "status": "active", "evidencePaths": ["scripts/verify-deployment-boundary.mjs", "vite.config.ts", "wrangler.toml", ".github/workflows/control-room-current-main-exact-head.yml"]},
       {"id": "control-room-packet", "name": "Sanitized Control Room packet", "kind": "contract", "command": "node scripts/verify-control-room-manifest.mjs", "required": true, "status": "active", "evidencePaths": ["control-room.manifest.json", ".control-room/repository.manifest.json", "scripts/verify-control-room-manifest.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "hair-match-playwright", "name": "Hair Match desktop and mobile Playwright", "kind": "e2e", "command": "external-exact-head-proof", "required": true, "status": "active", "evidencePaths": ["client/src/pages/HairMatch.tsx", "tests/hair-match-offer-contract.test.mjs"]}
+      {"id": "hair-match-playwright", "name": "Hair Match desktop and mobile Playwright", "kind": "e2e", "command": "external-exact-head-proof", "required": true, "status": "active", "evidencePaths": ["client/src/pages/HairMatch.tsx", "client/src/lib/shopifyStorefront.ts", "tests/shopify-headless-contract.test.mjs", "scripts/shopify-headless-playwright.mjs", ".github/workflows/shopify-headless-exact-head.yml"]}
     ]
   },
   "evidence": {

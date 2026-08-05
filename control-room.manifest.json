@@ -4,34 +4,61 @@
   "portfolioHub": "jussray/founder-control-room",
   "role": "commerce-surface",
   "authority": {
-    "sourceOfTruth": "Public storefront repository, Stripe redirect behavior, Cloudflare deployment evidence, and private operations kept outside this repo",
+    "sourceOfTruth": "Public storefront main, exact-head storefront contract, Stripe redirect behavior, and Cloudflare deployment-boundary evidence",
     "portfolioMode": "sanitized-read-only-observer",
+    "canonicalIntegration": ".control-room/repository.manifest.json",
     "productionMutation": "separate-founder-gate"
   },
   "controlRoom": {
-    "localSurface": false,
+    "localSurface": true,
     "surfaces": [
-      ".github/workflows",
+      "control-room.manifest.json",
+      ".control-room/repository.manifest.json",
+      ".github/workflows/control-room-current-main-exact-head.yml",
+      "scripts/verify-control-room-manifest.mjs",
+      "package.json",
       "wrangler.toml"
     ],
     "privateContentAllowed": false
   },
+  "tests": {
+    "authority": "repo-native-current-main-contract",
+    "aggregation": "sanitized-check-summary-to-founder-control-room",
+    "rawLogsAllowed": false,
+    "catalog": [
+      {"id": "typecheck", "name": "Storefront TypeScript", "kind": "typecheck", "command": "npm run check", "required": true, "status": "active", "evidencePaths": ["package.json", "tsconfig.json", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "lint", "name": "Storefront lint contract", "kind": "lint", "command": "npm run lint", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/lint-storefront.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "unit-tests", "name": "Storefront repository contracts", "kind": "unit", "command": "npm test", "required": true, "status": "active", "evidencePaths": ["package.json", "tests", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "cookie-contract", "name": "Storefront cookie contract", "kind": "security", "command": "npm run verify:cookies", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-cookie-contract.mjs", ".security/cookies.json", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "ai-skill-contract", "name": "Hair sales and adversarial AI-skill boundaries", "kind": "contract", "command": "npm run verify:ai-skills", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-ai-skills.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "mcp-contract", "name": "Storefront MCP contract", "kind": "contract", "command": "npm run verify:mcp", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-mcp-config.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "deployment-boundary-source", "name": "Source deployment boundary", "kind": "security", "command": "npm run security:deploy-boundary", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-deployment-boundary.mjs", "wrangler.toml", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "production-build", "name": "Production storefront build", "kind": "build", "command": "npm run build", "required": true, "status": "active", "evidencePaths": ["package.json", "vite.config.ts", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "deployment-boundary-built", "name": "Built deployment boundary", "kind": "deployment", "command": "npm run security:deploy-boundary", "required": true, "status": "active", "evidencePaths": ["scripts/verify-deployment-boundary.mjs", "vite.config.ts", "wrangler.toml", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "control-room-packet", "name": "Sanitized Control Room packet", "kind": "contract", "command": "node scripts/verify-control-room-manifest.mjs", "required": true, "status": "active", "evidencePaths": ["control-room.manifest.json", ".control-room/repository.manifest.json", "scripts/verify-control-room-manifest.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
+      {"id": "hair-match-playwright", "name": "Hair Match desktop and mobile Playwright", "kind": "e2e", "command": "external-exact-head-proof", "required": true, "status": "active", "evidencePaths": ["client/src/pages/HairMatch.tsx", "tests/hair-match-offer-contract.test.mjs"]}
+    ]
+  },
   "evidence": {
-    "status": "at-risk",
-    "commit": "ebfa7f23270de246b381953322cb70c468bfb439",
-    "observedAt": "2026-07-12",
+    "status": "verified",
+    "commit": "fbaf7550e6597a25070e72f6dc1f023f0de8346f",
+    "observedAt": "2026-08-04",
     "proofRefs": [
-      ".github/workflows",
+      ".github/workflows/control-room-current-main-exact-head.yml",
+      ".control-room/repository.manifest.json",
+      "scripts/verify-control-room-manifest.mjs",
+      "package.json",
       "wrangler.toml"
     ]
   },
   "risk": {
     "level": "high",
     "blockers": [
-      "Guardrail PR #3 has focused Playwright proof but broad typecheck, unit, lint, and SonarQube failures",
-      "Production checkout, order notification, fulfillment, and rollback are not verified end to end",
-      "Public/private repository separation still requires explicit release evidence"
+      "Production checkout, order notification, fulfillment, and rollback require separate live evidence",
+      "Public/private repository separation must remain enforced",
+      "A catalog entry is not a pass until the exact current-main provider signal succeeds",
+      "Rendered Hair Match proof must retain exact-head artifacts and cannot be inferred from unit tests"
     ]
   },
-  "nextGate": "Repair broad quality gates, merge guardrails without product or secret drift, then run monitored test orders and rollback proof."
+  "nextGate": "Pass the expanded current-main contract, retain the sanitized packet, and keep production order and fulfillment proof behind separate founder approval."
 }

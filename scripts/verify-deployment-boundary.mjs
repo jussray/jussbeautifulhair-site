@@ -238,5 +238,5 @@ if (failures.length) {
 }
 
 console.log(
-  "JBH deployment boundary verified: default deploy cannot claim the branded hostname, explicit front-door route is pinned to jussbeautifulhair.com/*, previews are disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts were detected.",
+  "JBH deployment boundary verified: default deploy cannot claim the branded hostname, explicit front-door route is pinned to jussbeautifulhair.com/*, previews disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts detected.",
 );

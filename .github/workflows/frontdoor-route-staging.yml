@@ -1,0 +1,45 @@
+name: Front Door Route Staging
+
+on:
+  pull_request:
+    paths:
+      - "wrangler.toml"
+      - "wrangler.frontdoor.toml"
+      - "worker/**"
+      - "scripts/verify-deployment-boundary.mjs"
+      - ".github/workflows/frontdoor-route-staging.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: frontdoor-route-staging-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-frontdoor-route:
+    name: Verify staged branded-host route
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+      - name: Verify exact head
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Verify source and route boundary
+        run: npm run security:deploy-boundary
+      - run: npm run build
+      - name: Verify built storefront boundary
+        run: npm run security:deploy-boundary

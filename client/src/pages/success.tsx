@@ -34,6 +34,7 @@ export default function SuccessPage() {
       return;
     }
 
+    const checkoutSessionId = sessionId;
     const controller = new AbortController();
 
     async function verifyPayment() {
@@ -41,7 +42,7 @@ export default function SuccessPage() {
 
       try {
         const response = await fetch(
-          `/api/checkout/session/${encodeURIComponent(sessionId)}`,
+          `/api/checkout/session/${encodeURIComponent(checkoutSessionId)}`,
           {
             method: "GET",
             headers: { Accept: "application/json" },

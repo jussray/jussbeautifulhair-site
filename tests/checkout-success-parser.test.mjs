@@ -39,3 +39,36 @@ test("checkout success parser safely handles a missing reference", async () => {
   const { getCheckoutSessionId } = await loadParser();
   assert.equal(getCheckoutSessionId("", "#/success"), undefined);
 });
+
+test("payment truth requires a complete paid Stripe session", async () => {
+  const { isPaidCheckoutVerification } = await loadParser();
+  assert.equal(
+    isPaidCheckoutVerification({
+      paid: true,
+      status: "complete",
+      paymentStatus: "paid",
+    }),
+    true,
+  );
+});
+
+test("payment truth rejects URL-only, open, and unpaid states", async () => {
+  const { isPaidCheckoutVerification } = await loadParser();
+  assert.equal(isPaidCheckoutVerification(undefined), false);
+  assert.equal(
+    isPaidCheckoutVerification({
+      paid: true,
+      status: "open",
+      paymentStatus: "paid",
+    }),
+    false,
+  );
+  assert.equal(
+    isPaidCheckoutVerification({
+      paid: false,
+      status: "complete",
+      paymentStatus: "unpaid",
+    }),
+    false,
+  );
+});

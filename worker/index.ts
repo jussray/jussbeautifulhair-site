@@ -17,6 +17,7 @@ interface Env {
 const FREE_SHIPPING_THRESHOLD = 150;
 const FLAT_SHIPPING = 9.99;
 const MAX_BODY_BYTES = 64 * 1024;
+const CHECKOUT_SESSION_ROUTE_PREFIX = "/api/checkout/session/";
 
 const checkoutSchema = z.object({
   checkoutAttemptId: z.string().uuid(),
@@ -31,6 +32,13 @@ const checkoutSchema = z.object({
     .min(1)
     .max(20),
 });
+
+const checkoutSessionIdSchema = z
+  .string()
+  .trim()
+  .min(8)
+  .max(255)
+  .regex(/^cs_(?:test_|live_)?[A-Za-z0-9]+$/);
 
 function json(body: unknown, status = 200, origin?: string): Response {
   const headers = new Headers({
@@ -71,6 +79,13 @@ function getContactApiOrigin(env: Env): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function createStripeClient(env: Env): Stripe {
+  return new Stripe(env.STRIPE_SECRET_KEY, {
+    apiVersion: "2025-02-24.acacia",
+    httpClient: Stripe.createFetchHttpClient(),
+  });
 }
 
 function isApprovedRequestHost(request: Request, env: Env): boolean {
@@ -251,10 +266,7 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
   }
 
   try {
-    const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-02-24.acacia",
-      httpClient: Stripe.createFetchHttpClient(),
-    });
+    const stripe = createStripeClient(env);
     const reference = parsed.data.checkoutAttemptId;
     const session = await stripe.checkout.sessions.create(
       {
@@ -284,6 +296,77 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
   }
 }
 
+async function handleCheckoutSessionVerification(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  const allowedOrigins = getAllowedOrigins(env);
+  const origin = request.headers.get("Origin");
+  const responseOrigin = origin && allowedOrigins.includes(origin) ? origin : undefined;
+
+  if (!env.STRIPE_SECRET_KEY) {
+    return json({ error: "Payments are not configured" }, 503, responseOrigin);
+  }
+
+  if (origin && !allowedOrigins.includes(origin)) {
+    return json({ error: "Origin not allowed" }, 403);
+  }
+
+  if (request.method !== "GET") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { Allow: "GET", "Cache-Control": "no-store" },
+    });
+  }
+
+  const url = new URL(request.url);
+  const parsedSessionId = checkoutSessionIdSchema.safeParse(
+    url.pathname.slice(CHECKOUT_SESSION_ROUTE_PREFIX.length),
+  );
+
+  if (!parsedSessionId.success) {
+    return json({ error: "Checkout Session not found" }, 404, responseOrigin);
+  }
+
+  try {
+    const session = await createStripeClient(env).checkout.sessions.retrieve(
+      parsedSessionId.data,
+    );
+    const reference = session.client_reference_id?.trim();
+    const metadataReference = session.metadata?.checkout_attempt_id?.trim();
+    const belongsToStore = Boolean(
+      reference && metadataReference && reference === metadataReference,
+    );
+
+    if (!belongsToStore) {
+      return json({ error: "Checkout Session not found" }, 404, responseOrigin);
+    }
+
+    return json(
+      {
+        paid: session.status === "complete" && session.payment_status === "paid",
+        status: session.status,
+        paymentStatus: session.payment_status,
+      },
+      200,
+      responseOrigin,
+    );
+  } catch (error) {
+    const statusCode =
+      error && typeof error === "object" && "statusCode" in error
+        ? (error as { statusCode?: unknown }).statusCode
+        : undefined;
+
+    if (statusCode === 400 || statusCode === 404) {
+      return json({ error: "Checkout Session not found" }, 404, responseOrigin);
+    }
+
+    const errorType = error instanceof Error ? error.name : "UnknownError";
+    console.error(`[CHECKOUT] Stripe session verification failed - ${errorType}`);
+    return json({ error: "Payment verification unavailable" }, 502, responseOrigin);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (!isApprovedRequestHost(request, env)) {
@@ -294,6 +377,10 @@ export default {
 
     if (url.pathname === "/api/checkout") {
       return handleCheckout(request, env);
+    }
+
+    if (url.pathname.startsWith(CHECKOUT_SESSION_ROUTE_PREFIX)) {
+      return handleCheckoutSessionVerification(request, env);
     }
 
     if (url.pathname.startsWith("/api/")) {

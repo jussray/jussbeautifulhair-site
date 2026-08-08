@@ -1,0 +1,75 @@
+name: Checkout Payment Truth Exact-Head Gate
+
+on:
+  pull_request:
+    paths:
+      - "worker/index.ts"
+      - "client/src/lib/checkoutSuccess.ts"
+      - "client/src/pages/success.tsx"
+      - "tests/checkout-success-parser.test.mjs"
+      - "tests/checkout-payment-truth.test.mjs"
+      - "scripts/checkout-payment-truth-playwright.mjs"
+      - ".github/workflows/checkout-payment-truth-exact-head.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checkout-payment-truth-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  verify:
+    name: Verify Stripe-authoritative checkout confirmation
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - name: Check out exact requested head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Verify exact head
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck and lint
+        run: npm run lint
+
+      - name: Run focused payment-truth tests
+        run: node --test tests/checkout-success-parser.test.mjs tests/checkout-payment-truth.test.mjs
+
+      - name: Run repository test suite
+        run: npm test
+
+      - name: Build production storefront
+        run: npm run build
+
+      - name: Install pinned browser verifier
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+
+      - name: Install Chromium
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Verify no-proof success path in a real browser
+        run: node scripts/checkout-payment-truth-playwright.mjs
+
+      - name: Upload exact-head browser proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkout-payment-truth-${{ env.EXPECTED_HEAD_SHA }}
+          path: artifacts/checkout-payment-truth/
+          if-no-files-found: error
+          retention-days: 30

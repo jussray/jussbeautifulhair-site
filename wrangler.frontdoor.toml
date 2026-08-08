@@ -1,0 +1,25 @@
+name = "jussbeautifulhair-site"
+main = "worker/index.ts"
+compatibility_date = "2026-07-14"
+compatibility_flags = ["nodejs_compat"]
+
+# Explicit activation config for the branded storefront front door.
+# This file is intentionally separate from wrangler.toml so branch/automatic
+# deploys cannot claim the root hostname before the Cloudflare DNS proxy gate
+# is verified. Activate only with an explicit --config wrangler.frontdoor.toml
+# deployment after the root DNS record is proxied through Cloudflare.
+workers_dev = false
+preview_urls = false
+
+[[routes]]
+pattern = "jussbeautifulhair.com/*"
+zone_name = "jussbeautifulhair.com"
+
+[vars]
+STORE_ORIGIN = "https://jussbeautifulhair.com"
+
+[assets]
+directory = "dist/public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]

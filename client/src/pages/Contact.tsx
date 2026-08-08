@@ -254,7 +254,7 @@ export default function Contact() {
             </span>
             <span>
               <span className="block text-sm text-muted-foreground">Location</span>
-              Pittsburgh, PA — shipping nationwide
+              Pennsylvania, USA — shipping nationwide
             </span>
           </div>
           <div className="rounded-lg bg-secondary/20 p-4 text-sm text-muted-foreground">

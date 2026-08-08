@@ -25,7 +25,7 @@ export default function About() {
           first day, a quiet season, or an everyday decision to show up as yourself.
         </p>
         <p>
-          We're a Pittsburgh-rooted, woman-owned storefront for customers seeking
+          We're a Pennsylvania-based, woman-owned storefront for customers seeking
           hair and beauty options with clearer facts, practical care guidance, and
           a reachable support path.
         </p>

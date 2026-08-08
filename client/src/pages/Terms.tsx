@@ -12,7 +12,7 @@ export default function Terms() {
             Terms of Service
           </h1>
           <p className="mt-4 text-sm text-primary-foreground/70">
-            Last updated: June 7, 2026
+            Last updated: August 8, 2026
           </p>
         </div>
       </section>

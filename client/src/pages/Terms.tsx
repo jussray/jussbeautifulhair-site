@@ -26,7 +26,7 @@ export default function Terms() {
 
           <h2 className="font-display text-2xl mt-8 mb-3">Who we are</h2>
           <p>
-            Juss Beautiful Hair is a small business based in Pittsburgh, Pennsylvania, USA.
+            Juss Beautiful Hair is a small business operating in Pennsylvania, USA.
             Contact: <a href="mailto:hello@jussbeautifulhair.com" className="underline">hello@jussbeautifulhair.com</a>.
           </p>
 

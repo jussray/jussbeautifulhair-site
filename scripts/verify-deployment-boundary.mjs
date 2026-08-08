@@ -73,6 +73,53 @@ forbidMatch(
   /workers\.dev/i,
   "wrangler.toml must not route the storefront through workers.dev.",
 );
+forbidMatch(
+  wrangler,
+  /^\s*\[\[routes\]\]/m,
+  "wrangler.toml must remain route-free so automatic deploys cannot claim the branded hostname.",
+);
+
+const frontdoorConfig = await read("wrangler.frontdoor.toml");
+requireMatch(
+  frontdoorConfig,
+  /^name\s*=\s*"jussbeautifulhair-site"\s*$/m,
+  "wrangler.frontdoor.toml must target the canonical storefront Worker.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^workers_dev\s*=\s*false\s*$/m,
+  "wrangler.frontdoor.toml must explicitly set workers_dev = false.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^preview_urls\s*=\s*false\s*$/m,
+  "wrangler.frontdoor.toml must explicitly set preview_urls = false.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^pattern\s*=\s*"jussbeautifulhair\.com\/\*"\s*$/m,
+  "Front-door route must match only jussbeautifulhair.com/*.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^zone_name\s*=\s*"jussbeautifulhair\.com"\s*$/m,
+  "Front-door route must bind only the jussbeautifulhair.com zone.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^STORE_ORIGIN\s*=\s*"https:\/\/jussbeautifulhair\.com"\s*$/m,
+  "Front-door STORE_ORIGIN must remain https://jussbeautifulhair.com.",
+);
+forbidMatch(
+  frontdoorConfig,
+  /custom_domain\s*=\s*true/i,
+  "Front-door staging must use a Worker Route in front of the existing Shopify origin, not a Custom Domain takeover.",
+);
+forbidMatch(
+  frontdoorConfig,
+  /workers\.dev/i,
+  "wrangler.frontdoor.toml must not route the storefront through workers.dev.",
+);
 
 const commandFiles = [
   "package.json",
@@ -191,5 +238,5 @@ if (failures.length) {
 }
 
 console.log(
-  "JBH deployment boundary verified: Cloudflare-only public host, previews disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts detected.",
+  "JBH deployment boundary verified: default deploy cannot claim the branded hostname, explicit front-door route is pinned to jussbeautifulhair.com/*, previews are disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts were detected.",
 );

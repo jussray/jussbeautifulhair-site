@@ -36,6 +36,8 @@ npm run verify:deploy
 
 - `workers_dev` is explicitly disabled;
 - public Preview URLs are explicitly disabled;
+- automatic/default deployment remains unable to claim the branded root hostname;
+- the explicit front-door config contains exactly one approved `jussbeautifulhair.com/*` Worker Route;
 - no temporary or aliased preview command is present in package scripts or GitHub Actions;
 - no deprecated Cloudflare Workers KV namespace-management route exists in source, scripts, workflows, or documentation;
 - no Vercel manifest, Vercel API directory, public database schema, public database client, or numeric order-lookup route exists;
@@ -46,14 +48,26 @@ The Vite storefront builds to `dist/public/`. Wrangler deploys that directory wi
 
 ## Cloudflare production-only configuration
 
-`wrangler.toml` explicitly sets:
+The default `wrangler.toml` is deliberately route-free and explicitly sets:
 
 ```toml
 workers_dev = false
 preview_urls = false
 ```
 
-Cloudflare must serve this Worker only through the approved custom storefront hostname. The Worker independently rejects requests whose hostname is not derived from `STORE_ORIGIN` or `ALLOWED_STOREFRONT_ORIGINS`. This makes a mistakenly created `workers.dev` or temporary preview hostname return a generic `404` instead of serving storefront assets or Checkout.
+That default configuration can build or update the Worker without silently claiming the branded root hostname.
+
+The separately gated `wrangler.frontdoor.toml` contains the one approved production Worker Route:
+
+```toml
+[[routes]]
+pattern = "jussbeautifulhair.com/*"
+zone_name = "jussbeautifulhair.com"
+```
+
+The front-door configuration is an explicit activation surface, not the normal branch/default deploy path. It keeps Shopify attached as the commerce origin while Cloudflare can run the custom JBH Worker in front of the existing hostname. Cloudflare requires the root DNS record to be proxied before a Worker Route can invoke.
+
+The Worker independently rejects requests whose hostname is not derived from `STORE_ORIGIN` or `ALLOWED_STOREFRONT_ORIGINS`. This makes a mistakenly created `workers.dev` or temporary preview hostname return a generic `404` instead of serving storefront assets or Checkout.
 
 Configure secrets in Cloudflare without placing values in GitHub:
 
@@ -92,13 +106,26 @@ The order-mutation webhook and owner/admin APIs do not belong in this public rep
 
 ## Deployment
 
-Cloudflare Workers Builds should run:
+Cloudflare Workers Builds should continue to run the normal verification lane:
 
 ```bash
 npm run verify:deploy
 ```
 
-Wrangler may then deploy the verified Worker and `dist/public/` assets using `wrangler.toml`. Do not use temporary deployments, Preview URLs, preview aliases, Vercel, or a `workers.dev` production route.
+Normal branch/default deployment uses route-free `wrangler.toml`; it must not be repurposed to claim `jussbeautifulhair.com`.
+
+Production front-door activation is separately gated by `.github/workflows/frontdoor-activate.yml`. That manual workflow requires:
+
+- the exact current `main` SHA;
+- explicit `jussbeautifulhair.com` and activation confirmations;
+- `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` GitHub secrets;
+- a proxied Cloudflare root DNS record;
+- no pre-existing JBH Worker route;
+- repository contracts and a Wrangler dry run to pass before deployment.
+
+It pins Wrangler, deploys only `wrangler.frontdoor.toml`, confirms the exact route maps to `jussbeautifulhair-site`, and runs live desktop/mobile Playwright proof against `https://jussbeautifulhair.com`. If any post-activation step fails, the workflow removes only the newly-created exact JBH Worker Route before finishing failed.
+
+Do not use temporary deployments, Preview URLs, preview aliases, Vercel, or a `workers.dev` production route.
 
 ## License
 

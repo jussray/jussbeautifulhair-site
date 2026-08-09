@@ -52,6 +52,23 @@ function forbidMatch(text, pattern, message) {
   if (pattern.test(text)) failures.push(message);
 }
 
+function readSingleTomlArrayTable(text, tableName) {
+  const marker = new RegExp(`^\\s*\\[\\[${tableName}\\]\\]\\s*$`, "gm");
+  const matches = [...text.matchAll(marker)];
+  if (matches.length !== 1) return { count: matches.length, entries: [] };
+
+  const start = (matches[0].index ?? 0) + matches[0][0].length;
+  const tail = text.slice(start);
+  const nextTableIndex = tail.search(/^\s*\[[^\]]+\]\s*$/m);
+  const block = nextTableIndex >= 0 ? tail.slice(0, nextTableIndex) : tail;
+  const entries = block
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+
+  return { count: 1, entries };
+}
+
 const wrangler = await read("wrangler.toml");
 requireMatch(
   wrangler,
@@ -73,6 +90,61 @@ forbidMatch(
   /workers\.dev/i,
   "wrangler.toml must not route the storefront through workers.dev.",
 );
+forbidMatch(
+  wrangler,
+  /^\s*\[\[routes\]\]/m,
+  "wrangler.toml must remain route-free so automatic deploys cannot claim the branded hostname.",
+);
+
+const frontdoorConfig = await read("wrangler.frontdoor.toml");
+requireMatch(
+  frontdoorConfig,
+  /^name\s*=\s*"jussbeautifulhair-site"\s*$/m,
+  "wrangler.frontdoor.toml must target the canonical storefront Worker.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^workers_dev\s*=\s*false\s*$/m,
+  "wrangler.frontdoor.toml must explicitly set workers_dev = false.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^preview_urls\s*=\s*false\s*$/m,
+  "wrangler.frontdoor.toml must explicitly set preview_urls = false.",
+);
+requireMatch(
+  frontdoorConfig,
+  /^STORE_ORIGIN\s*=\s*"https:\/\/jussbeautifulhair\.com"\s*$/m,
+  "Front-door STORE_ORIGIN must remain https://jussbeautifulhair.com.",
+);
+forbidMatch(
+  frontdoorConfig,
+  /custom_domain\s*=\s*true/i,
+  "Front-door staging must use a Worker Route in front of the existing Shopify origin, not a Custom Domain takeover.",
+);
+forbidMatch(
+  frontdoorConfig,
+  /workers\.dev/i,
+  "wrangler.frontdoor.toml must not route the storefront through workers.dev.",
+);
+
+const frontdoorRoute = readSingleTomlArrayTable(frontdoorConfig, "routes");
+if (frontdoorRoute.count !== 1) {
+  failures.push("wrangler.frontdoor.toml must contain exactly one [[routes]] block.");
+} else {
+  const expectedRouteEntries = new Set([
+    'pattern = "jussbeautifulhair.com/*"',
+    'zone_name = "jussbeautifulhair.com"',
+  ]);
+  const exactRoute =
+    frontdoorRoute.entries.length === expectedRouteEntries.size &&
+    frontdoorRoute.entries.every((entry) => expectedRouteEntries.has(entry));
+  if (!exactRoute) {
+    failures.push(
+      "The sole front-door route must contain only pattern = \"jussbeautifulhair.com/*\" and zone_name = \"jussbeautifulhair.com\".",
+    );
+  }
+}
 
 const commandFiles = [
   "package.json",
@@ -191,5 +263,5 @@ if (failures.length) {
 }
 
 console.log(
-  "JBH deployment boundary verified: Cloudflare-only public host, previews disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts detected.",
+  "JBH deployment boundary verified: default deploy cannot claim the branded hostname, explicit front-door route is pinned to jussbeautifulhair.com/*, previews disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts detected.",
 );

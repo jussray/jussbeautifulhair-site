@@ -93,6 +93,36 @@ Identify:
 
 Knowledge should compound across catalog, checkout, support, quality, care, and fulfillment without multiplying hidden state.
 
+## Scaling default
+
+Scalability is a default design constraint, not permission to expand catalog, checkout, fulfillment, providers, or automation before demand and operational truth justify it.
+
+Use this loop for material storefront and commerce-system work:
+
+```text
+Goal
+→ Inspect reality
+→ Identify the bottleneck
+→ Make the smallest reversible fix
+→ Verify the real path
+→ Measure
+→ Ship
+→ Observe
+→ Repeat
+```
+
+Juss Beautiful Hair public systems must:
+
+- design catalog, checkout, support, analytics, and fulfillment seams so future growth does not require rebuilding the storefront or creating a second source of truth;
+- scale only verified products, prices, stock, payment states, fulfillment promises, and customer-facing claims;
+- prefer boring, composable commerce interfaces and explicit server-authoritative state over client-side or agent-invented authority;
+- automate repetitive founder operations only after checkout, support, inventory, privacy, and rollback paths are observable and proven;
+- keep private vendor, cost, sourcing, customer, and operational data out of the public scaling surface;
+- leave reusable contracts, tests, Playwright evidence when applicable, release truth, and rollback paths so the next builder can continue without hidden context;
+- refuse to scale unsupported demand, scarcity, inventory, delivery, quality claims, checkout ambiguity, or unnecessary provider complexity.
+
+When demand is not yet proven, build the seam for future capacity rather than pre-paying complexity or duplicating commerce infrastructure.
+
 ## /elonmusk
 
 Question every requirement, integration, handoff, and state transition. Remove duplicate catalog paths, redundant checkout authority, ornamental dashboards, stale instructions, unnecessary provider dependence, and hidden workflow complexity before optimizing.

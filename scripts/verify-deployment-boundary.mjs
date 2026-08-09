@@ -52,6 +52,23 @@ function forbidMatch(text, pattern, message) {
   if (pattern.test(text)) failures.push(message);
 }
 
+function readSingleTomlArrayTable(text, tableName) {
+  const marker = new RegExp(`^\\s*\\[\\[${tableName}\\]\\]\\s*$`, "gm");
+  const matches = [...text.matchAll(marker)];
+  if (matches.length !== 1) return { count: matches.length, entries: [] };
+
+  const start = (matches[0].index ?? 0) + matches[0][0].length;
+  const tail = text.slice(start);
+  const nextTableIndex = tail.search(/^\s*\[[^\]]+\]\s*$/m);
+  const block = nextTableIndex >= 0 ? tail.slice(0, nextTableIndex) : tail;
+  const entries = block
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith("#"));
+
+  return { count: 1, entries };
+}
+
 const wrangler = await read("wrangler.toml");
 requireMatch(
   wrangler,
@@ -97,16 +114,6 @@ requireMatch(
 );
 requireMatch(
   frontdoorConfig,
-  /^pattern\s*=\s*"jussbeautifulhair\.com\/\*"\s*$/m,
-  "Front-door route must match only jussbeautifulhair.com/*.",
-);
-requireMatch(
-  frontdoorConfig,
-  /^zone_name\s*=\s*"jussbeautifulhair\.com"\s*$/m,
-  "Front-door route must bind only the jussbeautifulhair.com zone.",
-);
-requireMatch(
-  frontdoorConfig,
   /^STORE_ORIGIN\s*=\s*"https:\/\/jussbeautifulhair\.com"\s*$/m,
   "Front-door STORE_ORIGIN must remain https://jussbeautifulhair.com.",
 );
@@ -120,6 +127,24 @@ forbidMatch(
   /workers\.dev/i,
   "wrangler.frontdoor.toml must not route the storefront through workers.dev.",
 );
+
+const frontdoorRoute = readSingleTomlArrayTable(frontdoorConfig, "routes");
+if (frontdoorRoute.count !== 1) {
+  failures.push("wrangler.frontdoor.toml must contain exactly one [[routes]] block.");
+} else {
+  const expectedRouteEntries = new Set([
+    'pattern = "jussbeautifulhair.com/*"',
+    'zone_name = "jussbeautifulhair.com"',
+  ]);
+  const exactRoute =
+    frontdoorRoute.entries.length === expectedRouteEntries.size &&
+    frontdoorRoute.entries.every((entry) => expectedRouteEntries.has(entry));
+  if (!exactRoute) {
+    failures.push(
+      "The sole front-door route must contain only pattern = \"jussbeautifulhair.com/*\" and zone_name = \"jussbeautifulhair.com\".",
+    );
+  }
+}
 
 const commandFiles = [
   "package.json",

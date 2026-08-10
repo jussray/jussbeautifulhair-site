@@ -54,10 +54,10 @@ test("Wrangler activation is pinned, dry-run first, and uses only the front-door
   assert.match(activationWorkflow, /WRANGLER_VERSION: 4\.114\.0/);
   assert.match(activationWorkflow, /--var RELEASE_SHA:\$\{EXPECTED_HEAD_SHA\}/);
   const dryRunIndex = activationWorkflow.indexOf(
-    "deploy --config wrangler.frontdoor.toml --dry-run",
+    "deploy --config wrangler.frontdoor.toml --var RELEASE_SHA:${EXPECTED_HEAD_SHA} --dry-run",
   );
   const activationIndex = activationWorkflow.indexOf(
-    "deploy --config wrangler.frontdoor.toml\n",
+    "deploy --config wrangler.frontdoor.toml --var RELEASE_SHA:${EXPECTED_HEAD_SHA}\n",
   );
   assert.ok(dryRunIndex >= 0, "Pinned front-door dry run is missing.");
   assert.ok(activationIndex > dryRunIndex, "Live activation must occur only after the dry run.");

@@ -40,23 +40,23 @@ assert(parsedBase.origin === expectedOrigin, `LIVE_STOREFRONT_URL must be exactl
 
 await mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
-const versionResponse = await fetch(`${baseURL}/version`, {
-  headers: { accept: "application/json" },
-});
-assert(
-  versionResponse.ok,
-  `version route returned HTTP ${versionResponse.status}.`,
-);
-const versionPayload = await versionResponse.json();
-assert(versionPayload.ok === true, "version route did not report ok=true.");
-assert(
-  versionPayload.sha === expectedHead,
-  `version SHA mismatch: expected ${expectedHead}, received ${versionPayload.sha}.`,
-);
 const consoleErrors = [];
 const results = [];
 
 try {
+  const versionResponse = await fetch(`${baseURL}/version`, {
+    headers: { accept: "application/json" },
+  });
+  assert(
+    versionResponse.ok,
+    `version route returned HTTP ${versionResponse.status}.`,
+  );
+  const versionPayload = await versionResponse.json();
+  assert(versionPayload.ok === true, "version route did not report ok=true.");
+  assert(
+    versionPayload.sha === expectedHead,
+    `version SHA mismatch: expected ${expectedHead}, received ${versionPayload.sha}.`,
+  );
   for (const viewport of [
     { label: "desktop", width: 1440, height: 1000 },
     { label: "mobile", width: 390, height: 844 },

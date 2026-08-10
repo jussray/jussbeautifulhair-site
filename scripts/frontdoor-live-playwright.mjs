@@ -2,7 +2,7 @@ import { chromium } from "playwright";
 import { mkdir, writeFile } from "node:fs/promises";
 
 const baseURL = process.env.LIVE_STOREFRONT_URL || "https://jussbeautifulhair.com";
-const expectedHead = process.env.EXPECTED_HEAD_SHA || "unverified";
+const expectedHead = process.env.EXPECTED_HEAD_SHA || process.env.RELEASE_SHA || "unverified";
 const expectedOrigin = "https://jussbeautifulhair.com";
 const outputDir = "artifacts/frontdoor-live";
 
@@ -40,6 +40,19 @@ assert(parsedBase.origin === expectedOrigin, `LIVE_STOREFRONT_URL must be exactl
 
 await mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
+const versionResponse = await fetch(`${baseURL}/version`, {
+  headers: { accept: "application/json" },
+});
+assert(
+  versionResponse.ok,
+  `version route returned HTTP ${versionResponse.status}.`,
+);
+const versionPayload = await versionResponse.json();
+assert(versionPayload.ok === true, "version route did not report ok=true.");
+assert(
+  versionPayload.sha === expectedHead,
+  `version SHA mismatch: expected ${expectedHead}, received ${versionPayload.sha}.`,
+);
 const consoleErrors = [];
 const results = [];
 
@@ -104,6 +117,7 @@ try {
         assertions: [
           "root responds successfully on desktop and mobile",
           "Cloudflare Worker security headers prove the Worker served the root response",
+          "version route serves the exact approved main SHA",
           "Shopify password-wall markers are absent",
           "Juss Beautiful Hair title and storefront text render",
           "shipping, returns, privacy, and terms routes render through the branded origin",

@@ -14,6 +14,10 @@ const livePlaywright = await readFile(
   new URL("../scripts/frontdoor-live-playwright.mjs", import.meta.url),
   "utf8",
 );
+const worker = await readFile(
+  new URL("../worker/index.ts", import.meta.url),
+  "utf8",
+);
 
 test("front-door production activation remains manual and exact-head gated", () => {
   assert.match(activationWorkflow, /^on:\s*\n\s+workflow_dispatch:/m);
@@ -48,6 +52,7 @@ test("first activation refuses an existing JBH Worker route", () => {
 
 test("Wrangler activation is pinned, dry-run first, and uses only the front-door config", () => {
   assert.match(activationWorkflow, /WRANGLER_VERSION: 4\.114\.0/);
+  assert.match(activationWorkflow, /--var RELEASE_SHA:\$\{EXPECTED_HEAD_SHA\}/);
   const dryRunIndex = activationWorkflow.indexOf(
     "deploy --config wrangler.frontdoor.toml --dry-run",
   );
@@ -79,6 +84,8 @@ test("post-deploy route identity is exact and failed proof removes only that rou
 
 test("live Playwright proof binds to the branded origin and rejects Shopify password wall", () => {
   assert.match(livePlaywright, /https:\/\/jussbeautifulhair\.com/);
+  assert.match(livePlaywright, /\/version/);
+  assert.match(livePlaywright, /versionPayload\.sha === expectedHead/);
   assert.match(livePlaywright, /x-frame-options/);
   assert.match(livePlaywright, /content-signal/);
   assert.match(livePlaywright, /enter store using password/);
@@ -95,4 +102,11 @@ test("front-door Wrangler config remains one route for the branded root", () => 
   assert.match(frontdoorConfig, /^pattern\s*=\s*"jussbeautifulhair\.com\/\*"\s*$/m);
   assert.match(frontdoorConfig, /^zone_name\s*=\s*"jussbeautifulhair\.com"\s*$/m);
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
+});
+
+
+test("Worker version route reads the explicit release binding", () => {
+  assert.match(worker, /url\.pathname === "\/version"/);
+  assert.match(worker, /function getReleaseSha\(env: Env\)/);
+  assert.match(worker, /sha: getReleaseSha\(env\)/);
 });

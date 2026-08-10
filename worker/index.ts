@@ -12,6 +12,9 @@ interface Env {
   STORE_ORIGIN?: string;
   ALLOWED_STOREFRONT_ORIGINS?: string;
   CONTACT_API_ORIGIN?: string;
+  RELEASE_SHA?: string;
+  GITHUB_SHA?: string;
+  WORKERS_CI_COMMIT_SHA?: string;
 }
 
 const FREE_SHIPPING_THRESHOLD = 150;
@@ -79,6 +82,14 @@ function getContactApiOrigin(env: Env): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function getReleaseSha(env: Env): string {
+  return (
+    [env.RELEASE_SHA, env.GITHUB_SHA, env.WORKERS_CI_COMMIT_SHA]
+      .map((value) => value?.trim())
+      .find(Boolean) || "unknown"
+  );
 }
 
 function createStripeClient(env: Env): Stripe {
@@ -374,6 +385,10 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    if (url.pathname === "/version") {
+      return json({ ok: true, sha: getReleaseSha(env) });
+    }
 
     if (url.pathname === "/api/checkout") {
       return handleCheckout(request, env);

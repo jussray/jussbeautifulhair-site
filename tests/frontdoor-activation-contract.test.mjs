@@ -91,7 +91,7 @@ test("live Playwright proof binds to the branded origin and rejects Shopify pass
   assert.match(livePlaywright, /enter store using password/);
   assert.match(livePlaywright, /this store is password protected/);
   assert.match(livePlaywright, /opening soon/);
-  assert.match(livePlaywright, /"shipping", "returns", "privacy", "terms"/);
+  assert.match(livePlaywright, /\"shipping\", \"returns\", \"privacy\", \"terms\"/);
   assert.match(livePlaywright, /Juss Beautiful Hair/);
   assert.match(activationWorkflow, /node scripts\/frontdoor-live-playwright\.mjs/);
 });
@@ -99,14 +99,18 @@ test("live Playwright proof binds to the branded origin and rejects Shopify pass
 test("front-door Wrangler config remains one route for the branded root", () => {
   const routeBlocks = frontdoorConfig.match(/^\s*\[\[routes\]\]\s*$/gm) ?? [];
   assert.equal(routeBlocks.length, 1);
-  assert.match(frontdoorConfig, /^pattern\s*=\s*"jussbeautifulhair\.com\/\*"\s*$/m);
-  assert.match(frontdoorConfig, /^zone_name\s*=\s*"jussbeautifulhair\.com"\s*$/m);
+  assert.match(frontdoorConfig, /^pattern\s*=\s*\"jussbeautifulhair\.com\/\*\"\s*$/m);
+  assert.match(frontdoorConfig, /^zone_name\s*=\s*\"jussbeautifulhair\.com\"\s*$/m);
+  assert.match(
+    frontdoorConfig,
+    /run_worker_first\s*=\s*\[\s*\"\/api\/\*\"\s*,\s*\"\/version\"\s*\]/,
+  );
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
 });
 
 
 test("Worker version route reads the explicit release binding", () => {
-  assert.match(worker, /url\.pathname === "\/version"/);
+  assert.match(worker, /url\.pathname === \"\/version\"/);
   assert.match(worker, /function getReleaseSha\(env: Env\)/);
   assert.match(worker, /sha: getReleaseSha\(env\)/);
 });

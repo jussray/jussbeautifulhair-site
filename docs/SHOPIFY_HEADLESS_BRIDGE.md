@@ -11,7 +11,7 @@ For this fixed one-product offer, use Shopify's tokenless cart permalink instead
 The storefront intentionally code-locks these public Shopify identifiers:
 
 ```text
-shop domain: jbh-25.myshopify.com
+shop domain: 8qp1z2-az.myshopify.com
 variant GID: gid://shopify/ProductVariant/50196622344435
 offer code: jbh-hair-match-v1
 quantity: 1

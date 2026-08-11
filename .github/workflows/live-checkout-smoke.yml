@@ -1,0 +1,72 @@
+name: Live Checkout Smoke
+
+on:
+  pull_request:
+    paths:
+      - "client/src/lib/checkout.ts"
+      - "client/src/pages/Checkout.tsx"
+      - "client/src/lib/checkoutRedirect.mjs"
+      - "worker/index.ts"
+      - "shared/catalog.ts"
+      - "scripts/live-checkout-playwright.mjs"
+      - ".github/workflows/live-checkout-smoke.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "client/src/lib/checkout.ts"
+      - "client/src/pages/Checkout.tsx"
+      - "client/src/lib/checkoutRedirect.mjs"
+      - "worker/index.ts"
+      - "shared/catalog.ts"
+      - "scripts/live-checkout-playwright.mjs"
+      - ".github/workflows/live-checkout-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-checkout-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  LIVE_STOREFRONT_URL: https://jussbeautifulhair.com
+  EXPECTED_LIVE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+  EXPECTED_SCRIPT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  verify:
+    name: Prove live storefront reaches Stripe payment screen
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact verifier head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_SCRIPT_SHA }}
+
+      - name: Verify exact verifier head
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SCRIPT_SHA"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install pinned browser verifier
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+
+      - name: Install Chromium
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Prove live checkout initiation without submitting payment
+        run: node scripts/live-checkout-playwright.mjs
+
+      - name: Upload live checkout proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-checkout-${{ env.EXPECTED_LIVE_SHA }}
+          path: artifacts/live-checkout/
+          if-no-files-found: warn
+          retention-days: 30

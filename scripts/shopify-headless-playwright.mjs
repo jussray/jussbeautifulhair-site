@@ -10,6 +10,7 @@ const baseURL = `http://${host}:${port}`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-headless";
 const numericVariantId = "50196622344435";
+const shopifyDomain = "8qp1z2-az.myshopify.com";
 const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let serverOutput = "";
 
@@ -68,7 +69,7 @@ async function assertNoHorizontalOverflow(page, label) {
 }
 
 async function configureShopifyPermalinkMock(page, evidence) {
-  await page.route("https://jbh-25.myshopify.com/cart/**", async (route) => {
+  await page.route(`https://${shopifyDomain}/cart/**`, async (route) => {
     const checkout = new URL(route.request().url());
     evidence.checkoutRequests += 1;
     evidence.checkoutNavigation = checkout.toString();
@@ -141,7 +142,7 @@ try {
   await desktop.screenshot({ path: `${outputDir}/hair-match-desktop.png`, fullPage: true });
 
   await Promise.all([
-    desktop.waitForURL("https://jbh-25.myshopify.com/cart/**"),
+    desktop.waitForURL(`https://${shopifyDomain}/cart/**`),
     checkoutButton.click(),
   ]);
 
@@ -159,8 +160,8 @@ try {
   assert(evidence.attributes.budget === "150-250", "Budget attribute is wrong.");
   assert(evidence.attributes.maintenance === "low-maintenance", "Maintenance attribute is wrong.");
   assert(
-    evidence.checkoutNavigation?.startsWith("https://jbh-25.myshopify.com/cart/"),
-    "Browser did not navigate to an HTTPS Shopify cart permalink.",
+    evidence.checkoutNavigation?.startsWith(`https://${shopifyDomain}/cart/`),
+    "Browser did not navigate to the canonical HTTPS Shopify cart permalink.",
   );
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -198,6 +199,7 @@ try {
           "approved public Shopify contract works without build variables",
           "no Storefront access token exposed",
           "approved numeric Shopify variant and quantity used",
+          "canonical live Shopify shop domain used",
           "unsupported launch and fulfillment claims absent",
           "Hair Match navigation visible on desktop and mobile",
           "HTTPS Shopify cart permalink navigation occurred",

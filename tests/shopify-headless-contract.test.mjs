@@ -18,7 +18,7 @@ const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "u
 
 test("approved tokenless Shopify contract owns the Hair Match checkout", () => {
   for (const required of [
-    'shopDomain: "jbh-25.myshopify.com"',
+    'shopDomain: "8qp1z2-az.myshopify.com"',
     'variantGid: "gid://shopify/ProductVariant/50196622344435"',
     'offerCode: "jbh-hair-match-v1"',
     'source: "jussbeautifulhair.com"',
@@ -31,6 +31,7 @@ test("approved tokenless Shopify contract owns the Hair Match checkout", () => {
     assert.ok(storefront.includes(required), `missing Shopify contract: ${required}`);
   }
 
+  assert.doesNotMatch(storefront, /jbh-25\.myshopify\.com/);
   assert.doesNotMatch(storefront, /X-Shopify-Storefront-Access-Token/);
   assert.doesNotMatch(storefront, /VITE_SHOPIFY|import\.meta\.env/);
   assert.doesNotMatch(storefront, /STRIPE_SECRET_KEY|access_token/);

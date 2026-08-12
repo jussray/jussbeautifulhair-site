@@ -1,0 +1,128 @@
+name: Shopify Horizon Preview Proof
+
+on:
+  push:
+    branches:
+      - verify/jbh-shopify-horizon
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  SHOPIFY_PREVIEW_URL: https://8qp1z2-az.myshopify.com/?preview_theme_id=164372644083
+
+jobs:
+  browser-proof:
+    name: Prove unpublished JBH mirror in desktop and mobile Chromium
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install pinned Playwright
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Horizon preview proof
+        env:
+          PREVIEW_URL: ${{ env.SHOPIFY_PREVIEW_URL }}
+        run: |
+          mkdir -p artifacts/shopify-horizon-preview
+          node <<'NODE'
+          const { chromium, devices } = require('playwright');
+          const fs = require('fs');
+
+          const previewUrl = process.env.PREVIEW_URL;
+          const cases = [
+            { name: 'desktop', context: { viewport: { width: 1440, height: 1000 } } },
+            { name: 'mobile', context: { ...devices['iPhone 13'] } },
+          ];
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const receipts = [];
+            try {
+              for (const testCase of cases) {
+                const context = await browser.newContext(testCase.context);
+                const page = await context.newPage();
+                const consoleErrors = [];
+                page.on('console', msg => {
+                  if (msg.type() === 'error') consoleErrors.push(msg.text());
+                });
+                page.on('pageerror', err => consoleErrors.push(String(err)));
+
+                const response = await page.goto(previewUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+                await page.waitForTimeout(2500);
+
+                const bodyText = await page.locator('body').innerText();
+                const title = await page.title();
+                const finalUrl = page.url();
+                const announcement = page.locator('.jbh-announcement');
+                const hero = page.locator('.jbh-hero img');
+                const cards = page.locator('.jbh-card');
+
+                if (!bodyText.includes('Juss Beautiful Hair')) throw new Error(`${testCase.name}: JBH brand text missing. finalUrl=${finalUrl}`);
+                if (!bodyText.includes('Story. Quality. Care. Proof.')) throw new Error(`${testCase.name}: Crown Standard section missing.`);
+                if (!bodyText.includes('Bestsellers & Signatures')) throw new Error(`${testCase.name}: featured section missing.`);
+                if (await announcement.count() !== 1) throw new Error(`${testCase.name}: announcement bar missing.`);
+                if (await cards.count() < 4) throw new Error(`${testCase.name}: expected at least four product cards.`);
+
+                const heroLoaded = await hero.evaluate(el => el.complete && el.naturalWidth > 0);
+                if (!heroLoaded) throw new Error(`${testCase.name}: hero image did not load.`);
+
+                const visual = await page.evaluate(() => {
+                  const body = getComputedStyle(document.body);
+                  const announcement = getComputedStyle(document.querySelector('.jbh-announcement'));
+                  return {
+                    fontFamily: body.fontFamily,
+                    bodyBackground: body.backgroundColor,
+                    announcementBackground: announcement.backgroundColor,
+                    horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth + 1,
+                  };
+                });
+
+                if (!visual.fontFamily.toLowerCase().includes('montserrat')) throw new Error(`${testCase.name}: Montserrat is not active: ${visual.fontFamily}`);
+                if (visual.announcementBackground !== 'rgb(42, 26, 71)') throw new Error(`${testCase.name}: JBH purple mismatch: ${visual.announcementBackground}`);
+                if (visual.horizontalOverflow) throw new Error(`${testCase.name}: horizontal overflow detected.`);
+                if (consoleErrors.length) throw new Error(`${testCase.name}: console errors: ${consoleErrors.join(' | ')}`);
+
+                await page.screenshot({ path: `artifacts/shopify-horizon-preview/${testCase.name}.png`, fullPage: true });
+                receipts.push({
+                  name: testCase.name,
+                  status: response?.status() ?? null,
+                  finalUrl,
+                  title,
+                  cards: await cards.count(),
+                  heroLoaded,
+                  visual,
+                  consoleErrors,
+                });
+                await context.close();
+              }
+            } finally {
+              await browser.close();
+            }
+            fs.writeFileSync('artifacts/shopify-horizon-preview/receipt.json', JSON.stringify(receipts, null, 2));
+            console.log(JSON.stringify(receipts, null, 2));
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Upload preview proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shopify-horizon-preview-proof
+          path: artifacts/shopify-horizon-preview/
+          if-no-files-found: warn
+          retention-days: 14

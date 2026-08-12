@@ -8,18 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { PRODUCTS, FEATURED_IDS, getProduct, BRAND } from "@/lib/catalog";
+import { BRAND } from "@/lib/catalog";
+import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 
 const VALUES = [
   {
     icon: Truck,
-    title: "Clear Shipping Expectations",
-    body: "Orders are processed in 1–2 business days; standard domestic transit is listed as 3–5 additional business days.",
+    title: "Live Inventory",
+    body: "Product availability and pricing are read from Shopify so the storefront does not promise stale stock.",
   },
   {
     icon: Heart,
     title: "Product Facts First",
-    body: "Use current product details and care guidance to decide what fits your install, routine, and budget.",
+    body: "Review current product details, options, pricing, and policies before you choose your install.",
   },
   {
     icon: MessageCircle,
@@ -29,13 +30,20 @@ const VALUES = [
 ];
 
 export default function Home() {
-  const featured = FEATURED_IDS.map((id) => getProduct(id)!).filter(Boolean);
+  const { data: products = [], isLoading } = useShopifyCatalog();
+  const availableProducts = products.filter((product) => product.availableForSale);
+  const featured = availableProducts.slice(0, 4);
+  const signature =
+    availableProducts.find((product) => /juss blonde/i.test(product.name)) ||
+    availableProducts.find((product) => /body wave human hair bundles/i.test(product.name)) ||
+    featured[0];
+  const categoryPreview = availableProducts.slice(4, 8);
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
-  const subscribe = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const subscribe = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!email.trim()) return;
     try {
       await apiRequest("POST", "/api/newsletter", { email });
@@ -49,14 +57,12 @@ export default function Home() {
 
   return (
     <Layout>
-      {/* HERO — full editorial image, model breathes, minimal overlay */}
       <section className="relative bg-primary">
         <img
           src="/jbh_homepage_hero.jpg"
           alt="Premium hair. Lawless energy."
           className="w-full h-auto block"
         />
-        {/* Subtle bottom shadow for CTA legibility on desktop only */}
         <div className="hidden md:block absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-primary/70 to-transparent pointer-events-none" />
         <div className="hidden md:flex absolute left-8 bottom-8 lg:left-16 lg:bottom-12 gap-3 z-10">
           <Link href="/shop">
@@ -69,7 +75,6 @@ export default function Home() {
             </Button>
           </Link>
         </div>
-        {/* Mobile CTA under the image */}
         <div className="md:hidden px-6 py-6 bg-primary">
           <Link href="/shop">
             <Button
@@ -83,18 +88,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* VALUE STRIP */}
       <section className="border-b border-border bg-card">
         <div className="mx-auto max-w-7xl px-6 py-12 grid gap-8 sm:grid-cols-3">
-          {VALUES.map((v) => (
-            <div key={v.title} className="flex flex-col items-start">
+          {VALUES.map((value) => (
+            <div key={value.title} className="flex flex-col items-start">
               <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-secondary/40 text-primary mb-4">
-                <v.icon className="h-5 w-5" />
+                <value.icon className="h-5 w-5" />
               </div>
-              <h3 className="font-display text-lg text-foreground">{v.title}</h3>
-              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-                {v.body}
-              </p>
+              <h3 className="font-display text-lg text-foreground">{value.title}</h3>
+              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{value.body}</p>
             </div>
           ))}
         </div>
@@ -102,16 +104,11 @@ export default function Home() {
 
       <BrandMoatSection />
 
-      {/* FEATURED */}
       <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">
-              Hand-Selected
-            </p>
-            <h2 className="font-display text-3xl sm:text-4xl text-foreground">
-              Bestsellers &amp; Signatures
-            </h2>
+            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">Live from Shopify</p>
+            <h2 className="font-display text-3xl sm:text-4xl text-foreground">Featured Hair</h2>
           </div>
           <Link
             href="/shop"
@@ -121,75 +118,81 @@ export default function Home() {
             View all <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-          {featured.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      </section>
-
-      {/* SIGNATURE BANNER */}
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-7xl px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">
-              The Gold Standard
-            </p>
-            <h2 className="font-display text-3xl sm:text-4xl leading-tight">
-              Royal Raw Indian Temple Bundle 👑
-            </h2>
-            <p className="mt-4 text-primary-foreground/80 leading-relaxed">
-              A signature option in the current hair catalog. Review the product page
-              and current policies for the latest available construction, length, care,
-              stock, price, and fulfillment details before purchasing.
-            </p>
-            <Link href="/product/bundle-royal-indian">
-              <Button
-                size="lg"
-                data-testid="button-shop-signature"
-                className="mt-6 bg-gold text-primary hover:bg-gold font-semibold"
-              >
-                Shop the Signature <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+        {isLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {Array.from({ length: 4 }, (_, index) => (
+              <div key={index} className="aspect-[3/4] rounded-lg bg-muted animate-pulse" />
+            ))}
           </div>
-          <div className="rounded-lg overflow-hidden border border-gold/30">
-            <img
-              src="/products/bundle-royal-indian.jpg"
-              alt="Royal Raw Indian Temple Bundle"
-              className="w-full aspect-[4/3] object-cover"
-            />
+        ) : featured.length > 0 ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {featured.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
           </div>
-        </div>
+        ) : (
+          <div className="rounded-lg border border-card-border bg-card p-8 text-center text-muted-foreground">
+            Live inventory is refreshing. Visit the shop to try again.
+          </div>
+        )}
       </section>
 
-      {/* SHOP BY CATEGORY callout */}
-      <section className="mx-auto max-w-7xl px-6 py-16">
-        <h2 className="font-display text-3xl text-center text-foreground mb-2">
-          Everything You Need
-        </h2>
-        <p className="text-center text-muted-foreground mb-10">
-          {PRODUCTS.length} products across bundles, wigs, closures &amp; essentials.
-        </p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-          {PRODUCTS.slice(6, 10).map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
-      </section>
+      {signature && (
+        <section className="bg-primary text-primary-foreground">
+          <div className="mx-auto max-w-7xl px-6 py-16 grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">The Gold Standard</p>
+              <h2 className="font-display text-3xl sm:text-4xl leading-tight">{signature.name}</h2>
+              <p className="mt-4 text-primary-foreground/80 leading-relaxed line-clamp-4">
+                {signature.description}
+              </p>
+              <Link href={`/product/${signature.id}`}>
+                <Button
+                  size="lg"
+                  data-testid="button-shop-signature"
+                  className="mt-6 bg-gold text-primary hover:bg-gold font-semibold"
+                >
+                  Shop This Look <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="rounded-lg overflow-hidden border border-gold/30 bg-primary-foreground/5">
+              {signature.image ? (
+                <img
+                  src={signature.image}
+                  alt={signature.name}
+                  className="w-full aspect-[4/3] object-cover"
+                />
+              ) : (
+                <div className="w-full aspect-[4/3] grid place-items-center text-primary-foreground/60">
+                  Product image updating
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* NEWSLETTER */}
+      {categoryPreview.length > 0 && (
+        <section className="mx-auto max-w-7xl px-6 py-16">
+          <h2 className="font-display text-3xl text-center text-foreground mb-2">More to Explore</h2>
+          <p className="text-center text-muted-foreground mb-10">
+            {availableProducts.length} live products currently available through Shopify.
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {categoryPreview.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="bg-secondary/30">
         <div className="mx-auto max-w-2xl px-6 py-16 text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">
-            Join the inner circle
-          </p>
-          <h2 className="font-display text-3xl text-foreground">
-            Lawless Energy, In Your Inbox
-          </h2>
+          <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">Join the inner circle</p>
+          <h2 className="font-display text-3xl text-foreground">Lawless Energy, In Your Inbox</h2>
           <p className="mt-3 text-muted-foreground">
-            Restock alerts, early access, and the occasional flawless deal. Use
-            code <span className="font-semibold text-primary">{BRAND.promoCode}</span> for 10% off your first order.
+            Restock alerts, early access, product updates, and new drops from {BRAND.name}.
           </p>
           {subscribed ? (
             <p
@@ -207,7 +210,7 @@ export default function Home() {
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
                 placeholder="your@email.com"
                 data-testid="input-newsletter"
                 className="bg-card"

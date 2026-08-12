@@ -3,12 +3,24 @@ name: Shopify Checkout Bridge Exact-Head Gate
 on:
   pull_request:
     paths:
+      - "worker/index.ts"
       - "client/src/components/Layout.tsx"
+      - "client/src/components/ProductCard.tsx"
+      - "client/src/lib/cart.tsx"
+      - "client/src/lib/shopifyCatalog.ts"
       - "client/src/lib/shopifyStorefront.ts"
+      - "client/src/pages/Home.tsx"
+      - "client/src/pages/Shop.tsx"
+      - "client/src/pages/Product.tsx"
+      - "client/src/pages/Cart.tsx"
+      - "client/src/pages/Checkout.tsx"
       - "client/src/pages/HairMatch.tsx"
       - "client/src/App.tsx"
       - "scripts/shopify-headless-playwright.mjs"
+      - "scripts/shopify-physical-playwright.mjs"
+      - "scripts/shopify-physical-live-smoke.mjs"
       - "tests/shopify-headless-contract.test.mjs"
+      - "tests/shopify-physical-contract.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
   workflow_dispatch:
@@ -27,7 +39,7 @@ jobs:
   verify:
     name: Verify tokenless Shopify checkout bridge
     runs-on: ubuntu-22.04
-    timeout-minutes: 18
+    timeout-minutes: 25
     steps:
       - name: Check out exact requested head
         uses: actions/checkout@v4
@@ -48,8 +60,8 @@ jobs:
       - name: Typecheck
         run: npm run check
 
-      - name: Verify Shopify checkout code contract
-        run: node --test tests/shopify-headless-contract.test.mjs
+      - name: Verify Shopify checkout code contracts
+        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs
 
       - name: Build production storefront
         run: npm run build
@@ -63,11 +75,20 @@ jobs:
       - name: Verify rendered Hair Match permalink flow
         run: node scripts/shopify-headless-playwright.mjs
 
-      - name: Upload exact-head browser proof
+      - name: Verify rendered physical Shopify flow
+        run: node scripts/shopify-physical-playwright.mjs
+
+      - name: Verify live Shopify catalog and no-payment cart
+        run: node scripts/shopify-physical-live-smoke.mjs
+
+      - name: Upload exact-head Shopify proof
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: shopify-checkout-bridge-${{ env.EXPECTED_HEAD_SHA }}
-          path: artifacts/shopify-headless/
+          path: |
+            artifacts/shopify-headless/
+            artifacts/shopify-physical/
+            artifacts/shopify-physical-live/
           if-no-files-found: error
           retention-days: 30

@@ -12,6 +12,28 @@ const outputDir = "artifacts/brand-moat";
 const vitePath = fileURLToPath(
   new URL("../node_modules/vite/bin/vite.js", import.meta.url),
 );
+const shopifyCatalogFixture = {
+  products: [
+    {
+      id: "body-wave-human-hair-bundle-deal",
+      shopifyProductId: "gid://shopify/Product/55900000000001",
+      name: "Body Wave Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Live Shopify inventory",
+      description: "Supplier-backed body wave bundles fulfilled through the connected Shopify catalog.",
+      variants: [
+        {
+          id: "gid://shopify/ProductVariant/55900000000001",
+          option: '14\"',
+          price: 75,
+          availableForSale: true,
+        },
+      ],
+      image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%23f3ede8'/%3E%3C/svg%3E",
+      availableForSale: true,
+    },
+  ],
+};
 let serverOutput = "";
 
 const server = spawn(
@@ -84,6 +106,13 @@ try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  await page.route("**/api/shopify/catalog", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(shopifyCatalogFixture),
+    });
+  });
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
@@ -100,7 +129,8 @@ try {
   for (const riskyClaim of ["Quality Guaranteed", "never tangles", "lasts 2+ years", "factory pricing"]) {
     assert(!desktopText.includes(riskyClaim), `Unsupported certainty is still public: ${riskyClaim}`);
   }
-  assert(desktopText.includes("Royal Raw Indian Temple Bundle"), "Existing signature product disappeared.");
+  assert(desktopText.includes("Live from Shopify"), "Shopify catalog authority label is missing.");
+  assert(desktopText.includes("Body Wave Human Hair Bundle Deal"), "Shopify-backed signature product did not render.");
   assert(!desktopText.includes("Crown Logo Cap"), "Untold Stories product leaked into the hair storefront.");
   await assertNoHorizontalOverflow(page, "desktop homepage");
   await page.screenshot({ path: `${outputDir}/home-desktop.png`, fullPage: true });
@@ -129,7 +159,7 @@ try {
       assertions: [
         "four brand pillars visible",
         "unsupported certainty absent",
-        "hair and Untold Stories catalogs remain separate",
+        "Shopify-backed JBH product renders while Untold Stories catalog remains separate",
         "desktop and mobile have no horizontal overflow",
         "mobile CTA remains visible",
         "browser console remains clean",

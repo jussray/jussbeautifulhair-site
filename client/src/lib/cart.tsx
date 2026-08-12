@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 export interface CartItem {
   id: string;
+  variantId: string;
   name: string;
   variant: string;
   price: number;
@@ -13,25 +14,41 @@ export interface CartItem {
 interface CartContextValue {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "qty">, qty?: number) => void;
-  removeItem: (id: string, variant: string) => void;
-  updateQty: (id: string, variant: string, qty: number) => void;
+  removeItem: (variantId: string) => void;
+  updateQty: (variantId: string, qty: number) => void;
   clear: () => void;
   count: number;
   subtotal: number;
-  shipping: number;
-  total: number;
 }
 
-const FREE_SHIP_THRESHOLD = 150;
-const FLAT_SHIP = 9.99;
-const STORAGE_KEY = "jbh_cart_v1";
+const STORAGE_KEY = "jbh_cart_v2";
+
+function isStoredCartItem(value: unknown): value is CartItem {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Partial<CartItem>;
+  return (
+    typeof item.id === "string" &&
+    typeof item.variantId === "string" &&
+    /^gid:\/\/shopify\/ProductVariant\/\d+$/.test(item.variantId) &&
+    typeof item.name === "string" &&
+    typeof item.variant === "string" &&
+    typeof item.price === "number" &&
+    Number.isFinite(item.price) &&
+    item.price > 0 &&
+    typeof item.qty === "number" &&
+    Number.isInteger(item.qty) &&
+    item.qty > 0 &&
+    item.qty <= 10 &&
+    typeof item.image === "string"
+  );
+}
 
 function readStorage(): CartItem[] {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter(isStoredCartItem) : [];
   } catch {
     return [];
   }
@@ -58,7 +75,6 @@ const CartContext = createContext<CartContextValue | null>(null);
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => readStorage());
 
-  // Persist every change to sessionStorage so cart survives Stripe redirect
   useEffect(() => {
     writeStorage(items);
   }, [items]);
@@ -66,33 +82,36 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(
     (item: Omit<CartItem, "qty">, qty: number = 1) => {
       setItems((prev) => {
-        const idx = prev.findIndex(
-          (i) => i.id === item.id && i.variant === item.variant
-        );
+        const idx = prev.findIndex((candidate) => candidate.variantId === item.variantId);
         if (idx >= 0) {
           const next = [...prev];
-          next[idx] = { ...next[idx], qty: next[idx].qty + qty };
+          next[idx] = {
+            ...next[idx],
+            qty: Math.min(10, next[idx].qty + qty),
+            price: item.price,
+            name: item.name,
+            variant: item.variant,
+            image: item.image,
+          };
           return next;
         }
-        return [...prev, { ...item, qty }];
+        return [...prev, { ...item, qty: Math.min(10, Math.max(1, qty)) }];
       });
     },
-    []
+    [],
   );
 
-  const removeItem = useCallback((id: string, variant: string) => {
-    setItems((prev) =>
-      prev.filter((i) => !(i.id === id && i.variant === variant))
-    );
+  const removeItem = useCallback((variantId: string) => {
+    setItems((prev) => prev.filter((item) => item.variantId !== variantId));
   }, []);
 
-  const updateQty = useCallback((id: string, variant: string, qty: number) => {
+  const updateQty = useCallback((variantId: string, qty: number) => {
     setItems((prev) =>
-      prev.map((i) =>
-        i.id === id && i.variant === variant
-          ? { ...i, qty: Math.max(1, qty) }
-          : i
-      )
+      prev.map((item) =>
+        item.variantId === variantId
+          ? { ...item, qty: Math.min(10, Math.max(1, qty)) }
+          : item,
+      ),
     );
   }, []);
 
@@ -102,11 +121,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<CartContextValue>(() => {
-    const count = items.reduce((s, i) => s + i.qty, 0);
-    const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
-    const shipping =
-      subtotal === 0 || subtotal >= FREE_SHIP_THRESHOLD ? 0 : FLAT_SHIP;
-    const total = subtotal + shipping;
+    const count = items.reduce((sum, item) => sum + item.qty, 0);
+    const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
     return {
       items,
       addItem,
@@ -115,8 +131,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clear,
       count,
       subtotal,
-      shipping,
-      total,
     };
   }, [items, addItem, removeItem, updateQty, clear]);
 
@@ -128,5 +142,3 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used within CartProvider");
   return ctx;
 }
-
-export { FREE_SHIP_THRESHOLD, FLAT_SHIP };

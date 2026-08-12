@@ -22,6 +22,97 @@ const FLAT_SHIPPING = 9.99;
 const MAX_BODY_BYTES = 64 * 1024;
 const CHECKOUT_SESSION_ROUTE_PREFIX = "/api/checkout/session/";
 
+const SHOPIFY_STOREFRONT = Object.freeze({
+  shopDomain: "8qp1z2-az.myshopify.com",
+  apiVersion: "2026-07",
+  vendor: "JBH",
+  catalogPageSize: 25,
+});
+const SHOPIFY_STOREFRONT_ENDPOINT = `https://${SHOPIFY_STOREFRONT.shopDomain}/api/${SHOPIFY_STOREFRONT.apiVersion}/graphql.json`;
+
+const SHOPIFY_CATALOG_QUERY = `
+  query JbhVendorCatalog($first: Int!, $query: String!) {
+    products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
+      nodes {
+        id
+        handle
+        title
+        description
+        productType
+        vendor
+        availableForSale
+        featuredImage {
+          url
+          altText
+        }
+        variants(first: 20) {
+          nodes {
+            id
+            title
+            availableForSale
+            price {
+              amount
+              currencyCode
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+const SHOPIFY_VARIANT_PREFLIGHT_QUERY = `
+  query JbhCartVariantPreflight($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on ProductVariant {
+        id
+        availableForSale
+        product {
+          id
+          handle
+          vendor
+          availableForSale
+        }
+      }
+    }
+  }
+`;
+
+const SHOPIFY_CART_CREATE_MUTATION = `
+  mutation JbhCreateCart($input: CartInput!) {
+    cartCreate(input: $input) {
+      cart {
+        id
+        checkoutUrl
+        totalQuantity
+        cost {
+          subtotalAmount {
+            amount
+            currencyCode
+          }
+          totalAmount {
+            amount
+            currencyCode
+          }
+        }
+      }
+      userErrors {
+        field
+        message
+        code
+      }
+      warnings {
+        message
+        code
+      }
+    }
+  }
+`;
+
 const checkoutSchema = z.object({
   checkoutAttemptId: z.string().uuid(),
   items: z
@@ -29,6 +120,21 @@ const checkoutSchema = z.object({
       z.object({
         id: z.string().trim().min(1).max(100),
         variant: z.string().trim().min(1).max(100),
+        quantity: z.number().int().min(1).max(10),
+      }),
+    )
+    .min(1)
+    .max(20),
+});
+
+const shopifyCartSchema = z.object({
+  lines: z
+    .array(
+      z.object({
+        merchandiseId: z
+          .string()
+          .trim()
+          .regex(/^gid:\/\/shopify\/ProductVariant\/\d+$/),
         quantity: z.number().int().min(1).max(10),
       }),
     )
@@ -102,8 +208,6 @@ function createStripeClient(env: Env): Stripe {
 function isApprovedRequestHost(request: Request, env: Env): boolean {
   const requestHostname = new URL(request.url).hostname.toLowerCase();
 
-  // Preserve local Wrangler/Vite development without allowing workers.dev or
-  // temporary preview hostnames in production.
   if (requestHostname === "localhost" || requestHostname === "127.0.0.1") {
     return true;
   }
@@ -155,6 +259,287 @@ function secureAssetResponse(response: Response, env: Env): Response {
   return secured;
 }
 
+async function parseBoundedJson(request: Request): Promise<unknown> {
+  const contentLength = Number(request.headers.get("Content-Length") || 0);
+  if (contentLength > MAX_BODY_BYTES) throw new Error("REQUEST_TOO_LARGE");
+
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
+    throw new Error("REQUEST_TOO_LARGE");
+  }
+  return JSON.parse(raw);
+}
+
+type ShopifyGraphqlPayload<T> = {
+  data?: T;
+  errors?: Array<{ message?: string }>;
+};
+
+async function shopifyStorefrontRequest<T>(
+  query: string,
+  variables: Record<string, unknown>,
+): Promise<T> {
+  const response = await fetch(SHOPIFY_STOREFRONT_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as ShopifyGraphqlPayload<T>;
+  if (!response.ok || payload.errors?.length || !payload.data) {
+    console.error(`[SHOPIFY] Storefront request failed - status=${response.status}`);
+    throw new Error("SHOPIFY_STOREFRONT_UNAVAILABLE");
+  }
+
+  return payload.data;
+}
+
+function inferShopifyCategory(productType: string, title: string): string {
+  const normalized = `${productType} ${title}`.toLowerCase();
+  if (normalized.includes("wig")) return "Wigs";
+  if (normalized.includes("closure") || normalized.includes("frontal")) {
+    return "Closures & Frontals";
+  }
+  if (normalized.includes("bundle") || normalized.includes("weft")) return "Bundles";
+  return "Beauty Essentials";
+}
+
+type ShopifyCatalogData = {
+  products: {
+    nodes: Array<{
+      id: string;
+      handle: string;
+      title: string;
+      description: string;
+      productType: string;
+      vendor: string;
+      availableForSale: boolean;
+      featuredImage: { url: string; altText?: string | null } | null;
+      variants: {
+        nodes: Array<{
+          id: string;
+          title: string;
+          availableForSale: boolean;
+          price: { amount: string; currencyCode: string };
+        }>;
+      };
+    }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
+  };
+};
+
+async function handleShopifyCatalog(request: Request): Promise<Response> {
+  if (request.method !== "GET") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { Allow: "GET", "Cache-Control": "no-store" },
+    });
+  }
+
+  try {
+    const data = await shopifyStorefrontRequest<ShopifyCatalogData>(SHOPIFY_CATALOG_QUERY, {
+      first: SHOPIFY_STOREFRONT.catalogPageSize,
+      query: `vendor:${SHOPIFY_STOREFRONT.vendor}`,
+    });
+
+    if (data.products.pageInfo.hasNextPage) {
+      console.error("[SHOPIFY] Catalog page limit reached; refusing partial catalog response");
+      throw new Error("SHOPIFY_CATALOG_PAGE_LIMIT");
+    }
+
+    const products = data.products.nodes
+      .filter((product) => product.vendor === SHOPIFY_STOREFRONT.vendor)
+      .map((product) => {
+        const variants = product.variants.nodes
+          .map((variant) => ({
+            id: variant.id,
+            option: variant.title,
+            price: Number(variant.price.amount),
+            availableForSale: variant.availableForSale,
+          }))
+          .filter(
+            (variant) =>
+              /^gid:\/\/shopify\/ProductVariant\/\d+$/.test(variant.id) &&
+              Number.isFinite(variant.price) &&
+              variant.price > 0,
+          );
+
+        return {
+          id: product.handle,
+          shopifyProductId: product.id,
+          name: product.title,
+          category: inferShopifyCategory(product.productType, product.title),
+          tagline: "",
+          description: product.description,
+          variants,
+          image: product.featuredImage?.url || "",
+          availableForSale:
+            product.availableForSale && variants.some((variant) => variant.availableForSale),
+        };
+      })
+      .filter((product) => product.variants.length > 0);
+
+    return json({ products, source: "shopify-storefront" });
+  } catch {
+    return json({ error: "Live inventory is temporarily unavailable" }, 502);
+  }
+}
+
+type ShopifyVariantPreflightData = {
+  nodes: Array<
+    | {
+        id: string;
+        availableForSale: boolean;
+        product: {
+          id: string;
+          handle: string;
+          vendor: string;
+          availableForSale: boolean;
+        };
+      }
+    | null
+  >;
+};
+
+type ShopifyCartCreateData = {
+  cartCreate: {
+    cart: {
+      id: string;
+      checkoutUrl: string;
+      totalQuantity: number;
+      cost: {
+        subtotalAmount: { amount: string; currencyCode: string };
+        totalAmount: { amount: string; currencyCode: string };
+      };
+    } | null;
+    userErrors: Array<{ field?: string[] | null; message: string; code?: string | null }>;
+    warnings: Array<{ message: string; code?: string | null }>;
+  };
+};
+
+function assertApprovedShopifyCheckoutUrl(rawUrl: unknown): string {
+  if (typeof rawUrl !== "string" || !rawUrl.trim()) {
+    throw new Error("INVALID_SHOPIFY_CHECKOUT_URL");
+  }
+
+  const checkout = new URL(rawUrl.trim());
+  if (
+    checkout.protocol !== "https:" ||
+    checkout.hostname !== SHOPIFY_STOREFRONT.shopDomain ||
+    checkout.username ||
+    checkout.password ||
+    checkout.port
+  ) {
+    throw new Error("INVALID_SHOPIFY_CHECKOUT_URL");
+  }
+  return checkout.toString();
+}
+
+async function handleShopifyCart(request: Request, env: Env): Promise<Response> {
+  const allowedOrigins = getAllowedOrigins(env);
+  const origin = request.headers.get("Origin");
+
+  if (!origin || !allowedOrigins.includes(origin)) {
+    return json({ error: "Origin not allowed" }, 403);
+  }
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Cache-Control": "no-store",
+        Vary: "Origin",
+      },
+    });
+  }
+
+  if (request.method !== "POST") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: { Allow: "POST, OPTIONS", "Cache-Control": "no-store" },
+    });
+  }
+
+  let parsedJson: unknown;
+  try {
+    parsedJson = await parseBoundedJson(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "REQUEST_TOO_LARGE") {
+      return json({ error: "Request too large" }, 413, origin);
+    }
+    return json({ error: "Invalid request" }, 400, origin);
+  }
+
+  const parsed = shopifyCartSchema.safeParse(parsedJson);
+  if (!parsed.success) return json({ error: "Invalid cart" }, 400, origin);
+
+  try {
+    const requestedIds = [...new Set(parsed.data.lines.map((line) => line.merchandiseId))];
+    const preflight = await shopifyStorefrontRequest<ShopifyVariantPreflightData>(
+      SHOPIFY_VARIANT_PREFLIGHT_QUERY,
+      { ids: requestedIds },
+    );
+    const approvedIds = new Set(
+      preflight.nodes
+        .filter(
+          (node): node is NonNullable<ShopifyVariantPreflightData["nodes"][number]> =>
+            Boolean(
+              node &&
+                node.availableForSale &&
+                node.product.availableForSale &&
+                node.product.vendor === SHOPIFY_STOREFRONT.vendor,
+            ),
+        )
+        .map((node) => node.id),
+    );
+
+    if (requestedIds.some((id) => !approvedIds.has(id))) {
+      return json({ error: "Cart contains an unavailable item" }, 400, origin);
+    }
+
+    const created = await shopifyStorefrontRequest<ShopifyCartCreateData>(
+      SHOPIFY_CART_CREATE_MUTATION,
+      {
+        input: {
+          lines: parsed.data.lines,
+          attributes: [
+            { key: "source", value: "jussbeautifulhair.com" },
+            { key: "bridge", value: "cloudflare-shopify-v1" },
+          ],
+        },
+      },
+    );
+
+    if (created.cartCreate.userErrors.length > 0 || !created.cartCreate.cart) {
+      return json({ error: "Shopify could not create this cart. Please refresh and try again." }, 409, origin);
+    }
+
+    const checkoutUrl = assertApprovedShopifyCheckoutUrl(created.cartCreate.cart.checkoutUrl);
+    return json(
+      {
+        checkoutUrl,
+        totalQuantity: created.cartCreate.cart.totalQuantity,
+        cost: created.cartCreate.cart.cost,
+      },
+      200,
+      origin,
+    );
+  } catch (error) {
+    const errorType = error instanceof Error ? error.message : "UNKNOWN";
+    console.error(`[SHOPIFY] Cart creation failed - ${errorType}`);
+    return json({ error: "Shopify checkout is temporarily unavailable" }, 502, origin);
+  }
+}
+
 async function handleCheckout(request: Request, env: Env): Promise<Response> {
   const allowedOrigins = getAllowedOrigins(env);
   const storeOrigin = allowedOrigins[0];
@@ -188,19 +573,13 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
     });
   }
 
-  const contentLength = Number(request.headers.get("Content-Length") || 0);
-  if (contentLength > MAX_BODY_BYTES) {
-    return json({ error: "Request too large" }, 413, origin);
-  }
-
   let parsedJson: unknown;
   try {
-    const raw = await request.text();
-    if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) {
+    parsedJson = await parseBoundedJson(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "REQUEST_TOO_LARGE") {
       return json({ error: "Request too large" }, 413, origin);
     }
-    parsedJson = JSON.parse(raw);
-  } catch {
     return json({ error: "Invalid request" }, 400, origin);
   }
 
@@ -241,26 +620,24 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
       .reduce((sum, item) => sum + item.price * item.quantity, 0)
       .toFixed(2),
   );
-  const shipping =
-    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING;
+  const shipping = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING;
 
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] =
-    canonicalItems.map((item) => ({
-      quantity: item.quantity,
-      price_data: {
-        currency: "usd",
-        unit_amount: Math.round(item.price * 100),
-        product_data: {
-          name: `${item.name} (${item.variant})`,
-          images: [new URL(item.image, storeOrigin).toString()],
-          metadata: {
-            kind: "product",
-            product_id: item.id,
-            variant: item.variant,
-          },
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = canonicalItems.map((item) => ({
+    quantity: item.quantity,
+    price_data: {
+      currency: "usd",
+      unit_amount: Math.round(item.price * 100),
+      product_data: {
+        name: `${item.name} (${item.variant})`,
+        images: [new URL(item.image, storeOrigin).toString()],
+        metadata: {
+          kind: "product",
+          product_id: item.id,
+          variant: item.variant,
         },
       },
-    }));
+    },
+  }));
 
   if (shipping > 0) {
     lineItems.push({
@@ -340,14 +717,10 @@ async function handleCheckoutSessionVerification(
   }
 
   try {
-    const session = await createStripeClient(env).checkout.sessions.retrieve(
-      parsedSessionId.data,
-    );
+    const session = await createStripeClient(env).checkout.sessions.retrieve(parsedSessionId.data);
     const reference = session.client_reference_id?.trim();
     const metadataReference = session.metadata?.checkout_attempt_id?.trim();
-    const belongsToStore = Boolean(
-      reference && metadataReference && reference === metadataReference,
-    );
+    const belongsToStore = Boolean(reference && metadataReference && reference === metadataReference);
 
     if (!belongsToStore) {
       return json({ error: "Checkout Session not found" }, 404, responseOrigin);
@@ -388,6 +761,14 @@ export default {
 
     if (url.pathname === "/version") {
       return json({ ok: true, sha: getReleaseSha(env) });
+    }
+
+    if (url.pathname === "/api/shopify/catalog") {
+      return handleShopifyCatalog(request);
+    }
+
+    if (url.pathname === "/api/shopify/cart") {
+      return handleShopifyCart(request, env);
     }
 
     if (url.pathname === "/api/checkout") {

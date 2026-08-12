@@ -26,12 +26,13 @@ const SHOPIFY_STOREFRONT = Object.freeze({
   shopDomain: "8qp1z2-az.myshopify.com",
   apiVersion: "2026-07",
   vendor: "JBH",
+  catalogPageSize: 25,
 });
 const SHOPIFY_STOREFRONT_ENDPOINT = `https://${SHOPIFY_STOREFRONT.shopDomain}/api/${SHOPIFY_STOREFRONT.apiVersion}/graphql.json`;
 
 const SHOPIFY_CATALOG_QUERY = `
   query JbhVendorCatalog($first: Int!, $query: String!) {
-    products(first: $first, query: $query) {
+    products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
       nodes {
         id
         handle
@@ -44,7 +45,7 @@ const SHOPIFY_CATALOG_QUERY = `
           url
           altText
         }
-        variants(first: 50) {
+        variants(first: 20) {
           nodes {
             id
             title
@@ -55,6 +56,10 @@ const SHOPIFY_CATALOG_QUERY = `
             }
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
@@ -322,6 +327,10 @@ type ShopifyCatalogData = {
         }>;
       };
     }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      endCursor: string | null;
+    };
   };
 };
 
@@ -335,9 +344,14 @@ async function handleShopifyCatalog(request: Request): Promise<Response> {
 
   try {
     const data = await shopifyStorefrontRequest<ShopifyCatalogData>(SHOPIFY_CATALOG_QUERY, {
-      first: 50,
+      first: SHOPIFY_STOREFRONT.catalogPageSize,
       query: `vendor:${SHOPIFY_STOREFRONT.vendor}`,
     });
+
+    if (data.products.pageInfo.hasNextPage) {
+      console.error("[SHOPIFY] Catalog page limit reached; refusing partial catalog response");
+      throw new Error("SHOPIFY_CATALOG_PAGE_LIMIT");
+    }
 
     const products = data.products.nodes
       .filter((product) => product.vendor === SHOPIFY_STOREFRONT.vendor)

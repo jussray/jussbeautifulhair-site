@@ -10,14 +10,14 @@ const outputDir = "artifacts/shopify-physical-live";
 
 const catalogQuery = `
   query JbhLiveCatalogSmoke($first: Int!, $query: String!) {
-    products(first: $first, query: $query) {
+    products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
       nodes {
         id
         handle
         title
         vendor
         availableForSale
-        variants(first: 20) {
+        variants(first: 10) {
           nodes {
             id
             title
@@ -51,16 +51,25 @@ async function storefrontRequest(query, variables) {
     body: JSON.stringify({ query, variables }),
   });
   const payload = await response.json().catch(() => ({}));
-  assert.equal(response.ok, true, `Storefront API returned HTTP ${response.status}`);
-  assert.equal(Array.isArray(payload.errors) && payload.errors.length > 0, false, "Storefront API returned GraphQL errors");
-  assert.ok(payload.data, "Storefront API response is missing data");
+  const errorSummary = JSON.stringify(payload.errors ?? payload).slice(0, 500);
+  assert.equal(
+    response.ok,
+    true,
+    `Storefront API returned HTTP ${response.status}: ${errorSummary}`,
+  );
+  assert.equal(
+    Array.isArray(payload.errors) && payload.errors.length > 0,
+    false,
+    `Storefront API returned GraphQL errors: ${errorSummary}`,
+  );
+  assert.ok(payload.data, `Storefront API response is missing data: ${errorSummary}`);
   return payload.data;
 }
 
 await mkdir(outputDir, { recursive: true });
 
 const catalog = await storefrontRequest(catalogQuery, {
-  first: 50,
+  first: 10,
   query: "vendor:JBH",
 });
 
@@ -112,7 +121,7 @@ await writeFile(
       checkoutHost: checkout.hostname,
       checkoutPathPrefix: checkout.pathname.split("/").slice(0, 3).join("/"),
       assertions: [
-        "tokenless Storefront catalog returned JBH vendor products",
+        "bounded tokenless Storefront catalog returned JBH vendor products",
         "at least one supplier-backed variant was available for sale",
         "Shopify created a one-line no-payment cart",
         "checkout URL was HTTPS and stayed on the canonical myshopify host",

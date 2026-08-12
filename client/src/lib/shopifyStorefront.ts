@@ -1,5 +1,5 @@
 export const HAIR_MATCH_SHOPIFY_CONTRACT = Object.freeze({
-  shopDomain: "jbh-25.myshopify.com",
+  shopDomain: "8qp1z2-az.myshopify.com",
   variantGid: "gid://shopify/ProductVariant/50196622344435",
   offerCode: "jbh-hair-match-v1",
   source: "jussbeautifulhair.com",

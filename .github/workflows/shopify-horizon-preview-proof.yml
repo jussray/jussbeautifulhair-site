@@ -25,11 +25,19 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Install pinned Playwright
-        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+      - name: Install pinned Playwright in isolated temp directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/jbh-pw"
+          cd "$RUNNER_TEMP/jbh-pw"
+          npm init -y >/dev/null
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+          echo "NODE_PATH=$RUNNER_TEMP/jbh-pw/node_modules" >> "$GITHUB_ENV"
+          echo "$RUNNER_TEMP/jbh-pw/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: playwright install --with-deps chromium
 
       - name: Run Horizon preview proof
         env:

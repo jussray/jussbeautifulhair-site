@@ -66,13 +66,14 @@
       ]
     },
     {
-      "id": "server-authoritative-stripe-checkout",
-      "description": "Accepts catalog identifiers and quantities, resolves products and prices server-side, restricts origins and hosts, and creates idempotent Stripe-hosted Checkout Sessions.",
+      "id": "server-authoritative-shopify-checkout",
+      "description": "Accepts only Shopify variant identifiers and quantities from the browser, revalidates vendor and live availability through Shopify, restricts origins and hosts, and creates Shopify-hosted carts without trusting client prices.",
       "status": "active",
       "evidencePaths": [
         "client/src/pages/Checkout.tsx",
+        "client/src/lib/shopifyCatalog.ts",
         "worker/index.ts",
-        "shared/catalog.ts",
+        "tests/shopify-physical-contract.test.mjs",
         "wrangler.toml"
       ],
       "requiredSignals": [
@@ -80,28 +81,34 @@
       ],
       "usageAssertions": [
         {
-          "id": "checkout-posts-to-worker",
+          "id": "checkout-posts-to-shopify-worker",
           "path": "client/src/pages/Checkout.tsx",
-          "marker": "fetch(\"/api/checkout\"",
-          "description": "The browser requests a server-created Checkout Session."
+          "marker": "fetch(\"/api/shopify/cart\"",
+          "description": "The browser requests a server-created Shopify cart."
         },
         {
-          "id": "checkout-sends-attempt-id",
+          "id": "checkout-sends-shopify-variant-id",
           "path": "client/src/pages/Checkout.tsx",
-          "marker": "checkoutAttemptId: createCheckoutAttemptId()",
-          "description": "Each checkout attempt carries a UUID for idempotency."
+          "marker": "merchandiseId: item.variantId",
+          "description": "The browser sends the selected Shopify variant identifier rather than client-authoritative product pricing."
         },
         {
-          "id": "worker-routes-checkout",
+          "id": "worker-routes-shopify-cart",
           "path": "worker/index.ts",
-          "marker": "url.pathname === \"/api/checkout\"",
-          "description": "The Worker owns the public checkout endpoint."
+          "marker": "url.pathname === \"/api/shopify/cart\"",
+          "description": "The Worker owns the public Shopify cart endpoint."
         },
         {
-          "id": "worker-resolves-canonical-product",
+          "id": "worker-enforces-shopify-vendor-boundary",
           "path": "worker/index.ts",
-          "marker": "getProduct(requested.id)",
-          "description": "Products and prices resolve from the shared server-owned catalog."
+          "marker": "node.product.vendor === SHOPIFY_STOREFRONT.vendor",
+          "description": "Submitted Shopify variants must belong to the approved JBH public vendor boundary."
+        },
+        {
+          "id": "worker-preflights-shopify-variants",
+          "path": "worker/index.ts",
+          "marker": "SHOPIFY_VARIANT_PREFLIGHT_QUERY",
+          "description": "The Worker re-reads submitted variants from Shopify before cart creation."
         },
         {
           "id": "worker-enforces-origin-allowlist",
@@ -114,12 +121,6 @@
           "path": "worker/index.ts",
           "marker": "isApprovedRequestHost(request, env)",
           "description": "The Worker rejects unapproved request hostnames before serving assets or APIs."
-        },
-        {
-          "id": "worker-uses-idempotency-key",
-          "path": "worker/index.ts",
-          "marker": "idempotencyKey: `jbh-checkout-${reference}`",
-          "description": "Stripe session creation is idempotent per checkout attempt."
         }
       ]
     },
@@ -260,47 +261,47 @@
     },
     {
       "id": "checkout-redirect-integrity",
-      "description": "Validates the server-returned Stripe Checkout URL immediately before navigation and fails closed for malformed, insecure, credentialed, ported, arbitrary, and lookalike destinations.",
+      "description": "Validates the server-returned Shopify checkout URL immediately before navigation and fails closed for malformed, insecure, credentialed, ported, arbitrary, and lookalike destinations.",
       "status": "active",
       "evidencePaths": [
         "client/src/pages/Checkout.tsx",
-        "client/src/lib/checkoutRedirect.mjs",
-        "tests/checkout-redirect-contract.test.mjs",
-        ".github/workflows/checkout-redirect-exact-head.yml"
+        "client/src/lib/shopifyCatalog.ts",
+        "tests/shopify-physical-contract.test.mjs",
+        ".github/workflows/shopify-headless-exact-head.yml"
       ],
       "requiredSignals": [
         "current-main-storefront-contract"
       ],
       "usageAssertions": [
         {
-          "id": "checkout-validates-returned-url",
+          "id": "checkout-validates-returned-shopify-url",
           "path": "client/src/pages/Checkout.tsx",
-          "marker": "window.location.assign(assertApprovedCheckoutRedirect(data.url));",
-          "description": "Browser navigation uses the shared fail-closed validator."
+          "marker": "window.location.assign(assertApprovedShopifyCheckoutRedirect(data.checkoutUrl));",
+          "description": "Browser navigation uses the fail-closed Shopify checkout validator."
         },
         {
-          "id": "redirect-requires-exact-stripe-origin",
-          "path": "client/src/lib/checkoutRedirect.mjs",
-          "marker": "url.origin !== APPROVED_CHECKOUT_ORIGIN",
-          "description": "Only the exact configured Stripe Checkout origin is accepted."
+          "id": "redirect-requires-exact-shopify-host",
+          "path": "client/src/lib/shopifyCatalog.ts",
+          "marker": "checkout.hostname !== SHOPIFY_PUBLIC_CONTRACT.shopDomain",
+          "description": "Only the canonical approved Shopify host is accepted."
         },
         {
           "id": "redirect-requires-https",
-          "path": "client/src/lib/checkoutRedirect.mjs",
-          "marker": "url.protocol !== \"https:\"",
+          "path": "client/src/lib/shopifyCatalog.ts",
+          "marker": "checkout.protocol !== \"https:\"",
           "description": "Insecure redirect protocols are rejected."
         },
         {
           "id": "redirect-rejects-credentials-and-ports",
-          "path": "client/src/lib/checkoutRedirect.mjs",
-          "marker": "url.username ||",
-          "description": "Credentialed destinations are rejected before navigation."
+          "path": "client/src/lib/shopifyCatalog.ts",
+          "marker": "checkout.username ||",
+          "description": "Credentialed or custom-port destinations are rejected before navigation."
         },
         {
-          "id": "redirect-contract-covers-lookalikes",
-          "path": "tests/checkout-redirect-contract.test.mjs",
-          "marker": "fails closed for malformed, insecure, credentialed, ported, and lookalike URLs",
-          "description": "The focused contract exercises the negative redirect cases."
+          "id": "shopify-redirect-contract-is-machine-checked",
+          "path": "tests/shopify-physical-contract.test.mjs",
+          "marker": "assertApprovedShopifyCheckoutRedirect",
+          "description": "The focused physical Shopify contract requires the active checkout to use the approved redirect validator."
         }
       ]
     },

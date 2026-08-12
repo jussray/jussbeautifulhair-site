@@ -68,7 +68,7 @@ async function assertNoHorizontalOverflow(page, label) {
 }
 
 async function configureShopifyPermalinkMock(page, evidence) {
-  await page.route("https://jbh-25.myshopify.com/cart/**", async (route) => {
+  await page.route("https://8qp1z2-az.myshopify.com/cart/**", async (route) => {
     const checkout = new URL(route.request().url());
     evidence.checkoutRequests += 1;
     evidence.checkoutNavigation = checkout.toString();
@@ -141,7 +141,7 @@ try {
   await desktop.screenshot({ path: `${outputDir}/hair-match-desktop.png`, fullPage: true });
 
   await Promise.all([
-    desktop.waitForURL("https://jbh-25.myshopify.com/cart/**"),
+    desktop.waitForURL("https://8qp1z2-az.myshopify.com/cart/**"),
     checkoutButton.click(),
   ]);
 
@@ -159,7 +159,7 @@ try {
   assert(evidence.attributes.budget === "150-250", "Budget attribute is wrong.");
   assert(evidence.attributes.maintenance === "low-maintenance", "Maintenance attribute is wrong.");
   assert(
-    evidence.checkoutNavigation?.startsWith("https://jbh-25.myshopify.com/cart/"),
+    evidence.checkoutNavigation?.startsWith("https://8qp1z2-az.myshopify.com/cart/"),
     "Browser did not navigate to an HTTPS Shopify cart permalink.",
   );
 

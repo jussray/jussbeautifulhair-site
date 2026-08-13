@@ -18,6 +18,7 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
     'shopDomain: "8qp1z2-az.myshopify.com"',
     'apiVersion: "2026-07"',
     'vendor: "JBH"',
+    'checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"]',
     '"/api/shopify/catalog"',
     '"/api/shopify/cart"',
     "SHOPIFY_CATALOG_QUERY",
@@ -33,6 +34,7 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
   assert.doesNotMatch(worker, /X-Shopify-Storefront-Access-Token/);
   assert.doesNotMatch(worker, /SHOPIFY_ADMIN|admin[_-]?token/i);
   assert.match(worker, /merchandiseId:[\s\S]*ProductVariant/);
+  assert.match(worker, /SHOPIFY_STOREFRONT\.checkoutHosts\.some/);
   assert.doesNotMatch(worker.slice(worker.indexOf("const shopifyCartSchema"), worker.indexOf("const checkoutSessionIdSchema")), /\bprice\b|\bcurrency\b|\btotal\b/);
 });
 
@@ -66,6 +68,7 @@ test("customer-facing product surfaces read live Shopify commerce through the JB
   assert.match(catalogClient, /allowedOptions/);
   assert.match(catalogClient, /if \(!presentation\) return null/);
   assert.match(catalogClient, /No approved JBH products are available right now/);
+  assert.match(catalogClient, /checkoutHosts:\s*\["jussbeautifulhair\.com",\s*"8qp1z2-az\.myshopify\.com"\]/);
   assert.doesNotMatch(
     catalogClient,
     /Dropship Beauty|Dropship Bundles|DSers|Faire|AZ Hair|APOHAIR|Indique|Jaipur|5S Hair/i,

@@ -97,9 +97,28 @@ const created = await storefrontRequest(cartMutation, {
   },
 });
 
-assert.equal(created.cartCreate.userErrors.length, 0, "Shopify rejected the no-payment cart smoke test");
-assert.ok(created.cartCreate.cart, "Shopify did not return a cart");
-assert.equal(created.cartCreate.cart.totalQuantity, 1, "Unexpected cart quantity");
+const cartDiagnostics = JSON.stringify({
+  selectedProductHandle: product.handle,
+  selectedVariantId: variant.id,
+  selectedVariantTitle: variant.title,
+  selectedVariantPrice: variant.price,
+  userErrors: created.cartCreate.userErrors,
+  warnings: created.cartCreate.warnings,
+  totalQuantity: created.cartCreate.cart?.totalQuantity ?? null,
+});
+console.log(`Live Shopify cart diagnostics: ${cartDiagnostics}`);
+
+assert.equal(
+  created.cartCreate.userErrors.length,
+  0,
+  `Shopify rejected the no-payment cart smoke test: ${cartDiagnostics}`,
+);
+assert.ok(created.cartCreate.cart, `Shopify did not return a cart: ${cartDiagnostics}`);
+assert.equal(
+  created.cartCreate.cart.totalQuantity,
+  1,
+  `Unexpected cart quantity: ${cartDiagnostics}`,
+);
 
 const checkout = new URL(created.cartCreate.cart.checkoutUrl);
 assert.equal(checkout.protocol, "https:", "Shopify checkout must use HTTPS");

@@ -24,11 +24,58 @@ interface CatalogPayload {
   products?: unknown;
 }
 
+interface JbhPresentation {
+  name: string;
+  category: StoreProduct["category"];
+  tagline: string;
+  description: string;
+  image: string;
+}
+
 export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
   shopDomain: "8qp1z2-az.myshopify.com",
   apiVersion: "2026-07",
   vendor: "JBH",
 });
+
+// Shopify owns live variant IDs, price, and availability. JBH owns every field a
+// customer sees. Unmapped supplier imports are intentionally excluded rather than
+// leaking supplier/generic merchandising into the storefront.
+export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation>> =
+  Object.freeze({
+    "body-wave-human-hair-bundles": {
+      name: "Lawless Body Wave Bundles",
+      category: "Bundles",
+      tagline: "Soft body-wave movement with natural shine.",
+      description:
+        "100% virgin human hair with soft body-wave movement and machine double-stitched wefts. Choose your length using live availability at checkout.",
+      image: "/products/bundle-bodywave.jpg",
+    },
+    "deep-wave-human-hair-bundles": {
+      name: "Lawless Deep Wave Bundles",
+      category: "Bundles",
+      tagline: "Defined deep waves with full movement.",
+      description:
+        "100% virgin human hair with a defined deep-wave texture and machine double-stitched wefts. Choose your length using live availability at checkout.",
+      image: "/products/bundle-deepwave.jpg",
+    },
+    "loose-wave-human-hair-bundles": {
+      name: "Lawless Loose Wave Bundles",
+      category: "Bundles",
+      tagline: "Soft loose waves with easy movement.",
+      description:
+        "100% virgin human hair with a soft loose-wave texture and machine double-stitched wefts. Choose your length using live availability at checkout.",
+      image: "/products/bundle-loosewave.jpg",
+    },
+    "kinky-straight-human-hair-bundles": {
+      name: "Flawless Kinky Straight Bundles",
+      category: "Bundles",
+      tagline: "Full, textured straight hair with a natural blown-out finish.",
+      description:
+        "100% virgin human hair with a kinky-straight texture and machine double-stitched wefts. Choose your length using live availability at checkout.",
+      image: "/products/bundle-kinkystraight.jpg",
+    },
+  });
 
 function isStoreVariant(value: unknown): value is StoreVariant {
   if (!value || typeof value !== "object") return false;
@@ -63,6 +110,16 @@ function isStoreProduct(value: unknown): value is StoreProduct {
   );
 }
 
+export function applyJbhPresentation(product: StoreProduct): StoreProduct | null {
+  const presentation = JBH_PRESENTATION_BY_HANDLE[product.id];
+  if (!presentation) return null;
+
+  return {
+    ...product,
+    ...presentation,
+  };
+}
+
 export async function fetchShopifyCatalog(): Promise<StoreProduct[]> {
   const response = await fetch("/api/shopify/catalog", {
     method: "GET",
@@ -75,9 +132,13 @@ export async function fetchShopifyCatalog(): Promise<StoreProduct[]> {
     throw new Error("Live inventory is temporarily unavailable.");
   }
 
-  const products = payload.products.filter(isStoreProduct);
+  const products = payload.products
+    .filter(isStoreProduct)
+    .map(applyJbhPresentation)
+    .filter((product): product is StoreProduct => product !== null);
+
   if (products.length === 0) {
-    throw new Error("No live products are available right now.");
+    throw new Error("No approved JBH products are available right now.");
   }
   return products;
 }

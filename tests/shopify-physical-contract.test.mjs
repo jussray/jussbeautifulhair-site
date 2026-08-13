@@ -18,6 +18,7 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
     'shopDomain: "8qp1z2-az.myshopify.com"',
     'apiVersion: "2026-07"',
     'vendor: "JBH"',
+    'checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"]',
     '"/api/shopify/catalog"',
     '"/api/shopify/cart"',
     "SHOPIFY_CATALOG_QUERY",
@@ -33,6 +34,7 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
   assert.doesNotMatch(worker, /X-Shopify-Storefront-Access-Token/);
   assert.doesNotMatch(worker, /SHOPIFY_ADMIN|admin[_-]?token/i);
   assert.match(worker, /merchandiseId:[\s\S]*ProductVariant/);
+  assert.match(worker, /SHOPIFY_STOREFRONT\.checkoutHosts\.some/);
   assert.doesNotMatch(worker.slice(worker.indexOf("const shopifyCartSchema"), worker.indexOf("const checkoutSessionIdSchema")), /\bprice\b|\bcurrency\b|\btotal\b/);
 });
 
@@ -49,7 +51,7 @@ test("physical checkout sends only Shopify variant IDs and quantities", () => {
   assert.doesNotMatch(cart, /FREE_SHIP_THRESHOLD|FLAT_SHIPPING/);
 });
 
-test("customer-facing product surfaces read live Shopify data instead of static PRODUCTS", () => {
+test("customer-facing product surfaces read live Shopify commerce through the JBH presentation firewall", () => {
   for (const [name, source] of [
     ["shop", shop],
     ["product", product],
@@ -61,7 +63,16 @@ test("customer-facing product surfaces read live Shopify data instead of static 
 
   assert.match(catalogClient, /fetch\("\/api\/shopify\/catalog"/);
   assert.match(catalogClient, /staleTime:\s*30_000/);
-  assert.match(catalogClient, /No live products are available right now/);
+  assert.match(catalogClient, /JBH_PRESENTATION_BY_HANDLE/);
+  assert.match(catalogClient, /applyJbhPresentation/);
+  assert.match(catalogClient, /allowedOptions/);
+  assert.match(catalogClient, /if \(!presentation\) return null/);
+  assert.match(catalogClient, /No approved JBH products are available right now/);
+  assert.match(catalogClient, /checkoutHosts:\s*\["jussbeautifulhair\.com",\s*"8qp1z2-az\.myshopify\.com"\]/);
+  assert.doesNotMatch(
+    catalogClient,
+    /Dropship Beauty|Dropship Bundles|DSers|Faire|AZ Hair|APOHAIR|Indique|Jaipur|5S Hair/i,
+  );
   assert.doesNotMatch(catalogClient, /X-Shopify-Storefront-Access-Token|access_token|STRIPE_SECRET_KEY/);
 });
 

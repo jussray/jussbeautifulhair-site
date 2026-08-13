@@ -282,8 +282,8 @@
         {
           "id": "redirect-requires-exact-shopify-host",
           "path": "client/src/lib/shopifyCatalog.ts",
-          "marker": "checkout.hostname !== SHOPIFY_PUBLIC_CONTRACT.shopDomain",
-          "description": "Only the canonical approved Shopify host is accepted."
+          "marker": "!SHOPIFY_PUBLIC_CONTRACT.checkoutHosts.includes(",
+          "description": "Only the exact approved JBH-branded or canonical Shopify checkout hosts are accepted."
         },
         {
           "id": "redirect-requires-https",

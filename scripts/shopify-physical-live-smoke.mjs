@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import process from "node:process";
 
 const shopDomain = "8qp1z2-az.myshopify.com";
+const checkoutHosts = new Set(["jussbeautifulhair.com", shopDomain]);
 const apiVersion = "2026-07";
 const endpoint = `https://${shopDomain}/api/${apiVersion}/graphql.json`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
@@ -97,15 +98,39 @@ const created = await storefrontRequest(cartMutation, {
   },
 });
 
-assert.equal(created.cartCreate.userErrors.length, 0, "Shopify rejected the no-payment cart smoke test");
-assert.ok(created.cartCreate.cart, "Shopify did not return a cart");
-assert.equal(created.cartCreate.cart.totalQuantity, 1, "Unexpected cart quantity");
+const cartDiagnostics = JSON.stringify({
+  selectedProductHandle: product.handle,
+  selectedVariantId: variant.id,
+  selectedVariantTitle: variant.title,
+  selectedVariantPrice: variant.price,
+  userErrors: created.cartCreate.userErrors,
+  warnings: created.cartCreate.warnings,
+  totalQuantity: created.cartCreate.cart?.totalQuantity ?? null,
+});
+console.log(`Live Shopify cart diagnostics: ${cartDiagnostics}`);
+
+assert.equal(
+  created.cartCreate.userErrors.length,
+  0,
+  `Shopify rejected the no-payment cart smoke test: ${cartDiagnostics}`,
+);
+assert.ok(created.cartCreate.cart, `Shopify did not return a cart: ${cartDiagnostics}`);
+assert.equal(
+  created.cartCreate.cart.totalQuantity,
+  1,
+  `Unexpected cart quantity: ${cartDiagnostics}`,
+);
 
 const checkout = new URL(created.cartCreate.cart.checkoutUrl);
 assert.equal(checkout.protocol, "https:", "Shopify checkout must use HTTPS");
-assert.equal(checkout.hostname, shopDomain, "Shopify checkout returned an unexpected host");
+assert.equal(
+  checkoutHosts.has(checkout.hostname.toLowerCase()),
+  true,
+  "Shopify checkout returned an unexpected host",
+);
 assert.equal(checkout.username, "", "Shopify checkout URL must not contain credentials");
 assert.equal(checkout.password, "", "Shopify checkout URL must not contain credentials");
+assert.equal(checkout.port, "", "Shopify checkout URL must not use a custom port");
 
 await writeFile(
   `${outputDir}/manifest.json`,
@@ -124,7 +149,7 @@ await writeFile(
         "bounded tokenless Storefront catalog returned JBH vendor products",
         "at least one supplier-backed variant was available for sale",
         "Shopify created a one-line no-payment cart",
-        "checkout URL was HTTPS and stayed on the canonical myshopify host",
+        "checkout URL was HTTPS and stayed on an exact approved JBH/Shopify host",
         "no order or payment was submitted",
       ],
     },

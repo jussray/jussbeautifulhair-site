@@ -3,6 +3,8 @@ name: AI Sales Contract Exact-Head Gate
 on:
   pull_request:
     paths:
+      - 'AGENTS.md'
+      - 'AGENTS_FOUNDER_INTELLIGENCE.md'
       - '.agents/skills/**'
       - 'artifacts/billgates/SALES_PLATFORM_LEVERAGE.md'
       - 'artifacts/l99/SALES_AUTHORITY_MODEL.md'

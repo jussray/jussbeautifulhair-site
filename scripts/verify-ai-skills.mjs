@@ -4,6 +4,7 @@ import path from 'node:path';
 
 const requiredFiles = [
   'AGENTS.md',
+  'AGENTS_FOUNDER_INTELLIGENCE.md',
   '.agents/skills/sales/SKILL.md',
   '.agents/skills/devil/SKILL.md',
   'artifacts/redteam/SALES_DEVIL_ATTACK.md',
@@ -28,6 +29,7 @@ for (const file of [...requiredFiles, ...operatorFiles]) {
   try { texts.set(file, await readFile(file, 'utf8')); } catch {}
 }
 const agents = texts.get('AGENTS.md') ?? '';
+const founder = texts.get('AGENTS_FOUNDER_INTELLIGENCE.md') ?? '';
 const operator = operatorFiles.length === 1 ? texts.get(operatorFiles[0]) ?? '' : '';
 const sales = texts.get('.agents/skills/sales/SKILL.md') ?? '';
 const devil = texts.get('.agents/skills/devil/SKILL.md') ?? '';
@@ -37,6 +39,19 @@ for (const ref of ['.agents/skills/sales/SKILL.md', '.agents/skills/devil/SKILL.
 }
 for (const token of ['/sales', '/devil', '5w1h', 'redteam', 'lindymode', 'l99', 'ooda', 'ultrathink', 'bill gates', 'proof', 'rollback', 'approval']) {
   if (!all.includes(token)) failures.push(`missing contract token: ${token}`);
+}
+const founderLower = founder.toLowerCase();
+for (const command of ['/goalfix', '/ultrathink', '/truthmode', '/confess', '/redteam', '/lindymode', '/ooda', '/visualize']) {
+  if (!founderLower.includes(command)) failures.push(`Founder Intelligence missing portable command: ${command}`);
+}
+for (const phrase of [
+  'reasoning/planning modes only',
+  'never grant tool',
+  'explicit founder gates',
+  'local rule is stricter',
+  'visual output is not checkout',
+]) {
+  if (!founderLower.includes(phrase)) failures.push(`Founder Intelligence missing authority boundary: ${phrase}`);
 }
 for (const [label, source, phrases] of [
   ['sales', sales, ['qualif', 'disqualif', 'proof', 'not authorization']],

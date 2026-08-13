@@ -30,6 +30,7 @@ interface JbhPresentation {
   tagline: string;
   description: string;
   image: string;
+  allowedOptions: readonly string[];
 }
 
 export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
@@ -39,8 +40,8 @@ export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
 });
 
 // Shopify owns live variant IDs, price, and availability. JBH owns every field a
-// customer sees. Unmapped supplier imports are intentionally excluded rather than
-// leaking supplier/generic merchandising into the storefront.
+// customer sees. Unmapped supplier imports and unapproved supplier options are
+// intentionally excluded instead of leaking supplier merchandising into the store.
 export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation>> =
   Object.freeze({
     "body-wave-human-hair-bundles": {
@@ -50,6 +51,7 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       description:
         "100% virgin human hair with soft body-wave movement and machine double-stitched wefts. Choose your length using live availability at checkout.",
       image: "/products/bundle-bodywave.jpg",
+      allowedOptions: ['14"', '16"', '18"', '20"', '22"', '24"', '26"'],
     },
     "deep-wave-human-hair-bundles": {
       name: "Lawless Deep Wave Bundles",
@@ -58,6 +60,7 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       description:
         "100% virgin human hair with a defined deep-wave texture and machine double-stitched wefts. Choose your length using live availability at checkout.",
       image: "/products/bundle-deepwave.jpg",
+      allowedOptions: ['14"', '18"', '22"', '26"'],
     },
     "loose-wave-human-hair-bundles": {
       name: "Lawless Loose Wave Bundles",
@@ -66,6 +69,7 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       description:
         "100% virgin human hair with a soft loose-wave texture and machine double-stitched wefts. Choose your length using live availability at checkout.",
       image: "/products/bundle-loosewave.jpg",
+      allowedOptions: ['14"', '18"', '22"', '26"'],
     },
     "kinky-straight-human-hair-bundles": {
       name: "Flawless Kinky Straight Bundles",
@@ -74,6 +78,7 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       description:
         "100% virgin human hair with a kinky-straight texture and machine double-stitched wefts. Choose your length using live availability at checkout.",
       image: "/products/bundle-kinkystraight.jpg",
+      allowedOptions: ['14"', '18"', '22"', '26"'],
     },
   });
 
@@ -114,9 +119,18 @@ export function applyJbhPresentation(product: StoreProduct): StoreProduct | null
   const presentation = JBH_PRESENTATION_BY_HANDLE[product.id];
   if (!presentation) return null;
 
+  const variants = product.variants.filter((variant) =>
+    presentation.allowedOptions.includes(variant.option),
+  );
+  if (variants.length === 0) return null;
+
+  const { allowedOptions: _allowedOptions, ...publicPresentation } = presentation;
   return {
     ...product,
-    ...presentation,
+    ...publicPresentation,
+    variants,
+    availableForSale:
+      product.availableForSale && variants.some((variant) => variant.availableForSale),
   };
 }
 

@@ -37,6 +37,7 @@ export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
   shopDomain: "8qp1z2-az.myshopify.com",
   apiVersion: "2026-07",
   vendor: "JBH",
+  checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 
 // Shopify owns live variant IDs, price, and availability. JBH owns every field a
@@ -180,7 +181,9 @@ export function assertApprovedShopifyCheckoutRedirect(rawUrl: unknown): string {
 
   if (
     checkout.protocol !== "https:" ||
-    checkout.hostname !== SHOPIFY_PUBLIC_CONTRACT.shopDomain ||
+    !SHOPIFY_PUBLIC_CONTRACT.checkoutHosts.includes(
+      checkout.hostname as (typeof SHOPIFY_PUBLIC_CONTRACT.checkoutHosts)[number],
+    ) ||
     checkout.username ||
     checkout.password ||
     checkout.port

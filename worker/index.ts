@@ -27,6 +27,7 @@ const SHOPIFY_STOREFRONT = Object.freeze({
   apiVersion: "2026-07",
   vendor: "JBH",
   catalogPageSize: 25,
+  checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 const SHOPIFY_STOREFRONT_ENDPOINT = `https://${SHOPIFY_STOREFRONT.shopDomain}/api/${SHOPIFY_STOREFRONT.apiVersion}/graphql.json`;
 
@@ -431,7 +432,9 @@ function assertApprovedShopifyCheckoutUrl(rawUrl: unknown): string {
   const checkout = new URL(rawUrl.trim());
   if (
     checkout.protocol !== "https:" ||
-    checkout.hostname !== SHOPIFY_STOREFRONT.shopDomain ||
+    !SHOPIFY_STOREFRONT.checkoutHosts.some(
+      (host) => host === checkout.hostname.toLowerCase(),
+    ) ||
     checkout.username ||
     checkout.password ||
     checkout.port

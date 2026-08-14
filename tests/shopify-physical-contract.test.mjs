@@ -51,6 +51,12 @@ test("physical checkout sends only Shopify variant IDs and quantities", () => {
   assert.doesNotMatch(cart, /FREE_SHIP_THRESHOLD|FLAT_SHIPPING/);
 });
 
+test("branded Shopify checkout URLs escape the Cloudflare storefront without changing cart identity", () => {
+  assert.match(catalogClient, /const checkoutHost = checkout\.hostname\.toLowerCase\(\)/);
+  assert.match(catalogClient, /checkoutHost === "jussbeautifulhair\.com"/);
+  assert.match(catalogClient, /checkout\.hostname = SHOPIFY_PUBLIC_CONTRACT\.shopDomain/);
+});
+
 test("customer-facing product surfaces read live Shopify commerce through the JBH presentation firewall", () => {
   for (const [name, source] of [
     ["shop", shop],

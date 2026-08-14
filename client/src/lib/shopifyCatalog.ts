@@ -179,16 +179,25 @@ export function assertApprovedShopifyCheckoutRedirect(rawUrl: unknown): string {
     throw new Error("Checkout returned a malformed Shopify URL.");
   }
 
+  const checkoutHost = checkout.hostname.toLowerCase();
   if (
     checkout.protocol !== "https:" ||
     !SHOPIFY_PUBLIC_CONTRACT.checkoutHosts.includes(
-      checkout.hostname as (typeof SHOPIFY_PUBLIC_CONTRACT.checkoutHosts)[number],
+      checkoutHost as (typeof SHOPIFY_PUBLIC_CONTRACT.checkoutHosts)[number],
     ) ||
     checkout.username ||
     checkout.password ||
     checkout.port
   ) {
     throw new Error("Checkout redirect was blocked because the Shopify host was not approved.");
+  }
+
+  // Shopify may return the branded storefront host for Cart checkoutUrl. That host
+  // is owned by the Cloudflare SPA, so sending /cart/c/* there loops back into the
+  // storefront. Preserve Shopify's exact cart path and key while escaping only the
+  // colliding hostname to the canonical shop domain that serves Shopify checkout.
+  if (checkoutHost === "jussbeautifulhair.com") {
+    checkout.hostname = SHOPIFY_PUBLIC_CONTRACT.shopDomain;
   }
 
   return checkout.toString();

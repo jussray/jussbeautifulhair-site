@@ -10,6 +10,7 @@ const baseURL = `http://${host}:${port}`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-physical";
 const checkoutHost = "8qp1z2-az.myshopify.com";
+const brandedCheckoutHost = "jussbeautifulhair.com";
 const selectedVariantId = "gid://shopify/ProductVariant/50273899900002";
 const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let serverOutput = "";
@@ -131,7 +132,7 @@ async function configureMocks(page, evidence) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        checkoutUrl: `https://${checkoutHost}/cart/c/jbh-browser-proof?key=exact-head`,
+        checkoutUrl: `https://${brandedCheckoutHost}/cart/c/jbh-browser-proof?key=exact-head`,
         totalQuantity: 1,
         cost: {
           subtotalAmount: { amount: "58.99", currencyCode: "USD" },
@@ -211,8 +212,8 @@ try {
     `Unexpected Shopify cart payload: ${JSON.stringify(evidence.cartBody)}`,
   );
   assert(
-    evidence.checkoutUrl?.startsWith(`https://${checkoutHost}/cart/`),
-    "Browser did not navigate to the canonical Shopify checkout host.",
+    evidence.checkoutUrl === `https://${checkoutHost}/cart/c/jbh-browser-proof?key=exact-head`,
+    `Branded Shopify checkout did not escape to the canonical host with its exact cart key: ${evidence.checkoutUrl}`,
   );
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -253,7 +254,7 @@ try {
           "cart and checkout remain usable on desktop and mobile",
           "physical checkout sends only merchandiseId and quantity",
           "physical checkout no longer presents Stripe as the active payment handoff",
-          "browser navigates to canonical HTTPS Shopify checkout URL",
+          "branded Shopify checkout URL escapes to the canonical Shopify host without changing the cart path or key",
           "desktop and mobile layouts have no horizontal overflow",
           "browser console remained clean",
         ],

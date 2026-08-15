@@ -4,9 +4,9 @@ Date: July 31, 2026
 
 ## Purpose
 
-This audit records repository metadata and ownership boundaries. It is not legal
-advice, a securities document, an investment offer, a partnership agreement, a
-confidentiality agreement, or a substitute for review by qualified counsel.
+This audit records repository metadata and ownership boundaries. It is not legal advice,
+a securities document, an investment offer, a partnership agreement, a confidentiality
+agreement, or a substitute for review by qualified counsel.
 
 ## Current-main finding
 

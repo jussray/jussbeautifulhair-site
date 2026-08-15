@@ -3,6 +3,9 @@ name: Shopify Checkout Bridge Exact-Head Gate
 on:
   pull_request:
     paths:
+      - ".control-room/commerce-seam.json"
+      - "package.json"
+      - "README.md"
       - "worker/index.ts"
       - "client/src/components/Layout.tsx"
       - "client/src/components/ProductCard.tsx"
@@ -16,6 +19,7 @@ on:
       - "client/src/pages/Checkout.tsx"
       - "client/src/pages/HairMatch.tsx"
       - "client/src/App.tsx"
+      - "scripts/verify-commerce-seam.mjs"
       - "scripts/shopify-headless-playwright.mjs"
       - "scripts/shopify-physical-playwright.mjs"
       - "scripts/shopify-physical-live-smoke.mjs"
@@ -59,6 +63,9 @@ jobs:
 
       - name: Typecheck
         run: npm run check
+
+      - name: Verify cross-repo commerce seam
+        run: npm run verify:commerce-seam
 
       - name: Verify Shopify checkout code contracts
         run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs

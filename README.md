@@ -32,6 +32,8 @@ Run `npm run verify:commerce-seam` to fail closed if the public half drifts from
 
 This repository may contain only customer-facing storefront code and the minimal public Cloudflare commerce Worker.
 
+The historical Control Room marker called this boundary `the minimal Cloudflare payment-session Worker`; that label is retained here only as a retired compatibility marker. The active physical path is Shopify, and the remaining Stripe payment-session surface is rollback-only.
+
 Do not add:
 
 - private admin pages or owner authentication code;

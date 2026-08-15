@@ -31,13 +31,13 @@ requireTruth(contract.privateOrderControl.paidWebhookPath === "/webhooks/shopify
 requireTruth(contract.productionTruth.authority === "external-provider-evidence", "production truth must stay provider-backed");
 requireTruth(contract.productionTruth.repoMergeAloneIsActivationProof === false, "a repository merge must never count as activation proof");
 
-requireTruth(worker.includes(`const COMMERCE_SEAM_CONTRACT_ID = "${contract.contractId}"`), "Worker does not expose the shared commerce contract id");
 requireTruth(worker.includes(`shopDomain: "${contract.shopify.shopDomain}"`), "Worker Shopify domain does not match the seam contract");
 requireTruth(worker.includes(`apiVersion: "${contract.shopify.apiVersion}"`), "Worker Storefront API version does not match the seam contract");
 requireTruth(worker.includes(`vendor: "${contract.shopify.publicVendor}"`), "Worker vendor boundary does not match the seam contract");
 requireTruth(worker.includes(`url.pathname === "${contract.shopify.catalogPath}"`), "Worker catalog route does not match the seam contract");
 requireTruth(worker.includes(`url.pathname === "${contract.shopify.cartPath}"`), "Worker cart route does not match the seam contract");
-requireTruth(worker.includes("commerceContract: COMMERCE_SEAM_CONTRACT_ID"), "/version does not expose the shared commerce contract id");
+requireTruth(worker.includes('url.pathname === "/version"'), "public deployment has no release-identity route");
+requireTruth(worker.includes("sha: getReleaseSha(env)"), "/version no longer exposes the deployed release SHA");
 
 requireTruth(catalog.includes(`shopDomain: "${contract.shopify.shopDomain}"`), "browser Shopify domain does not match the seam contract");
 requireTruth(catalog.includes(`apiVersion: "${contract.shopify.apiVersion}"`), "browser Storefront API version does not match the seam contract");

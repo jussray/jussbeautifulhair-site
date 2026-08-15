@@ -141,8 +141,8 @@
         {
           "id": "readme-defines-minimal-public-worker",
           "path": "README.md",
-          "marker": "the minimal Cloudflare payment-session Worker",
-          "description": "The repository contract limits public backend authority."
+          "marker": "the minimal Cloudflare public-commerce Worker surface",
+          "description": "The repository contract limits public backend authority while allowing the current bounded Shopify commerce endpoints."
         },
         {
           "id": "readme-excludes-order-webhooks",

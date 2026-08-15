@@ -8,21 +8,49 @@ Public storefront for Juss Beautiful Hair.
 
 **Stack:** React + Vite + Tailwind CSS + Cloudflare Worker
 
-**Payments:** Stripe-hosted Checkout. Secret keys remain in Cloudflare Worker secrets and are never bundled into browser JavaScript.
+**Active physical-commerce handoff:** Shopify Storefront Cart + Shopify-hosted checkout. Shopify owns sellable catalog state, cart creation, final availability, discounts, shipping, taxes, payment, and order creation. The Cloudflare storefront remains the branded delivery layer.
+
+The older Stripe checkout surface remains server-side only as a reversible rollback path while the Shopify physical-product flow earns production proof. It is not the active physical-product customer handoff.
+
+See [`docs/SHOPIFY_HEADLESS_BRIDGE.md`](docs/SHOPIFY_HEADLESS_BRIDGE.md) for the current commerce contract.
 
 ## Security boundary
 
-This repository may contain only customer-facing storefront code and the minimal Cloudflare payment-session Worker.
+This repository may contain only customer-facing storefront code and the minimal Cloudflare public-commerce Worker surface.
 
 Do not add:
 
 - private admin pages or owner authentication code;
-- vendor names, sourcing files, pricing, outreach records, or factory documents;
+- vendor names, sourcing files, private pricing, outreach records, or factory documents;
 - customer/order schemas, database clients, database exports, or public order-detail APIs;
 - Vercel functions, alternate deployment manifests, or setup scripts that recreate legacy APIs;
-- Stripe secret keys, webhook signing secrets, Cloudflare API tokens, or `.env` files.
+- Shopify Admin tokens, app secrets, customer credentials, Stripe secret keys, webhook signing secrets, Cloudflare API tokens, or `.env` files.
 
 The private owner/admin, order-processing backend, webhook processing, and vendor control source belongs only in `jbh-private`.
+
+## Current commerce flow
+
+For physical products:
+
+1. The browser renders the existing JBH React/Vite storefront.
+2. `GET /api/shopify/catalog` reaches the Cloudflare Worker.
+3. The Worker reads live public Shopify Storefront data only inside the approved `JBH` vendor boundary.
+4. The browser keeps selected Shopify variant GIDs in a session-scoped cart.
+5. Checkout sends only `merchandiseId` and `quantity` to `POST /api/shopify/cart`.
+6. The Worker revalidates submitted variants against Shopify before cart creation.
+7. Shopify `cartCreate` returns the checkout URL and Shopify-computed cart totals.
+8. If Shopify returns a branded `jussbeautifulhair.com/cart/...` checkout URL, the client preserves the exact cart path and key while switching only the colliding hostname to the canonical `.myshopify.com` shop host.
+9. The browser redirects to Shopify for checkout and payment.
+
+The browser does not send product prices as authority, and the Worker does not accept arbitrary variants outside the approved public catalog boundary.
+
+Hair Match remains a separate bounded Shopify offer as documented in `docs/SHOPIFY_HEADLESS_BRIDGE.md`.
+
+## Legacy Stripe boundary
+
+The historical `/api/checkout` and Stripe Checkout Session verification code remains server-side as a rollback surface during the Shopify migration. Do not describe that legacy route as the active physical-product checkout.
+
+Removing the legacy Stripe path is a separate cleanup gate after the Shopify path has production proof.
 
 ## Build and verification
 
@@ -32,32 +60,32 @@ npm run check
 npm run verify:deploy
 ```
 
-`verify:deploy` builds the storefront and then checks that:
+`verify:deploy` builds the storefront and checks the production-boundary rules, including:
 
-- `workers_dev` is explicitly disabled;
-- public Preview URLs are explicitly disabled;
-- automatic/default deployment remains unable to claim the branded root hostname;
-- the explicit front-door config contains exactly one approved `jussbeautifulhair.com/*` Worker Route;
-- no temporary or aliased preview command is present in package scripts or GitHub Actions;
-- no deprecated Cloudflare Workers KV namespace-management route exists in source, scripts, workflows, or documentation;
-- no Vercel manifest, Vercel API directory, public database schema, public database client, or numeric order-lookup route exists;
-- no known private-admin or vendor artifact appears in `dist/public/`;
-- no private control-layer directory has been added to this repository.
+- `workers_dev` disabled;
+- public Preview URLs disabled;
+- default deployment unable to claim the branded root hostname;
+- exactly one separately approved `jussbeautifulhair.com/*` front-door Worker Route;
+- no temporary/aliased preview command in package scripts or GitHub Actions;
+- no deprecated Cloudflare Workers KV namespace-management route;
+- no Vercel manifest/API directory, public database schema/client, or numeric order-lookup route;
+- no known private-admin/vendor artifact in `dist/public/`;
+- no private control-layer directory in this public repository.
 
-The Vite storefront builds to `dist/public/`. Wrangler deploys that directory with `worker/index.ts` handling `/api/checkout` before static assets.
+The Vite storefront builds to `dist/public/`. `worker/index.ts` owns the bounded public API surfaces before static assets.
+
+The Shopify physical path also has focused source contracts and desktop/mobile Playwright proof. Production deployment evidence remains separate from repository proof.
 
 ## Cloudflare production-only configuration
 
-The default `wrangler.toml` is deliberately route-free and explicitly sets:
+The default `wrangler.toml` is deliberately route-free and sets:
 
 ```toml
 workers_dev = false
 preview_urls = false
 ```
 
-That default configuration can build or update the Worker without silently claiming the branded root hostname.
-
-The separately gated `wrangler.frontdoor.toml` contains the one approved production Worker Route:
+The separately gated `wrangler.frontdoor.toml` contains the approved production Worker Route:
 
 ```toml
 [[routes]]
@@ -65,15 +93,9 @@ pattern = "jussbeautifulhair.com/*"
 zone_name = "jussbeautifulhair.com"
 ```
 
-The front-door configuration is an explicit activation surface, not the normal branch/default deploy path. It keeps Shopify attached as the commerce origin while Cloudflare can run the custom JBH Worker in front of the existing hostname. Cloudflare requires the root DNS record to be proxied before a Worker Route can invoke.
+That front-door configuration is an explicit activation surface, not the ordinary branch/default deploy path. Shopify remains the commerce source of truth behind the branded Cloudflare experience.
 
-The Worker independently rejects requests whose hostname is not derived from `STORE_ORIGIN` or `ALLOWED_STOREFRONT_ORIGINS`. This makes a mistakenly created `workers.dev` or temporary preview hostname return a generic `404` instead of serving storefront assets or Checkout.
-
-Configure secrets in Cloudflare without placing values in GitHub:
-
-```bash
-wrangler secret put STRIPE_SECRET_KEY
-```
+The Worker rejects unapproved storefront hostnames. A mistakenly exposed `workers.dev` or preview hostname must not become an alternate production storefront.
 
 Optional runtime variable when more than one public origin is intentionally supported:
 
@@ -81,28 +103,21 @@ Optional runtime variable when more than one public origin is intentionally supp
 ALLOWED_STOREFRONT_ORIGINS=https://<PRIMARY_STORE_ORIGIN>,https://<SECONDARY_STORE_ORIGIN>
 ```
 
-Do not prefix secrets with `VITE_`. Vite variables are readable by browsers.
-
-### Workers KV management API
-
-The storefront currently contains no direct Cloudflare Workers KV namespace-management client. Runtime KV bindings, if added later, should be configured through Wrangler bindings. Any future direct Cloudflare API integration must use the documented `/storage/kv/namespaces` route and must keep `<CLOUDFLARE_API_TOKEN>`, namespace identifiers, stored event identifiers, and values out of source and logs.
-
-The deployment verifier fails when the deprecated namespace-management route is introduced anywhere in tracked repository text files.
+Do not prefix secrets with `VITE_`. Vite variables are browser-readable.
 
 ## Checkout protections
 
-The Worker:
+The active physical-product path:
 
-- serves only approved storefront hostnames plus local loopback development;
-- accepts product ID, variant, quantity, and a random checkout-attempt ID only;
-- resolves prices and shipping from the server-side catalog;
-- rejects unknown products, variants, oversized payloads, and unapproved origins;
-- uses a Stripe idempotency key for each checkout attempt;
-- sends customers to Stripe to provide payment, contact, billing, and shipping details;
-- returns generic errors and does not log customer data or credentials;
-- applies restrictive security headers to storefront assets.
+- accepts only Shopify variant GIDs and quantities as cart input;
+- re-reads submitted variants from Shopify before cart creation;
+- requires products to remain sellable and inside the approved `JBH` public catalog boundary;
+- refuses malformed or unapproved checkout URLs;
+- preserves exact Shopify cart identity while escaping the branded-host routing collision to the canonical shop host;
+- leaves shipping, taxes, payment, and order creation to Shopify;
+- does not expose Admin credentials or customer/order records to the browser.
 
-The order-mutation webhook and owner/admin APIs do not belong in this public repository. The public site must not expose order details by sequential or user-supplied IDs. The success page displays only a truncated Stripe session reference and does not fetch customer or order records.
+The order-mutation webhook and owner/admin APIs do not belong in this public repository. The public site must not expose order details by sequential or user-supplied IDs.
 
 ## Deployment
 
@@ -114,18 +129,15 @@ npm run verify:deploy
 
 Normal branch/default deployment uses route-free `wrangler.toml`; it must not be repurposed to claim `jussbeautifulhair.com`.
 
-Production front-door activation is separately gated by `.github/workflows/frontdoor-activate.yml`. That manual workflow requires:
+Production front-door activation is separately gated by `.github/workflows/frontdoor-activate.yml`. That workflow requires exact-current-main authority, explicit activation confirmation, the required Cloudflare production credentials, repository contracts, dry-run proof, exact-route verification, and live desktop/mobile Playwright after activation. Its rollback removes only a newly-created exact JBH Worker Route when the post-activation proof fails.
 
-- the exact current `main` SHA;
-- explicit `jussbeautifulhair.com` and activation confirmations;
-- `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` GitHub secrets;
-- a proxied Cloudflare root DNS record;
-- no pre-existing JBH Worker route;
-- repository contracts and a Wrangler dry run to pass before deployment.
-
-It pins Wrangler, deploys only `wrangler.frontdoor.toml`, confirms the exact route maps to `jussbeautifulhair-site`, and runs live desktop/mobile Playwright proof against `https://jussbeautifulhair.com`. If any post-activation step fails, the workflow removes only the newly-created exact JBH Worker Route before finishing failed.
+Repository merge, Worker upload, or a successful build is not by itself production-commerce proof. Keep source, CI, Cloudflare routing, Shopify cart/checkout, and live browser evidence separate.
 
 Do not use temporary deployments, Preview URLs, preview aliases, Vercel, or a `workers.dev` production route.
+
+## Documentation rule
+
+Current `main` implementation and exact evidence outrank stale prose. Historical Stripe documentation may remain historical, but current-state docs must not present Stripe as the active physical-product checkout while the Shopify Cart path is the implemented customer handoff.
 
 ## License
 

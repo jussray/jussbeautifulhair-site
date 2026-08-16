@@ -146,6 +146,12 @@ jobs:
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
         run: node scripts/frontdoor-live-playwright.mjs
 
+      - name: Prove exact deployed Shopify purchase path without payment
+        env:
+          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: node scripts/shopify-production-playwright.mjs
+
       - name: Remove newly-created route if post-activation proof fails
         if: failure() && steps.activate_route.outcome == 'success'
         env:
@@ -174,6 +180,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontdoor-live-${{ env.EXPECTED_HEAD_SHA }}
-          path: artifacts/frontdoor-live/
+          path: |
+            artifacts/frontdoor-live/
+            artifacts/shopify-production/
           if-no-files-found: warn
           retention-days: 30

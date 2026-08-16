@@ -1,5 +1,5 @@
 name = "jussbeautifulhair-site"
-main = "worker/index.ts"
+main = "worker/entry.ts"
 compatibility_date = "2026-07-14"
 compatibility_flags = ["nodejs_compat"]
 
@@ -17,6 +17,7 @@ zone_name = "jussbeautifulhair.com"
 
 [vars]
 STORE_ORIGIN = "https://jussbeautifulhair.com"
+ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
 
 [assets]
 directory = "dist/public"

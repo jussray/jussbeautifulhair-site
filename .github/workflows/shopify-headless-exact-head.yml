@@ -19,10 +19,13 @@ on:
       - "scripts/shopify-headless-playwright.mjs"
       - "scripts/shopify-physical-playwright.mjs"
       - "scripts/shopify-physical-live-smoke.mjs"
+      - "scripts/shopify-production-playwright.mjs"
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
+      - "tests/frontdoor-activation-contract.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
+      - ".github/workflows/frontdoor-activate.yml"
   workflow_dispatch:
 
 permissions:
@@ -60,8 +63,8 @@ jobs:
       - name: Typecheck
         run: npm run check
 
-      - name: Verify Shopify checkout code contracts
-        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs
+      - name: Verify Shopify checkout and production-witness contracts
+        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs
 
       - name: Build production storefront
         run: npm run build

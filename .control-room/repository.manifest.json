@@ -166,6 +166,7 @@
         "package.json",
         "vite.config.ts",
         "wrangler.toml",
+        "worker/entry.ts",
         "scripts/verify-deployment-boundary.mjs",
         ".github/workflows/deployment-boundary.yml"
       ],
@@ -182,8 +183,14 @@
         {
           "id": "wrangler-runs-storefront-worker",
           "path": "wrangler.toml",
-          "marker": "main = \"worker/index.ts\"",
-          "description": "Wrangler executes the storefront Worker."
+          "marker": "main = \"worker/entry.ts\"",
+          "description": "Wrangler executes the default-off payment gate before delegating to the storefront Worker."
+        },
+        {
+          "id": "entry-delegates-to-storefront-worker",
+          "path": "worker/entry.ts",
+          "marker": "return worker.fetch(request, env);",
+          "description": "The gated entrypoint delegates approved traffic to the existing storefront Worker."
         },
         {
           "id": "wrangler-disables-workers-dev",

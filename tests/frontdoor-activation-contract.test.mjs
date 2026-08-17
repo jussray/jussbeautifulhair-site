@@ -6,6 +6,10 @@ const activationWorkflow = await readFile(
   new URL("../.github/workflows/frontdoor-activate.yml", import.meta.url),
   "utf8",
 );
+const mainShopifyWorkflow = await readFile(
+  new URL("../.github/workflows/shopify-headless-exact-head.yml", import.meta.url),
+  "utf8",
+);
 const frontdoorConfig = await readFile(
   new URL("../wrangler.frontdoor.toml", import.meta.url),
   "utf8",
@@ -121,6 +125,23 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
   assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
 });
 
+test("main commerce gate waits for the exact Worker build and emits verified only after live Playwright", () => {
+  assert.match(mainShopifyWorkflow, /^\s*push:\s*\n\s+branches: \[main\]/m);
+  assert.match(mainShopifyWorkflow, /checks: read/);
+  assert.match(mainShopifyWorkflow, /Workers Builds: jussbeautifulhair-site/);
+  const providerIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
+  const frontdoorIndex = mainShopifyWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs");
+  const productionIndex = mainShopifyWorkflow.indexOf("node scripts/shopify-production-playwright.mjs");
+  const receiptIndex = mainShopifyWorkflow.indexOf("Write canonical production receipt");
+  assert.ok(providerIndex >= 0, "Exact Worker-build wait is missing.");
+  assert.ok(frontdoorIndex > providerIndex, "Live front-door Playwright must follow exact provider build proof.");
+  assert.ok(productionIndex > frontdoorIndex, "Production Shopify Playwright must follow live SHA proof.");
+  assert.ok(receiptIndex > productionIndex, "Verified receipt must be emitted only after both live browser gates.");
+  assert.match(mainShopifyWorkflow, /live_state: 'verified'/);
+  assert.match(mainShopifyWorkflow, /https:\/\/jussbeautifulhair\.com\/version/);
+  assert.doesNotMatch(mainShopifyWorkflow, /wrangler[^\n]*deploy/i);
+});
+
 test("front-door Wrangler config remains one route for the branded root", () => {
   const routeBlocks = frontdoorConfig.match(/^\s*\[\[routes\]\]\s*$/gm) ?? [];
   assert.equal(routeBlocks.length, 1);
@@ -132,7 +153,6 @@ test("front-door Wrangler config remains one route for the branded root", () => 
   );
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
 });
-
 
 test("Worker version route reads the explicit release binding", () => {
   assert.match(worker, /url\.pathname === \"\/version\"/);

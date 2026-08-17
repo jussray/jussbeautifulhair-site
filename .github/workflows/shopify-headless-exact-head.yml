@@ -19,6 +19,7 @@ on:
       - "scripts/shopify-headless-playwright.mjs"
       - "scripts/shopify-physical-playwright.mjs"
       - "scripts/shopify-physical-live-smoke.mjs"
+      - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
@@ -45,6 +46,7 @@ on:
       - "scripts/shopify-headless-playwright.mjs"
       - "scripts/shopify-physical-playwright.mjs"
       - "scripts/shopify-physical-live-smoke.mjs"
+      - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
@@ -56,6 +58,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
 
 concurrency:
   group: shopify-checkout-bridge-${{ github.event.pull_request.number || github.ref }}
@@ -63,12 +66,13 @@ concurrency:
 
 env:
   EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  LIVE_STOREFRONT_URL: https://jussbeautifulhair.com
 
 jobs:
   verify:
     name: Verify tokenless Shopify checkout bridge
     runs-on: ubuntu-22.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - name: Check out exact requested head
         uses: actions/checkout@v4
@@ -110,6 +114,96 @@ jobs:
       - name: Verify live Shopify catalog and no-payment cart
         run: node scripts/shopify-physical-live-smoke.mjs
 
+      - name: Wait for exact Cloudflare Worker build
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..90}; do
+            checks="$(curl --fail --silent --show-error \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD_SHA/check-runs" || true)"
+
+            state="$(printf '%s' "$checks" | node -e '
+              let raw = "";
+              process.stdin.on("data", (chunk) => { raw += chunk; });
+              process.stdin.on("end", () => {
+                try {
+                  const data = JSON.parse(raw);
+                  const runs = (data.check_runs || []).filter((run) => run.name === "Workers Builds: jussbeautifulhair-site");
+                  if (runs.some((run) => run.status === "completed" && run.conclusion === "success")) {
+                    console.log("success");
+                    return;
+                  }
+                  if (runs.some((run) => run.status === "completed" && run.conclusion && run.conclusion !== "success")) {
+                    console.log("failure");
+                    return;
+                  }
+                  console.log("pending");
+                } catch {
+                  console.log("pending");
+                }
+              });
+            ')"
+
+            if [ "$state" = "success" ]; then
+              printf 'Cloudflare Worker build is green for %s\n' "$EXPECTED_HEAD_SHA"
+              break
+            fi
+            if [ "$state" = "failure" ]; then
+              printf 'Cloudflare Worker build failed for %s\n' "$EXPECTED_HEAD_SHA" >&2
+              exit 1
+            fi
+            if [ "$attempt" -eq 90 ]; then
+              printf 'Cloudflare Worker build did not complete for %s\n' "$EXPECTED_HEAD_SHA" >&2
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: Prove exact live SHA and branded front door
+        if: github.event_name == 'push'
+        env:
+          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: node scripts/frontdoor-live-playwright.mjs
+
+      - name: Prove exact deployed Shopify purchase path without payment
+        if: github.event_name == 'push'
+        env:
+          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: node scripts/shopify-production-playwright.mjs
+
+      - name: Write canonical production receipt
+        if: github.event_name == 'push' && success()
+        shell: bash
+        env:
+          RECEIPT_URL: https://jussbeautifulhair.com/version
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {mkdir, writeFile} from 'node:fs/promises';
+
+          const sha = process.env.EXPECTED_HEAD_SHA || '';
+          if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('Expected a full 40-character release SHA.');
+          const url = new URL(process.env.RECEIPT_URL);
+          if (url.protocol !== 'https:') throw new Error('Receipt URL must use HTTPS.');
+          const receipt = {
+            repo: process.env.GITHUB_REPOSITORY,
+            sha,
+            live_state: 'verified',
+            url: url.toString(),
+          };
+          await mkdir('artifacts/production-proof', {recursive: true});
+          await writeFile('artifacts/production-proof/receipt.json', `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
+          console.log(JSON.stringify(receipt));
+          NODE
+
       - name: Upload exact-head Shopify proof
         if: always()
         uses: actions/upload-artifact@v4
@@ -119,5 +213,8 @@ jobs:
             artifacts/shopify-headless/
             artifacts/shopify-physical/
             artifacts/shopify-physical-live/
+            artifacts/frontdoor-live/
+            artifacts/shopify-production/
+            artifacts/production-proof/
           if-no-files-found: error
           retention-days: 30

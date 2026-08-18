@@ -81,6 +81,126 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       image: "/products/bundle-kinkystraight.jpg",
       allowedOptions: ['14"', '18"', '22"', '26"'],
     },
+    "lawless-bone-straight-bundle-raw-vietnamese": {
+      name: "Lawless Bone Straight Bundle — Raw Vietnamese",
+      category: "Bundles",
+      tagline: "Silky raw Vietnamese hair with a glass-straight finish.",
+      description:
+        "Single-donor raw Vietnamese hair designed to press sleek, hold a curl, and move naturally with proper care.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/bundle-bonestraight_c3cba4a7-475e-49ab-85cf-b755cd51811a.jpg?v=1786301922",
+      allowedOptions: ['14"', '18"', '22"', '26"'],
+    },
+    "royal-raw-indian-temple-bundle": {
+      name: "Royal Raw Indian Temple Bundle",
+      category: "Bundles",
+      tagline: "Single-donor raw Indian hair with natural longevity.",
+      description:
+        "Cuticle-aligned raw Indian temple hair designed for long wear and flexible styling with proper care.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/bundle-royal-indian_71d3c68e-5c90-4ed1-96df-45438bd72023.jpg?v=1786301908",
+      allowedOptions: ['14"', '18"', '22"', '26"'],
+    },
+    "lawless-4-4-hd-lace-closure": {
+      name: "Lawless 4×4 HD Lace Closure",
+      category: "Closures & Frontals",
+      tagline: "Compact HD lace coverage for a polished install.",
+      description:
+        "Pre-plucked 4×4 HD lace closure with a natural-looking hairline and flexible everyday styling.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/closure-4x4_a62fc0d2-fa67-4242-a32f-34063047629d.jpg?v=1786301899",
+      allowedOptions: ['16"'],
+    },
+    "lawless-5-5-hd-lace-closure": {
+      name: "Lawless 5×5 HD Lace Closure",
+      category: "Closures & Frontals",
+      tagline: "More parting space with a seamless HD lace finish.",
+      description:
+        "5×5 HD lace closure with added parting room for a natural-looking install and versatile styling.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/closure-5x5_4b3b1278-8c14-4402-b946-baf4c15d2246.jpg?v=1786301890",
+      allowedOptions: ['16"'],
+    },
+    "lawless-13-4-hd-lace-frontal": {
+      name: "Lawless 13×4 HD Lace Frontal",
+      category: "Closures & Frontals",
+      tagline: "Ear-to-ear HD lace with flexible parting.",
+      description:
+        "13×4 HD lace frontal designed for broad hairline coverage, flexible parting, and a natural-looking finish.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/frontal-13x4_5bfa907a-f1c2-46fe-a494-10f12ac4d548.jpg?v=1786301839",
+      allowedOptions: ['18"'],
+    },
+    "flawless-13-6-body-wave-bob-wig": {
+      name: "Flawless 13×6 Body Wave Bob Wig",
+      category: "Wigs",
+      tagline: "Glossy body-wave movement in a polished bob.",
+      description:
+        "10-inch body-wave bob with 13×6 HD transparent lace and a pre-plucked finish for an easy polished look.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/wig-13x6-bob_3499d848-53a9-4172-8617-d91cb1932053.jpg?v=1786301818",
+      allowedOptions: ['10" bob'],
+    },
+    "flawless-deep-wave-u-part-wig": {
+      name: "Flawless Deep Wave U-Part Wig",
+      category: "Wigs",
+      tagline: "Beginner-friendly deep wave with leave-out flexibility.",
+      description:
+        "20-inch deep-wave U-part construction designed for a quick protective install while blending with your natural leave-out.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/wig-upart-deepwave_696eed72-90e8-4102-b617-7fa9216f94b7.jpg?v=1786301808",
+      allowedOptions: ['20"'],
+    },
+    "flawless-13-4-lace-frontal-wig-straight": {
+      name: "Flawless 13×4 Lace Frontal Wig — Straight",
+      category: "Wigs",
+      tagline: "Sleek straight styling with a ready-to-wear lace finish.",
+      description:
+        "22-inch straight human-hair wig with 13×4 lace, a pre-plucked hairline, and a ready-to-wear finish.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/wig-13x4-straight_9f4c2d88-b645-4090-bd13-1603733e68b2.jpg?v=1786301824",
+      allowedOptions: ['22"'],
+    },
+    "flawless-glueless-4-4-closure-wig-body-wave": {
+      name: "Flawless Glueless 4×4 Closure Wig — Body Wave",
+      category: "Wigs",
+      tagline: "Glueless body-wave styling with an adjustable fit.",
+      description:
+        "18-inch body-wave closure wig with adjustable straps, combs, and a breathable cap for an easy glueless install.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/wig-glueless-bodywave_7ee33b84-52db-4ef5-9911-e4cb60c2d142.jpg?v=1786301864",
+      allowedOptions: ['18"'],
+    },
+    "lawless-edge-control-4-oz": {
+      name: "Lawless Edge Control — 4 oz",
+      category: "Beauty Essentials",
+      tagline: "Strong, polished hold for everyday styling.",
+      description:
+        "4 oz edge control designed for smooth styling and firm hold without a flaky finish.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/edge-control_18dc1db5-8a31-403b-b3b7-7c6751359a57.jpg?v=1786301802",
+      allowedOptions: ["4 oz"],
+    },
+    "lawless-lace-melt-spray": {
+      name: "Lawless Lace Melt Spray",
+      category: "Beauty Essentials",
+      tagline: "A clean finishing step for lace installs.",
+      description:
+        "2 oz lace melt spray designed for HD and Swiss lace installs and a smooth finished look.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/lace-melt-spray_082f9766-685a-4d0f-a1dd-4831988e0678.jpg?v=1786301882",
+      allowedOptions: ["2 oz"],
+    },
+    "lawless-hair-oil-rosemary-mint": {
+      name: "Lawless Hair Oil — Rosemary Mint",
+      category: "Beauty Essentials",
+      tagline: "Lightweight scalp care for natural hair and installs.",
+      description:
+        "2 oz rosemary, mint, and castor scalp oil designed for lightweight care with natural hair and protective installs.",
+      image:
+        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/hair-oil_66810ed7-a883-4113-8c21-934002c3b41d.jpg?v=1786301875",
+      allowedOptions: ["2 oz"],
+    },
   });
 
 function isStoreVariant(value: unknown): value is StoreVariant {

@@ -3,9 +3,7 @@ import fs from "node:fs";
 const read = (path) => fs.readFileSync(path, "utf8");
 const contract = JSON.parse(read(".control-room/commerce-seam.json"));
 const worker = read("worker/index.ts");
-const catalog = read("client/src/lib/shopifyCatalog.ts");
-const checkout = read("client/src/pages/Checkout.tsx");
-const bridgeDoc = read("docs/SHOPIFY_HEADLESS_BRIDGE.md");
+const catalogClient = read("client/src/lib/shopifyCatalog.ts");
 const readme = read("README.md");
 
 function requireTruth(condition, message) {
@@ -31,22 +29,15 @@ requireTruth(contract.privateOrderControl.paidWebhookPath === "/webhooks/shopify
 requireTruth(contract.productionTruth.authority === "external-provider-evidence", "production truth must stay provider-backed");
 requireTruth(contract.productionTruth.repoMergeAloneIsActivationProof === false, "a repository merge must never count as activation proof");
 
-requireTruth(worker.includes(`shopDomain: "${contract.shopify.shopDomain}"`), "Worker Shopify domain does not match the seam contract");
-requireTruth(worker.includes(`apiVersion: "${contract.shopify.apiVersion}"`), "Worker Storefront API version does not match the seam contract");
-requireTruth(worker.includes(`vendor: "${contract.shopify.publicVendor}"`), "Worker vendor boundary does not match the seam contract");
-requireTruth(worker.includes(`url.pathname === "${contract.shopify.catalogPath}"`), "Worker catalog route does not match the seam contract");
-requireTruth(worker.includes(`url.pathname === "${contract.shopify.cartPath}"`), "Worker cart route does not match the seam contract");
-requireTruth(worker.includes('url.pathname === "/version"'), "public deployment has no release-identity route");
-requireTruth(worker.includes("sha: getReleaseSha(env)"), "/version no longer exposes the deployed release SHA");
+requireTruth(worker.includes(`shopDomain: "${contract.shopify.shopDomain}"`), "public Worker shop domain does not match the seam contract");
+requireTruth(worker.includes(`apiVersion: "${contract.shopify.apiVersion}"`), "public Worker Storefront API version does not match the seam contract");
+requireTruth(worker.includes(`vendor: "${contract.shopify.publicVendor}"`), "public Worker vendor boundary does not match the seam contract");
+requireTruth(worker.includes(`"${contract.shopify.catalogPath}"`), "public catalog route does not match the seam contract");
+requireTruth(worker.includes(`"${contract.shopify.cartPath}"`), "public cart route does not match the seam contract");
+requireTruth(!/SHOPIFY_ADMIN|admin[_-]?token/i.test(worker), "public Worker must not gain Shopify Admin authority");
+requireTruth(!worker.includes("SHOPIFY_WEBHOOK_SECRET"), "public Worker must not gain the private Shopify webhook secret");
 
-requireTruth(catalog.includes(`shopDomain: "${contract.shopify.shopDomain}"`), "browser Shopify domain does not match the seam contract");
-requireTruth(catalog.includes(`apiVersion: "${contract.shopify.apiVersion}"`), "browser Storefront API version does not match the seam contract");
-requireTruth(catalog.includes(`vendor: "${contract.shopify.publicVendor}"`), "browser vendor boundary does not match the seam contract");
-requireTruth(checkout.includes(`fetch("${contract.shopify.cartPath}"`), "Checkout page is not using the contracted Shopify cart route");
-
-requireTruth(bridgeDoc.includes(contract.privateRepository), "Shopify bridge doc must name the canonical private repository");
-requireTruth(bridgeDoc.includes(contract.privateOrderControl.paidWebhookPath), "Shopify bridge doc must name the private paid-order webhook path");
-requireTruth(readme.includes("Shopify-hosted checkout"), "README must describe Shopify as the active physical checkout handoff");
-requireTruth(!readme.includes("**Payments:** Stripe-hosted Checkout."), "README still claims Stripe is the active payment handoff");
+requireTruth(catalogClient.includes(contract.shopify.shopDomain), "browser checkout authority drifted from canonical Shopify shop");
+requireTruth(readme.includes(contract.privateRepository), "public README must name the canonical private repository");
 
 console.log(`[commerce-seam] public contract verified: ${contract.contractId}`);

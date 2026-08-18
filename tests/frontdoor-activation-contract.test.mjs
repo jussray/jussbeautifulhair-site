@@ -14,6 +14,10 @@ const livePlaywright = await readFile(
   new URL("../scripts/frontdoor-live-playwright.mjs", import.meta.url),
   "utf8",
 );
+const shopifyProductionPlaywright = await readFile(
+  new URL("../scripts/shopify-production-playwright.mjs", import.meta.url),
+  "utf8",
+);
 const worker = await readFile(
   new URL("../worker/index.ts", import.meta.url),
   "utf8",
@@ -94,6 +98,27 @@ test("live Playwright proof binds to the branded origin and rejects Shopify pass
   assert.match(livePlaywright, /\"shipping\", \"returns\", \"privacy\", \"terms\"/);
   assert.match(livePlaywright, /Juss Beautiful Hair/);
   assert.match(activationWorkflow, /node scripts\/frontdoor-live-playwright\.mjs/);
+});
+
+test("Shopify production proof is exact-deploy bound and stops before payment", () => {
+  const frontdoorProofIndex = activationWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs");
+  const shopifyProofIndex = activationWorkflow.indexOf("node scripts/shopify-production-playwright.mjs");
+  const rollbackIndex = activationWorkflow.indexOf("Remove newly-created route if post-activation proof fails");
+
+  assert.ok(frontdoorProofIndex >= 0, "Front-door live proof is missing.");
+  assert.ok(shopifyProofIndex > frontdoorProofIndex, "Shopify production proof must run after exact front-door proof.");
+  assert.ok(rollbackIndex > shopifyProofIndex, "Shopify proof must remain inside the post-activation rollback boundary.");
+  assert.match(activationWorkflow, /artifacts\/shopify-production\//);
+
+  assert.match(shopifyProductionPlaywright, /EXPECTED_HEAD_SHA/);
+  assert.match(shopifyProductionPlaywright, /\/version/);
+  assert.match(shopifyProductionPlaywright, /versionPayload\?\.sha,\s*expectedHead/);
+  assert.match(shopifyProductionPlaywright, /\/api\/shopify\/catalog/);
+  assert.match(shopifyProductionPlaywright, /\/api\/shopify\/cart/);
+  assert.match(shopifyProductionPlaywright, /card-product-\$\{product\.id\}/);
+  assert.match(shopifyProductionPlaywright, /button-place-order/);
+  assert.match(shopifyProductionPlaywright, /merchandiseId: variant\.id, quantity: 1/);
+  assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
 });
 
 test("front-door Wrangler config remains one route for the branded root", () => {

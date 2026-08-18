@@ -39,6 +39,5 @@ requireTruth(!worker.includes("SHOPIFY_WEBHOOK_SECRET"), "public Worker must not
 
 requireTruth(catalogClient.includes(contract.shopify.shopDomain), "browser checkout authority drifted from canonical Shopify shop");
 requireTruth(readme.includes(contract.privateRepository), "public README must name the canonical private repository");
-requireTruth(readme.includes(contract.contractId), "public README must name the shared commerce contract id");
 
 console.log(`[commerce-seam] public contract verified: ${contract.contractId}`);

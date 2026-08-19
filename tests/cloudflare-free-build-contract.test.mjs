@@ -10,10 +10,10 @@ const wrangler = readFileSync(
   'utf8',
 );
 
-test('runs the storefront quality bundle before every Wrangler upload', () => {
+test('uses the same provider-neutral build before every Wrangler upload', () => {
   assert.match(
     wrangler,
-    /^\[build\]\ncommand = "npm run quality"$/m,
+    /^\[build\]\ncommand = "npm run build"$/m,
   );
   assert.equal(pkg.scripts.quality, 'npm run build');
 });
@@ -35,5 +35,9 @@ test('makes the ordinary provider build carry the non-browser proof bundle', () 
   assert.match(build, /npm run security:deploy-boundary/);
   assert.doesNotMatch(build, /\bwrangler\b|npm run quality/);
 
-  assert.equal(pkg.scripts['verify:deploy'], 'npm run build');
+  const legacyDeployVerifier = pkg.scripts['verify:deploy'];
+  assert.match(legacyDeployVerifier, /npm run build/);
+  assert.match(legacyDeployVerifier, /npm run verify:commerce-seam/);
+  assert.match(legacyDeployVerifier, /npm run security:deploy-boundary/);
+  assert.doesNotMatch(legacyDeployVerifier, /\bwrangler\b/);
 });

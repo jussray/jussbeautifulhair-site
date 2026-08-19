@@ -34,10 +34,13 @@ export default function Home() {
     data: products = [],
     isLoading,
     isError,
+    isRefetchError,
     isFetching,
     refetch,
   } = useShopifyCatalog();
-  const availableProducts = products.filter((product) => product.availableForSale);
+  const catalogUnavailable = isError || isRefetchError;
+  const authoritativeProducts = catalogUnavailable ? [] : products;
+  const availableProducts = authoritativeProducts.filter((product) => product.availableForSale);
   const featured = availableProducts.slice(0, 4);
   const signature =
     availableProducts.find((product) => /juss blonde/i.test(product.name)) ||
@@ -130,7 +133,7 @@ export default function Home() {
               <div key={index} className="aspect-[3/4] rounded-lg bg-muted animate-pulse" />
             ))}
           </div>
-        ) : isError ? (
+        ) : catalogUnavailable ? (
           <div
             role="alert"
             data-testid="home-catalog-unavailable"

@@ -109,10 +109,13 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.route("**/api/shopify/catalog", async (route) => {
     if (catalogMode === "failure") {
+      // Use an HTTP-successful but contract-invalid response. The storefront must
+      // still fail closed because `products` is absent, while the browser console
+      // remains clean enough to catch unrelated runtime errors independently.
       await route.fulfill({
-        status: 503,
+        status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ error: "proof fixture: Shopify catalog unavailable" }),
+        body: JSON.stringify({ error: "proof fixture: Shopify catalog unreadable" }),
       });
       return;
     }
@@ -198,7 +201,7 @@ try {
         "four brand pillars visible",
         "unsupported certainty absent",
         "Shopify-backed JBH product renders while Untold Stories catalog remains separate",
-        "failed Shopify catalog read renders an explicit unavailable state with no stale products",
+        "unusable Shopify catalog response renders an explicit unavailable state with no stale products",
         "failed Shopify catalog state keeps a real retry action",
         "desktop and mobile have no horizontal overflow",
         "mobile CTA remains visible",

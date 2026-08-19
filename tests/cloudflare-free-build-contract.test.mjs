@@ -29,10 +29,17 @@ test('makes the ordinary provider build carry the non-browser proof bundle', () 
   assert.doesNotMatch(prebuild, /\bwrangler\b|npm run build(?:\b|:)|npm run quality/);
 
   const build = pkg.scripts.build;
-  assert.match(build, /npm run verify:prebuild/);
-  assert.match(build, /npm run build:app/);
-  assert.match(build, /npm run verify:commerce-seam/);
-  assert.match(build, /npm run security:deploy-boundary/);
+  const prebuildIndex = build.indexOf('npm run verify:prebuild');
+  const appIndex = build.indexOf('npm run build:app');
+  const commerceIndex = build.indexOf('npm run verify:commerce-seam');
+  const receiptIndex = build.indexOf('node scripts/write-public-build-receipt.mjs');
+  const boundaryIndex = build.indexOf('npm run security:deploy-boundary');
+
+  assert.ok(prebuildIndex >= 0);
+  assert.ok(appIndex > prebuildIndex);
+  assert.ok(commerceIndex > appIndex);
+  assert.ok(receiptIndex > commerceIndex);
+  assert.ok(boundaryIndex > receiptIndex);
   assert.doesNotMatch(build, /\bwrangler\b|npm run quality/);
 
   const legacyDeployVerifier = pkg.scripts['verify:deploy'];

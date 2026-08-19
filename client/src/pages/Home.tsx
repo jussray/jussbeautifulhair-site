@@ -30,7 +30,13 @@ const VALUES = [
 ];
 
 export default function Home() {
-  const { data: products = [], isLoading } = useShopifyCatalog();
+  const {
+    data: products = [],
+    isLoading,
+    isError,
+    isFetching,
+    refetch,
+  } = useShopifyCatalog();
   const availableProducts = products.filter((product) => product.availableForSale);
   const featured = availableProducts.slice(0, 4);
   const signature =
@@ -119,10 +125,30 @@ export default function Home() {
           </Link>
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5" aria-label="Loading live inventory">
             {Array.from({ length: 4 }, (_, index) => (
               <div key={index} className="aspect-[3/4] rounded-lg bg-muted animate-pulse" />
             ))}
+          </div>
+        ) : isError ? (
+          <div
+            role="alert"
+            data-testid="home-catalog-unavailable"
+            className="rounded-lg border border-card-border bg-card p-8 text-center"
+          >
+            <h3 className="font-display text-2xl text-foreground">Live inventory could not be verified</h3>
+            <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">
+              Shopify inventory is unavailable right now. No stale prices or availability are being shown.
+            </p>
+            <Button
+              type="button"
+              className="mt-6"
+              data-testid="button-retry-home-catalog"
+              disabled={isFetching}
+              onClick={() => void refetch()}
+            >
+              {isFetching ? "Checking Shopify…" : "Try Again"}
+            </Button>
           </div>
         ) : featured.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
@@ -131,8 +157,11 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className="rounded-lg border border-card-border bg-card p-8 text-center text-muted-foreground">
-            Live inventory is refreshing. Visit the shop to try again.
+          <div
+            data-testid="home-catalog-verified-empty"
+            className="rounded-lg border border-card-border bg-card p-8 text-center text-muted-foreground"
+          >
+            No Shopify products are available for sale right now.
           </div>
         )}
       </section>

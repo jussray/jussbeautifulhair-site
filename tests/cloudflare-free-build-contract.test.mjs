@@ -15,21 +15,25 @@ test('runs the storefront quality bundle before every Wrangler upload', () => {
     wrangler,
     /^\[build\]\ncommand = "npm run quality"$/m,
   );
-
-  const quality = pkg.scripts.quality;
-  assert.equal(typeof quality, 'string');
-  assert.match(quality, /npm run verify:cookies/);
-  assert.match(quality, /npm run verify:ai-skills/);
-  assert.match(quality, /npm run lint/);
-  assert.match(quality, /npm test/);
-  assert.match(quality, /npm run verify:deploy/);
-  assert.doesNotMatch(quality, /\bwrangler\b/);
+  assert.equal(pkg.scripts.quality, 'npm run build');
 });
 
-test('keeps the repo build path provider-neutral and non-recursive', () => {
-  assert.equal(pkg.scripts.build, 'vite build');
-  assert.doesNotMatch(pkg.scripts['verify:deploy'], /\bwrangler\b/);
-  assert.match(pkg.scripts['verify:deploy'], /npm run build/);
-  assert.match(pkg.scripts['verify:deploy'], /npm run verify:commerce-seam/);
-  assert.match(pkg.scripts['verify:deploy'], /npm run security:deploy-boundary/);
+test('makes the ordinary provider build carry the non-browser proof bundle', () => {
+  assert.equal(pkg.scripts['build:app'], 'vite build');
+
+  const prebuild = pkg.scripts['verify:prebuild'];
+  assert.match(prebuild, /npm run verify:cookies/);
+  assert.match(prebuild, /npm run verify:ai-skills/);
+  assert.match(prebuild, /npm run lint/);
+  assert.match(prebuild, /npm test/);
+  assert.doesNotMatch(prebuild, /\bwrangler\b|npm run build(?:\b|:)|npm run quality/);
+
+  const build = pkg.scripts.build;
+  assert.match(build, /npm run verify:prebuild/);
+  assert.match(build, /npm run build:app/);
+  assert.match(build, /npm run verify:commerce-seam/);
+  assert.match(build, /npm run security:deploy-boundary/);
+  assert.doesNotMatch(build, /\bwrangler\b|npm run quality/);
+
+  assert.equal(pkg.scripts['verify:deploy'], 'npm run build');
 });

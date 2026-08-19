@@ -8,6 +8,9 @@ compatibility_flags = ["nodejs_compat"]
 workers_dev = false
 preview_urls = false
 
+[build]
+command = "npm run build"
+
 [vars]
 STORE_ORIGIN = "https://jussbeautifulhair.com"
 ENABLE_LEGACY_STRIPE_CHECKOUT = "false"

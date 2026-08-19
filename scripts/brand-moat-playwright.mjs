@@ -35,6 +35,7 @@ const shopifyCatalogFixture = {
   ],
 };
 let serverOutput = "";
+let catalogMode = "success";
 
 const server = spawn(
   process.execPath,
@@ -107,6 +108,15 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.route("**/api/shopify/catalog", async (route) => {
+    if (catalogMode === "failure") {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "proof fixture: Shopify catalog unavailable" }),
+      });
+      return;
+    }
+
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -148,6 +158,34 @@ try {
   await assertNoHorizontalOverflow(page, "mobile homepage");
   await page.screenshot({ path: `${outputDir}/home-mobile.png`, fullPage: true });
 
+  catalogMode = "failure";
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  const unavailable = page.getByTestId("home-catalog-unavailable");
+  await unavailable.waitFor({ state: "visible", timeout: 15_000 });
+  const unavailableText = await unavailable.innerText();
+  assert(
+    unavailableText.includes("Live inventory could not be verified"),
+    `Homepage did not label failed catalog truth explicitly: ${unavailableText}`,
+  );
+  assert(
+    unavailableText.includes("No stale prices or availability are being shown."),
+    "Homepage failed state does not preserve the no-stale-commerce contract.",
+  );
+  assert(
+    await page.getByTestId("button-retry-home-catalog").isVisible(),
+    "Homepage failed catalog state is missing a retry action.",
+  );
+  const failedHomeText = await page.locator("body").innerText();
+  assert(
+    !failedHomeText.includes("Body Wave Human Hair Bundle Deal"),
+    "Homepage showed prior catalog product data after the authoritative catalog read failed.",
+  );
+  await assertNoHorizontalOverflow(page, "mobile homepage unavailable state");
+  await page.screenshot({
+    path: `${outputDir}/home-mobile-catalog-unavailable.png`,
+    fullPage: true,
+  });
+
   assert(consoleErrors.length === 0, `Browser console errors: ${consoleErrors.join(" | ")}`);
   await writeFile(
     `${outputDir}/manifest.json`,
@@ -160,6 +198,8 @@ try {
         "four brand pillars visible",
         "unsupported certainty absent",
         "Shopify-backed JBH product renders while Untold Stories catalog remains separate",
+        "failed Shopify catalog read renders an explicit unavailable state with no stale products",
+        "failed Shopify catalog state keeps a real retry action",
         "desktop and mobile have no horizontal overflow",
         "mobile CTA remains visible",
         "browser console remains clean",

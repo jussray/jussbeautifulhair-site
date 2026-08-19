@@ -9,7 +9,7 @@ workers_dev = false
 preview_urls = false
 
 [build]
-command = "npm run quality"
+command = "npm run build"
 
 [vars]
 STORE_ORIGIN = "https://jussbeautifulhair.com"

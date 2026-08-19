@@ -26,7 +26,7 @@ Do not add:
 - Vercel functions, alternate deployment manifests, or setup scripts that recreate legacy APIs;
 - Shopify Admin tokens, app secrets, customer credentials, Stripe secret keys, webhook signing secrets, Cloudflare API tokens, or `.env` files.
 
-The private owner/admin, order-processing backend, webhook processing, and vendor control source belongs only in `jbh-private`.
+The private owner/admin, order-processing backend, webhook processing, and vendor control source belongs only in `jussray/jbh-private`.
 
 ## Current commerce flow
 

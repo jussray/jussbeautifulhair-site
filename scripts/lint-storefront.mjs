@@ -138,6 +138,28 @@ requireMatch(
   "worker/index.ts must use the Stripe API version pinned by the installed Stripe SDK.",
 );
 
+const productPage = await read("client/src/pages/Product.tsx");
+requireMatch(
+  productPage,
+  /\bisRefetchError\b/,
+  "Product page must observe background Shopify refetch failures.",
+);
+requireMatch(
+  productPage,
+  /catalogUnavailable\s*=\s*isError\s*\|\|\s*isRefetchError/,
+  "Product page must fail closed on initial or background Shopify catalog errors.",
+);
+requireMatch(
+  productPage,
+  /if\s*\(catalogUnavailable\)/,
+  "Product page must render the unavailable state before price, variant, and Add-to-Cart UI.",
+);
+requireMatch(
+  productPage,
+  /data-testid="product-catalog-unavailable"/,
+  "Product page must expose a stable browser-proof target for unavailable catalog truth.",
+);
+
 for (const forbiddenPath of [
   "api",
   "vercel.json",
@@ -157,5 +179,5 @@ if (failures.length) {
 }
 
 console.log(
-  "JBH storefront static analysis passed: catalog, single Cloudflare payment entry, workflow pinning, and sensitive-log boundaries verified.",
+  "JBH storefront static analysis passed: catalog, product refetch truth, single Cloudflare payment entry, workflow pinning, and sensitive-log boundaries verified.",
 );

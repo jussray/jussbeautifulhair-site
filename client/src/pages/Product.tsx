@@ -11,7 +11,14 @@ import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 
 export default function Product() {
   const [, params] = useRoute("/product/:id");
-  const { data: products = [], isLoading, isError, refetch } = useShopifyCatalog();
+  const {
+    data: products = [],
+    isLoading,
+    isError,
+    isRefetchError,
+    refetch,
+  } = useShopifyCatalog();
+  const catalogUnavailable = isError || isRefetchError;
   const product = params ? products.find((candidate) => candidate.id === params.id) : undefined;
   const { addItem } = useCart();
   const { toast } = useToast();
@@ -54,13 +61,13 @@ export default function Product() {
     );
   }
 
-  if (isError) {
+  if (catalogUnavailable) {
     return (
       <Layout>
-        <div className="mx-auto max-w-3xl px-6 py-24 text-center">
+        <div className="mx-auto max-w-3xl px-6 py-24 text-center" data-testid="product-catalog-unavailable">
           <h1 className="font-display text-3xl text-foreground">Live product details are refreshing</h1>
           <p className="mt-3 text-muted-foreground">We are not showing stale pricing or availability.</p>
-          <Button className="mt-6" onClick={() => void refetch()}>
+          <Button className="mt-6" onClick={() => void refetch()} data-testid="button-product-catalog-retry">
             Try Again
           </Button>
         </div>

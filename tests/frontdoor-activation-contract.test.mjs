@@ -27,12 +27,16 @@ const worker = await readFile(
   "utf8",
 );
 
-test("front-door production activation remains manual and exact-head gated", () => {
+test("front-door production activation remains manual, founder-approved, and exact-head gated", () => {
   assert.match(activationWorkflow, /^on:\s*\n\s+workflow_dispatch:/m);
   assert.doesNotMatch(activationWorkflow, /^\s+(?:push|pull_request|schedule):/m);
+  assert.match(activationWorkflow, /environment:\s*Production/);
   assert.match(activationWorkflow, /expected_main_sha:/);
   assert.match(activationWorkflow, /confirm_domain:/);
   assert.match(activationWorkflow, /confirm_action:/);
+  assert.match(activationWorkflow, /test \"\$GITHUB_ACTOR\" = \"jussray\"/);
+  assert.match(activationWorkflow, /test \"\$GITHUB_REF\" = \"refs\/heads\/main\"/);
+  assert.match(activationWorkflow, /test \"\$GITHUB_SHA\" = \"\$actual\"/);
   assert.match(activationWorkflow, /test \"\$EXPECTED_HEAD_SHA\" = \"\$actual\"/);
   assert.match(activationWorkflow, /test \"\$CONFIRM_DOMAIN\" = \"jussbeautifulhair\.com\"/);
   assert.match(activationWorkflow, /test \"\$CONFIRM_ACTION\" = \"activate-frontdoor\"/);

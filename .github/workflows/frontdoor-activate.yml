@@ -33,6 +33,7 @@ jobs:
   activate:
     name: Verify, activate, and browser-prove branded front door
     runs-on: ubuntu-22.04
+    environment: Production
     timeout-minutes: 25
     steps:
       - name: Check out current main
@@ -52,6 +53,9 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$GITHUB_ACTOR" = "jussray"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$GITHUB_SHA" = "$actual"
           test "$EXPECTED_HEAD_SHA" = "$actual"
           test "${#EXPECTED_HEAD_SHA}" -eq 40
           test "$CONFIRM_DOMAIN" = "jussbeautifulhair.com"

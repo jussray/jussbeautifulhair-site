@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const execFileAsync = promisify(execFile);
 const read = (relativePath) => readFile(path.join(root, relativePath), "utf8");
 const exists = async (relativePath) => {
   try {
@@ -12,6 +15,17 @@ const exists = async (relativePath) => {
     return true;
   } catch {
     return false;
+  }
+};
+const isTrackedRepositoryPath = async (relativePath) => {
+  try {
+    const { stdout } = await execFileAsync("git", ["ls-files", "--", relativePath], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    return stdout.trim().length > 0;
+  } catch {
+    return exists(relativePath);
   }
 };
 
@@ -68,7 +82,7 @@ test("the only public Stripe SDK entry point uses the pinned API version", async
     "vercel.json",
   ]) {
     assert.equal(
-      await exists(forbiddenPath),
+      await isTrackedRepositoryPath(forbiddenPath),
       false,
       `${forbiddenPath} must not restore an alternate public server surface`,
     );

@@ -1,8 +1,11 @@
+import { execFile } from "node:child_process";
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const execFileAsync = promisify(execFile);
 const failures = [];
 const ignoredDirectories = new Set([
   ".git",
@@ -20,6 +23,23 @@ async function exists(relativePath) {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function isTrackedRepositoryPath(relativePath) {
+  if (relativePath !== "vercel.json") return exists(relativePath);
+
+  try {
+    const { stdout } = await execFileAsync("git", ["ls-files", "--", relativePath], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    return stdout.trim().length > 0;
+  } catch {
+    // Preserve fail-closed behavior when a packaged environment removes Git
+    // metadata entirely. Only Vercel's workspace control file may rely on Git
+    // source authority; all other forbidden paths are checked by filesystem.
+    return exists(relativePath);
   }
 }
 
@@ -201,8 +221,11 @@ for (const relativePath of repositoryFiles) {
 }
 
 // This repository is Cloudflare-only. Legacy Vercel handlers previously
-// included an unauthenticated numeric order lookup and database code. Keep the
-// entire alternate deployment/data path out of the public repository.
+// included an unauthenticated numeric order lookup and database code. Keep all
+// alternate deployment/data paths out of the actual build workspace. The sole
+// exception is Vercel's own untracked vercel.json control file, which is judged
+// against canonical Git source so provider workspace materialization cannot
+// impersonate repository authority.
 for (const forbiddenPath of [
   "api",
   "vercel.json",
@@ -215,7 +238,7 @@ for (const forbiddenPath of [
   "admin-local",
   "jbh-admin.html",
 ]) {
-  if (await exists(forbiddenPath)) {
+  if (await isTrackedRepositoryPath(forbiddenPath)) {
     failures.push(`Forbidden public-repository path exists: ${forbiddenPath}`);
   }
 }

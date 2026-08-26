@@ -6,12 +6,29 @@ const lint = readFileSync(
   new URL("../scripts/lint-storefront.mjs", import.meta.url),
   "utf8",
 );
+const storefrontContract = readFileSync(
+  new URL("./storefront-contract.test.mjs", import.meta.url),
+  "utf8",
+);
+const deploymentBoundary = readFileSync(
+  new URL("../scripts/verify-deployment-boundary.mjs", import.meta.url),
+  "utf8",
+);
 
-test("forbidden alternate paths are bound to tracked repository source", () => {
-  assert.match(lint, /async function isTrackedRepositoryPath\(relativePath\)/);
-  assert.match(lint, /execFileAsync\("git", \["ls-files", "--", relativePath\]/);
-  assert.match(lint, /return stdout\.trim\(\)\.length > 0;/);
-  assert.match(lint, /return exists\(relativePath\);/);
-  assert.match(lint, /if \(await isTrackedRepositoryPath\(forbiddenPath\)\)/);
+for (const [label, source] of [
+  ["static lint", lint],
+  ["storefront contract", storefrontContract],
+  ["deployment boundary", deploymentBoundary],
+]) {
+  test(`${label} binds forbidden alternate paths to tracked repository source`, () => {
+    assert.match(source, /isTrackedRepositoryPath/);
+    assert.match(source, /execFileAsync\("git", \["ls-files", "--", relativePath\]/);
+    assert.match(source, /return stdout\.trim\(\)\.length > 0;/);
+    assert.match(source, /return exists\(relativePath\);/);
+    assert.match(source, /isTrackedRepositoryPath\(forbiddenPath\)/);
+  });
+}
+
+ test("static lint no longer equates build-workspace presence with repository authority", () => {
   assert.doesNotMatch(lint, /if \(await exists\(forbiddenPath\)\)/);
 });

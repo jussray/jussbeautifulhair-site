@@ -27,6 +27,8 @@ async function exists(relativePath) {
 }
 
 async function isTrackedRepositoryPath(relativePath) {
+  if (relativePath !== "vercel.json") return exists(relativePath);
+
   try {
     const { stdout } = await execFileAsync("git", ["ls-files", "--", relativePath], {
       cwd: root,
@@ -35,7 +37,8 @@ async function isTrackedRepositoryPath(relativePath) {
     return stdout.trim().length > 0;
   } catch {
     // Preserve fail-closed behavior when a packaged environment removes Git
-    // metadata entirely. In a real clone, source authority comes from the index.
+    // metadata entirely. Only Vercel's workspace control file may rely on Git
+    // source authority; all other forbidden paths are checked by filesystem.
     return exists(relativePath);
   }
 }
@@ -218,10 +221,11 @@ for (const relativePath of repositoryFiles) {
 }
 
 // This repository is Cloudflare-only. Legacy Vercel handlers previously
-// included an unauthenticated numeric order lookup and database code. Keep the
-// entire alternate deployment/data path out of canonical tracked source. Build
-// systems may materialize their own untracked control files; those are not
-// repository authority and must not create a false source failure.
+// included an unauthenticated numeric order lookup and database code. Keep all
+// alternate deployment/data paths out of the actual build workspace. The sole
+// exception is Vercel's own untracked vercel.json control file, which is judged
+// against canonical Git source so provider workspace materialization cannot
+// impersonate repository authority.
 for (const forbiddenPath of [
   "api",
   "vercel.json",

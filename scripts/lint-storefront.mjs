@@ -42,6 +42,8 @@ async function exists(relativePath) {
 }
 
 async function isTrackedRepositoryPath(relativePath) {
+  if (relativePath !== "vercel.json") return exists(relativePath);
+
   try {
     const { stdout } = await execFileAsync("git", ["ls-files", "--", relativePath], {
       cwd: root,

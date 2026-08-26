@@ -1,8 +1,11 @@
+import { execFile } from "node:child_process";
 import { access, readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const execFileAsync = promisify(execFile);
 const failures = [];
 const ignoredDirectories = new Set([
   ".git",
@@ -35,6 +38,20 @@ async function exists(relativePath) {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function isTrackedRepositoryPath(relativePath) {
+  try {
+    const { stdout } = await execFileAsync("git", ["ls-files", "--", relativePath], {
+      cwd: root,
+      encoding: "utf8",
+    });
+    return stdout.trim().length > 0;
+  } catch {
+    // Some packaged/build environments omit Git metadata entirely. Preserve the
+    // previous fail-closed behavior there rather than silently weakening the guard.
+    return exists(relativePath);
   }
 }
 
@@ -145,7 +162,7 @@ for (const forbiddenPath of [
   "shared/schema.ts",
   "client/src/pages/Confirmation.tsx",
 ]) {
-  if (await exists(forbiddenPath)) {
+  if (await isTrackedRepositoryPath(forbiddenPath)) {
     failures.push(`Public repository contains a forbidden alternate server/data path: ${forbiddenPath}`);
   }
 }

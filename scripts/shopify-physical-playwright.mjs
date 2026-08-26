@@ -12,6 +12,7 @@ const outputDir = "artifacts/shopify-physical";
 const checkoutHost = "8qp1z2-az.myshopify.com";
 const brandedCheckoutHost = "jussbeautifulhair.com";
 const selectedVariantId = "gid://shopify/ProductVariant/50273899900002";
+const shopifyCatalogQueryKey = ["shopify", "catalog", "8qp1z2-az.myshopify.com"];
 const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let serverOutput = "";
 
@@ -114,6 +115,13 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
+function captureConsoleErrors(page, consoleErrors) {
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
+}
+
 async function configureMocks(page, evidence) {
   await page.route("**/api/shopify/catalog", async (route) => {
     evidence.catalogRequests += 1;
@@ -153,6 +161,112 @@ async function configureMocks(page, evidence) {
   });
 }
 
+async function configureRefetchTruthMock(page) {
+  let failCatalog = false;
+  let requests = 0;
+
+  await page.route("**/api/shopify/catalog", async (route) => {
+    requests += 1;
+    if (failCatalog) {
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "forced-background-refetch-failure" }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ products: mockProducts, source: "shopify-storefront" }),
+    });
+  });
+
+  return {
+    fail() {
+      failCatalog = true;
+    },
+    recover() {
+      failCatalog = false;
+    },
+    requestCount() {
+      return requests;
+    },
+  };
+}
+
+async function triggerCatalogRefetch(page) {
+  await page.evaluate(async (queryKey) => {
+    const { queryClient } = await import("/src/lib/queryClient.ts");
+    await queryClient.refetchQueries({ queryKey, exact: true });
+  }, shopifyCatalogQueryKey);
+}
+
+async function proveProductRefetchFailClosed(browser, viewport, label, consoleErrors) {
+  const page = await browser.newPage({ viewport });
+  captureConsoleErrors(page, consoleErrors);
+  const catalogMock = await configureRefetchTruthMock(page);
+  const mobile = label === "mobile";
+  const addToCartTestId = mobile ? "button-add-to-cart-mobile" : "button-add-to-cart";
+
+  await page.goto(`${baseURL}/#/product/body-wave-human-hair-bundles`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.getByTestId("text-product-name").waitFor({ state: "visible" });
+  await page.getByTestId("text-product-price").waitFor({ state: "visible" });
+  await page.getByTestId(addToCartTestId).waitFor({ state: "visible" });
+  await assertNoHorizontalOverflow(page, `${label} Product success state`);
+
+  catalogMock.fail();
+  await triggerCatalogRefetch(page);
+  await page.getByTestId("product-catalog-unavailable").waitFor({ state: "visible" });
+
+  assert(
+    (await page.getByTestId("text-product-price").count()) === 0,
+    `${label} retained stale Product price after failed background refetch.`,
+  );
+  assert(
+    (await page.getByTestId("button-add-to-cart").count()) === 0,
+    `${label} retained stale desktop Add-to-Cart authority after failed background refetch.`,
+  );
+  assert(
+    (await page.getByTestId("button-add-to-cart-mobile").count()) === 0,
+    `${label} retained stale mobile Add-to-Cart authority after failed background refetch.`,
+  );
+  assert(
+    (await page.getByTestId("button-product-catalog-retry").count()) === 1,
+    `${label} did not expose the truthful catalog retry action.`,
+  );
+  await assertNoHorizontalOverflow(page, `${label} Product refetch failure state`);
+  await page.screenshot({
+    path: `${outputDir}/product-refetch-failed-${label}.png`,
+    fullPage: true,
+  });
+
+  catalogMock.recover();
+  await page.getByTestId("button-product-catalog-retry").click();
+  await page.getByTestId("text-product-name").waitFor({ state: "visible" });
+  await page.getByTestId("text-product-price").waitFor({ state: "visible" });
+  await page.getByTestId(addToCartTestId).waitFor({ state: "visible" });
+  assert(
+    (await page.getByTestId("product-catalog-unavailable").count()) === 0,
+    `${label} did not recover from the forced refetch failure.`,
+  );
+  await page.screenshot({
+    path: `${outputDir}/product-refetch-recovered-${label}.png`,
+    fullPage: true,
+  });
+
+  const requestCount = catalogMock.requestCount();
+  assert(
+    requestCount >= 3,
+    `${label} expected initial success, failed background refetch, and successful retry; saw ${requestCount} catalog requests.`,
+  );
+  await page.close();
+  return requestCount;
+}
+
 let browser;
 const consoleErrors = [];
 const evidence = {
@@ -161,6 +275,10 @@ const evidence = {
   checkoutNavigations: 0,
   cartBody: null,
   checkoutUrl: null,
+  refetchTruth: {
+    desktopCatalogRequests: 0,
+    mobileCatalogRequests: 0,
+  },
 };
 
 try {
@@ -169,10 +287,7 @@ try {
   browser = await chromium.launch({ headless: true });
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
-  desktop.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  desktop.on("pageerror", (error) => consoleErrors.push(error.message));
+  captureConsoleErrors(desktop, consoleErrors);
   await configureMocks(desktop, evidence);
 
   await desktop.goto(`${baseURL}/#/shop`, { waitUntil: "domcontentloaded" });
@@ -217,10 +332,7 @@ try {
   );
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  mobile.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  mobile.on("pageerror", (error) => consoleErrors.push(error.message));
+  captureConsoleErrors(mobile, consoleErrors);
   await configureMocks(mobile, evidence);
   await mobile.goto(`${baseURL}/#/shop`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("card-product-body-wave-human-hair-bundles").waitFor({ state: "visible" });
@@ -235,6 +347,19 @@ try {
   await mobile.getByTestId("button-place-order").waitFor({ state: "visible" });
   await assertNoHorizontalOverflow(mobile, "mobile checkout");
   await mobile.screenshot({ path: `${outputDir}/checkout-mobile.png`, fullPage: true });
+
+  evidence.refetchTruth.desktopCatalogRequests = await proveProductRefetchFailClosed(
+    browser,
+    { width: 1440, height: 1100 },
+    "desktop",
+    consoleErrors,
+  );
+  evidence.refetchTruth.mobileCatalogRequests = await proveProductRefetchFailClosed(
+    browser,
+    { width: 390, height: 844 },
+    "mobile",
+    consoleErrors,
+  );
 
   assert(evidence.catalogRequests >= 2, "Desktop and mobile did not both request live catalog data.");
   assert(consoleErrors.length === 0, `Browser console errors: ${consoleErrors.join(" | ")}`);
@@ -255,6 +380,9 @@ try {
           "physical checkout sends only merchandiseId and quantity",
           "physical checkout no longer presents Stripe as the active payment handoff",
           "branded Shopify checkout URL escapes to the canonical Shopify host without changing the cart path or key",
+          "a real QueryClient background refetch failure replaces retained Product data with the truthful unavailable/retry surface",
+          "failed background refetch exposes no stale price, desktop Add-to-Cart, or mobile Add-to-Cart authority",
+          "desktop and mobile Product views both recover after a successful retry",
           "desktop and mobile layouts have no horizontal overflow",
           "browser console remained clean",
         ],

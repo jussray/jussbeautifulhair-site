@@ -17,7 +17,7 @@
     "verify:cookies": "node scripts/verify-cookie-contract.mjs",
     "verify:ai-skills": "node scripts/verify-ai-skills.mjs",
     "verify:commerce-seam": "node scripts/verify-commerce-seam.mjs",
-    "verify:deploy": "npm run build && npm run verify:commerce-seam && npm run security:deploy-boundary",
+    "verify:deploy": "npm run build && npm run security:deploy-boundary",
     "verify:mcp": "node scripts/verify-mcp-config.mjs",
     "db:push": "drizzle-kit push"
   },

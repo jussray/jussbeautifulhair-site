@@ -17,7 +17,7 @@
     "verify:cookies": "node scripts/verify-cookie-contract.mjs",
     "verify:ai-skills": "node scripts/verify-ai-skills.mjs",
     "verify:commerce-seam": "node scripts/verify-commerce-seam.mjs",
-    "verify:deploy": "npm run build && npm run security:deploy-boundary",
+    "verify:deploy": "npm run build && npm run verify:commerce-seam && npm run security:deploy-boundary",
     "verify:mcp": "node scripts/verify-mcp-config.mjs",
     "db:push": "drizzle-kit push"
   },
@@ -64,7 +64,7 @@
     "input-otp": "^1.4.2",
     "lucide-react": "^0.453.0",
     "next-themes": "^0.4.6",
-    "react": "^18.3.1",
+    "react": "^18.3.11",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.55.0",

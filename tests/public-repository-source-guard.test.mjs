@@ -21,10 +21,14 @@ const allowedExamplePaths = new Set([
 ]);
 
 const secretPatterns = [
-  ["GitHub personal/access token", /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g],
+  ["GitHub classic token", /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g],
+  ["GitHub fine-grained token", /\bgithub_pat_[A-Za-z0-9_]{20,}\b/g],
   ["Stripe secret key", /\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/g],
   ["Stripe webhook secret", /\bwhsec_[A-Za-z0-9]{16,}\b/g],
   ["Shopify Admin token", /\bshpat_[A-Za-z0-9]{16,}\b/g],
+  ["Slack token", /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/g],
+  ["AWS access-key ID", /\bAKIA[0-9A-Z]{16}\b/g],
+  ["Google API key", /\bAIza[0-9A-Za-z_-]{30,}\b/g],
   ["private key material", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g],
   ["non-empty Cloudflare API token assignment", /CLOUDFLARE_(?:API|ACCESS_API)_TOKEN\s*=\s*["']?[A-Za-z0-9_-]{20,}["']?/g],
   ["non-empty database URL assignment", /DATABASE_URL\s*=\s*["']?(?:postgres|postgresql):\/\/[^\s"']+/g],

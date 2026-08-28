@@ -138,6 +138,11 @@ try {
   for (const pillar of ["story", "quality", "care", "proof"]) {
     assert(await page.getByTestId(`brand-moat-${pillar}`).isVisible(), `Brand moat pillar ${pillar} is missing.`);
   }
+  await page.getByText("Live from Shopify", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+  await page
+    .getByText("Body Wave Human Hair Bundle Deal", { exact: true })
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 });
   const desktopText = await page.locator("body").innerText();
   for (const riskyClaim of ["Quality Guaranteed", "never tangles", "lasts 2+ years", "factory pricing"]) {
     assert(!desktopText.includes(riskyClaim), `Unsupported certainty is still public: ${riskyClaim}`);

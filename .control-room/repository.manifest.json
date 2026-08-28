@@ -261,8 +261,8 @@
         {
           "id": "package-defines-deployment-proof",
           "path": "package.json",
-          "marker": "\"verify:deploy\": \"npm run build && npm run security:deploy-boundary\"",
-          "description": "The production build and deployment boundary are jointly executable."
+          "marker": "\"verify:deploy\": \"npm run build && npm run verify:commerce-seam && npm run security:deploy-boundary\"",
+          "description": "The production build, commerce seam, and deployment boundary are jointly executable."
         }
       ]
     },

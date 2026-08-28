@@ -44,7 +44,10 @@ assert.doesNotMatch(license, /all associated files.*exclusive proprietary proper
 assert.doesNotMatch(license, /all required third-party notices.*are preserved/is);
 assert.doesNotMatch(license, /hello@jussbeautifulhair\.com/i);
 
-assert.match(notices, /Third-party packages and components remain governed by their own licenses/i);
+assert.match(
+  notices,
+  /third-party software packages[\s\S]*governed by their own license\s*terms/i,
+);
 assert.match(notices, /not a representation that every transitive package's full license text/i);
 assert.match(audit, /not legal advice/i);
 assert.match(audit, /beauty-under-the-radar-2026\.md/);

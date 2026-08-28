@@ -10,13 +10,18 @@ const hairMatch = await readFile(
   new URL("../client/src/pages/HairMatch.tsx", import.meta.url),
   "utf8",
 );
+const catalogClient = await readFile(
+  new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url),
+  "utf8",
+);
+const worker = await readFile(new URL("../worker/index.ts", import.meta.url), "utf8");
 const layout = await readFile(
   new URL("../client/src/components/Layout.tsx", import.meta.url),
   "utf8",
 );
 const app = await readFile(new URL("../client/src/App.tsx", import.meta.url), "utf8");
 
-test("approved tokenless Shopify contract owns the Hair Match checkout", () => {
+test("approved Hair Match checkout reuses the guarded Shopify cart bridge", () => {
   for (const required of [
     'shopDomain: "8qp1z2-az.myshopify.com"',
     'variantGid: "gid://shopify/ProductVariant/50196622344435"',
@@ -25,15 +30,37 @@ test("approved tokenless Shopify contract owns the Hair Match checkout", () => {
     'quantity: 1',
     'priceUsd: "25.00"',
     "createHairMatchCheckout",
-    "/cart/${variantId}:${HAIR_MATCH_SHOPIFY_CONTRACT.quantity}",
-    "checkout.searchParams.set(`attributes[${key}]`, value)",
+    'fetch("/api/shopify/cart"',
+    "merchandiseId: HAIR_MATCH_SHOPIFY_CONTRACT.variantGid",
+    "hairMatch:",
+    "attributes: normalizeAttributes(attributes)",
+    "assertApprovedShopifyCheckoutRedirect(payload.checkoutUrl)",
   ]) {
     assert.ok(storefront.includes(required), `missing Shopify contract: ${required}`);
   }
 
+  assert.doesNotMatch(storefront, /\/cart\/\$\{variantId\}/);
   assert.doesNotMatch(storefront, /X-Shopify-Storefront-Access-Token/);
   assert.doesNotMatch(storefront, /VITE_SHOPIFY|import\.meta\.env/);
   assert.doesNotMatch(storefront, /STRIPE_SECRET_KEY|access_token/);
+  assert.match(catalogClient, /checkoutHost === "jussbeautifulhair\.com"/);
+  assert.match(catalogClient, /checkout\.hostname = SHOPIFY_PUBLIC_CONTRACT\.shopDomain/);
+});
+
+test("Worker binds Hair Match metadata to the one approved variant", () => {
+  for (const required of [
+    'const HAIR_MATCH_VARIANT_GID = "gid://shopify/ProductVariant/50196622344435"',
+    'const HAIR_MATCH_OFFER_CODE = "jbh-hair-match-v1"',
+    'z.enum(["hair_goal", "preferred_length", "budget", "maintenance"])',
+    "offer: z.literal(HAIR_MATCH_OFFER_CODE)",
+    "attributes.length === 4",
+    "new Set(attributes.map(({ key }) => key)).size === 4",
+    "containsHairMatch !== Boolean(parsed.data.hairMatch)",
+    "parsed.data.hairMatch?.attributes ?? []",
+    '{ key: "offer", value: parsed.data.hairMatch.offer }',
+  ]) {
+    assert.ok(worker.includes(required), `missing Hair Match Worker guard: ${required}`);
+  }
 });
 
 test("Hair Match route preserves truthful non-physical-product disclosure", () => {
@@ -55,7 +82,7 @@ test("Hair Match preferences are complete, unique, bounded, and non-sensitive", 
 });
 
 test("approved checkout is deploy-ready without unproven build variables", () => {
-  assert.match(hairMatch, /createHairMatchCheckout\(preferences\)/);
+  assert.match(hairMatch, /await createHairMatchCheckout\(preferences\)/);
   assert.match(hairMatch, /disabled=\{submitting\}/);
   assert.doesNotMatch(hairMatch, /VITE_SHOPIFY|import\.meta\.env/);
   assert.doesNotMatch(hairMatch, /Checkout opens after the Shopify storefront connection/);

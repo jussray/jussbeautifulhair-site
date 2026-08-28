@@ -18,7 +18,7 @@ export default function HairMatch() {
   const [budget, setBudget] = useState("not-sure");
   const [maintenance, setMaintenance] = useState("low-maintenance");
 
-  function startCheckout() {
+  async function startCheckout() {
     const preferences: ShopifyCartAttribute[] = [
       { key: "hair_goal", value: hairGoal },
       { key: "preferred_length", value: preferredLength },
@@ -30,7 +30,7 @@ export default function HairMatch() {
     setError(null);
 
     try {
-      const { checkoutUrl } = createHairMatchCheckout(preferences);
+      const { checkoutUrl } = await createHairMatchCheckout(preferences);
       window.location.assign(checkoutUrl);
     } catch (checkoutError) {
       setError(

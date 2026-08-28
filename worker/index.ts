@@ -21,6 +21,8 @@ const FREE_SHIPPING_THRESHOLD = 150;
 const FLAT_SHIPPING = 9.99;
 const MAX_BODY_BYTES = 64 * 1024;
 const CHECKOUT_SESSION_ROUTE_PREFIX = "/api/checkout/session/";
+const HAIR_MATCH_VARIANT_GID = "gid://shopify/ProductVariant/50196622344435";
+const HAIR_MATCH_OFFER_CODE = "jbh-hair-match-v1";
 
 const SHOPIFY_STOREFRONT = Object.freeze({
   shopDomain: "8qp1z2-az.myshopify.com",
@@ -128,6 +130,20 @@ const checkoutSchema = z.object({
     .max(20),
 });
 
+const shopifyHairMatchAttributeSchema = z.object({
+  key: z.enum(["hair_goal", "preferred_length", "budget", "maintenance"]),
+  value: z.string().trim().min(1).max(120),
+});
+
+const shopifyHairMatchSchema = z.object({
+  offer: z.literal(HAIR_MATCH_OFFER_CODE),
+  attributes: z.array(shopifyHairMatchAttributeSchema).refine(
+    (attributes) =>
+      attributes.length === 4 && new Set(attributes.map(({ key }) => key)).size === 4,
+    "Hair Match preferences must include each approved key exactly once",
+  ),
+});
+
 const shopifyCartSchema = z.object({
   lines: z
     .array(
@@ -141,6 +157,7 @@ const shopifyCartSchema = z.object({
     )
     .min(1)
     .max(20),
+  hairMatch: shopifyHairMatchSchema.optional(),
 });
 
 const checkoutSessionIdSchema = z
@@ -485,6 +502,19 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
   const parsed = shopifyCartSchema.safeParse(parsedJson);
   if (!parsed.success) return json({ error: "Invalid cart" }, 400, origin);
 
+  const containsHairMatch = parsed.data.lines.some(
+    (line) => line.merchandiseId === HAIR_MATCH_VARIANT_GID,
+  );
+  if (containsHairMatch !== Boolean(parsed.data.hairMatch)) {
+    return json({ error: "Invalid Hair Match cart" }, 400, origin);
+  }
+  if (
+    containsHairMatch &&
+    (parsed.data.lines.length !== 1 || parsed.data.lines[0].quantity !== 1)
+  ) {
+    return json({ error: "Invalid Hair Match cart" }, 400, origin);
+  }
+
   try {
     const requestedIds = [...new Set(parsed.data.lines.map((line) => line.merchandiseId))];
     const preflight = await shopifyStorefrontRequest<ShopifyVariantPreflightData>(
@@ -509,6 +539,7 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
       return json({ error: "Cart contains an unavailable item" }, 400, origin);
     }
 
+    const hairMatchAttributes = parsed.data.hairMatch?.attributes ?? [];
     const created = await shopifyStorefrontRequest<ShopifyCartCreateData>(
       SHOPIFY_CART_CREATE_MUTATION,
       {
@@ -517,6 +548,12 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
           attributes: [
             { key: "source", value: "jussbeautifulhair.com" },
             { key: "bridge", value: "cloudflare-shopify-v1" },
+            ...(parsed.data.hairMatch
+              ? [
+                  { key: "offer", value: parsed.data.hairMatch.offer },
+                  ...hairMatchAttributes,
+                ]
+              : []),
           ],
         },
       },

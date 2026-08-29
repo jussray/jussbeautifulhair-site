@@ -168,8 +168,10 @@ async function configureRefetchTruthMock(page) {
   await page.route("**/api/shopify/catalog", async (route) => {
     requests += 1;
     if (failCatalog) {
+      // Exercise the catalog contract failure without manufacturing a browser-level
+      // network error that the same proof later classifies as an unrelated console failure.
       await route.fulfill({
-        status: 503,
+        status: 200,
         contentType: "application/json",
         body: JSON.stringify({ error: "forced-background-refetch-failure" }),
       });

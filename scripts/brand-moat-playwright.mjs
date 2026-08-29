@@ -15,15 +15,15 @@ const vitePath = fileURLToPath(
 const shopifyCatalogFixture = {
   products: [
     {
-      id: "body-wave-human-hair-bundle-deal",
-      shopifyProductId: "gid://shopify/Product/55900000000001",
-      name: "Body Wave Human Hair Bundle Deal",
+      id: "body-wave-human-hair-bundles",
+      shopifyProductId: "gid://shopify/Product/9719789060339",
+      name: "Body Wave Human Hair Bundles",
       category: "Bundles",
       tagline: "Live Shopify inventory",
       description: "Supplier-backed body wave bundles fulfilled through the connected Shopify catalog.",
       variants: [
         {
-          id: "gid://shopify/ProductVariant/55900000000001",
+          id: "gid://shopify/ProductVariant/50273899900001",
           option: '14\"',
           price: 75,
           availableForSale: true,
@@ -140,7 +140,7 @@ try {
   }
   await page.getByText("Live from Shopify", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
   await page
-    .getByText("Body Wave Human Hair Bundle Deal", { exact: true })
+    .getByText("Lawless Body Wave Bundles", { exact: true })
     .first()
     .waitFor({ state: "visible", timeout: 15_000 });
   const desktopText = await page.locator("body").innerText();
@@ -148,7 +148,7 @@ try {
     assert(!desktopText.includes(riskyClaim), `Unsupported certainty is still public: ${riskyClaim}`);
   }
   assert(desktopText.includes("Live from Shopify"), "Shopify catalog authority label is missing.");
-  assert(desktopText.includes("Body Wave Human Hair Bundle Deal"), "Shopify-backed signature product did not render.");
+  assert(desktopText.includes("Lawless Body Wave Bundles"), "Shopify-backed signature product did not render.");
   assert(!desktopText.includes("Crown Logo Cap"), "Untold Stories product leaked into the hair storefront.");
   await assertNoHorizontalOverflow(page, "desktop homepage");
   await page.screenshot({ path: `${outputDir}/home-desktop.png`, fullPage: true });
@@ -185,7 +185,7 @@ try {
   );
   const failedHomeText = await page.locator("body").innerText();
   assert(
-    !failedHomeText.includes("Body Wave Human Hair Bundle Deal"),
+    !failedHomeText.includes("Lawless Body Wave Bundles"),
     "Homepage showed prior catalog product data after the authoritative catalog read failed.",
   );
   await assertNoHorizontalOverflow(page, "mobile homepage unavailable state");

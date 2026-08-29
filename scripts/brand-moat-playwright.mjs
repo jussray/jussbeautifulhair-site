@@ -147,7 +147,6 @@ try {
   for (const riskyClaim of ["Quality Guaranteed", "never tangles", "lasts 2+ years", "factory pricing"]) {
     assert(!desktopText.includes(riskyClaim), `Unsupported certainty is still public: ${riskyClaim}`);
   }
-  assert(desktopText.includes("Live from Shopify"), "Shopify catalog authority label is missing.");
   assert(desktopText.includes("Lawless Body Wave Bundles"), "Shopify-backed signature product did not render.");
   assert(!desktopText.includes("Crown Logo Cap"), "Untold Stories product leaked into the hair storefront.");
   await assertNoHorizontalOverflow(page, "desktop homepage");

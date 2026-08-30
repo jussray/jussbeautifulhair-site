@@ -9,7 +9,7 @@ const port = Number(process.env.PLAYWRIGHT_PORT || 4174);
 const baseURL = `http://${host}:${port}`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-headless";
-const numericVariantId = "50196622344435";
+const variantGid = "gid://shopify/ProductVariant/50196622344435";
 const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let serverOutput = "";
 
@@ -67,19 +67,33 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
-async function configureShopifyPermalinkMock(page, evidence) {
-  await page.route("https://8qp1z2-az.myshopify.com/cart/**", async (route) => {
+async function configureShopifyBridgeMock(page, evidence) {
+  await page.route("**/api/shopify/cart", async (route) => {
+    const request = route.request();
+    evidence.bridgeRequests += 1;
+    evidence.bridgePayload = request.postDataJSON();
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        checkoutUrl: "https://jussbeautifulhair.com/cart/c/hair-match-proof?key=proof-secret",
+        totalQuantity: 1,
+        cost: {
+          subtotalAmount: { amount: "25.00", currencyCode: "USD" },
+          totalAmount: { amount: "25.00", currencyCode: "USD" },
+        },
+      }),
+    });
+  });
+
+  await page.route("https://8qp1z2-az.myshopify.com/cart/c/**", async (route) => {
     const checkout = new URL(route.request().url());
     evidence.checkoutRequests += 1;
     evidence.checkoutNavigation = checkout.toString();
     evidence.checkoutPath = checkout.pathname;
-    evidence.ref = checkout.searchParams.get("ref");
+    evidence.checkoutKey = checkout.searchParams.get("key");
     evidence.accessTokenPresent = checkout.searchParams.has("access_token");
-    evidence.attributes = {};
-    for (const [key, value] of checkout.searchParams.entries()) {
-      const match = key.match(/^attributes\[(.+)\]$/);
-      if (match) evidence.attributes[match[1]] = value;
-    }
 
     await route.fulfill({
       status: 200,
@@ -92,12 +106,13 @@ async function configureShopifyPermalinkMock(page, evidence) {
 let browser;
 const consoleErrors = [];
 const evidence = {
-  configurationSource: "repository-approved-public-contract",
+  configurationSource: "repository-approved-cloudflare-shopify-bridge",
+  bridgeRequests: 0,
+  bridgePayload: null,
   checkoutRequests: 0,
   checkoutNavigation: null,
   checkoutPath: null,
-  attributes: {},
-  ref: null,
+  checkoutKey: null,
   accessTokenPresent: false,
 };
 
@@ -111,7 +126,7 @@ try {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   desktop.on("pageerror", (error) => consoleErrors.push(error.message));
-  await configureShopifyPermalinkMock(desktop, evidence);
+  await configureShopifyBridgeMock(desktop, evidence);
 
   await desktop.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
   const bodyText = await desktop.locator("body").innerText();
@@ -141,26 +156,34 @@ try {
   await desktop.screenshot({ path: `${outputDir}/hair-match-desktop.png`, fullPage: true });
 
   await Promise.all([
-    desktop.waitForURL("https://8qp1z2-az.myshopify.com/cart/**"),
+    desktop.waitForURL("https://8qp1z2-az.myshopify.com/cart/c/**"),
     checkoutButton.click(),
   ]);
 
+  assert(evidence.bridgeRequests === 1, "Expected exactly one Shopify bridge request.");
   assert(evidence.checkoutRequests === 1, "Expected exactly one Shopify checkout navigation.");
-  assert(
-    evidence.checkoutPath === `/cart/${numericVariantId}:1`,
-    "Unexpected Shopify cart permalink path.",
-  );
+  assert(evidence.checkoutPath === "/cart/c/hair-match-proof", "Unexpected Shopify checkout path.");
+  assert(evidence.checkoutKey === "proof-secret", "Shopify cart identity key was not preserved.");
   assert(evidence.accessTokenPresent === false, "Checkout URL exposed a Storefront token.");
-  assert(evidence.ref === "jbh-hair-match-v1", "Referral marker is missing.");
-  assert(evidence.attributes.source === "jussbeautifulhair.com", "Source attribute is missing.");
-  assert(evidence.attributes.offer === "jbh-hair-match-v1", "Offer attribute is missing.");
-  assert(evidence.attributes.hair_goal === "wig", "Hair goal attribute is wrong.");
-  assert(evidence.attributes.preferred_length === "medium-16-20", "Length attribute is wrong.");
-  assert(evidence.attributes.budget === "150-250", "Budget attribute is wrong.");
-  assert(evidence.attributes.maintenance === "low-maintenance", "Maintenance attribute is wrong.");
+
+  const payload = evidence.bridgePayload;
+  assert(payload && typeof payload === "object", "Shopify bridge payload is missing.");
+  assert(Array.isArray(payload.lines) && payload.lines.length === 1, "Hair Match must send one cart line.");
+  assert(payload.lines[0].merchandiseId === variantGid, "Hair Match used the wrong Shopify variant.");
+  assert(payload.lines[0].quantity === 1, "Hair Match quantity is wrong.");
+  assert(payload.hairMatch?.offer === "jbh-hair-match-v1", "Hair Match offer marker is missing.");
+  assert(Array.isArray(payload.hairMatch?.attributes), "Hair Match preference attributes are missing.");
+  const attributes = Object.fromEntries(
+    payload.hairMatch.attributes.map(({ key, value }) => [key, value]),
+  );
+  assert(attributes.hair_goal === "wig", "Hair goal attribute is wrong.");
+  assert(attributes.preferred_length === "medium-16-20", "Length attribute is wrong.");
+  assert(attributes.budget === "150-250", "Budget attribute is wrong.");
+  assert(attributes.maintenance === "low-maintenance", "Maintenance attribute is wrong.");
+  assert(!("price" in payload) && !("total" in payload), "Client sent pricing authority to the bridge.");
   assert(
-    evidence.checkoutNavigation?.startsWith("https://8qp1z2-az.myshopify.com/cart/"),
-    "Browser did not navigate to an HTTPS Shopify cart permalink.",
+    evidence.checkoutNavigation?.startsWith("https://8qp1z2-az.myshopify.com/cart/c/"),
+    "Branded Shopify checkout did not escape to the canonical Shopify host.",
   );
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -193,14 +216,13 @@ try {
         evidence,
         assertions: [
           "truthful consultation and future-credit disclosure rendered",
-          "four bounded non-sensitive preferences rendered",
-          "preferences attached to Shopify cart permalink attributes",
-          "approved public Shopify contract works without build variables",
+          "four bounded non-sensitive preferences sent to the guarded Shopify bridge",
+          "approved numeric Shopify variant and quantity sent without client pricing authority",
+          "branded Shopify checkout URL escaped to canonical myshopify host",
+          "Shopify cart path and identity key were preserved",
           "no Storefront access token exposed",
-          "approved numeric Shopify variant and quantity used",
           "unsupported launch and fulfillment claims absent",
           "Hair Match navigation visible on desktop and mobile",
-          "HTTPS Shopify cart permalink navigation occurred",
           "desktop and mobile layouts have no horizontal overflow",
           "browser console remained clean",
         ],
@@ -210,7 +232,7 @@ try {
     )}\n`,
   );
 
-  console.log(`Shopify permalink Playwright proof passed for ${expectedHead}.`);
+  console.log(`Shopify bridge Playwright proof passed for ${expectedHead}.`);
 } finally {
   await browser?.close();
   await stopServer();

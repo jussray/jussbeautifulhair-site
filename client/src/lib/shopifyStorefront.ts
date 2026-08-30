@@ -1,3 +1,5 @@
+import { assertApprovedShopifyCheckoutRedirect } from "@/lib/shopifyCatalog";
+
 export const HAIR_MATCH_SHOPIFY_CONTRACT = Object.freeze({
   shopDomain: "8qp1z2-az.myshopify.com",
   variantGid: "gid://shopify/ProductVariant/50196622344435",
@@ -12,27 +14,9 @@ export interface ShopifyCartAttribute {
   value: string;
 }
 
-function normalizedShopDomain(): string {
-  const domain = HAIR_MATCH_SHOPIFY_CONTRACT.shopDomain.trim().toLowerCase();
-  if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(domain)) {
-    throw new Error("Shopify checkout is not configured correctly.");
-  }
-  return domain;
-}
-
-function numericVariantId(): string {
-  const match = HAIR_MATCH_SHOPIFY_CONTRACT.variantGid.match(
-    /^gid:\/\/shopify\/ProductVariant\/(\d+)$/,
-  );
-  if (!match) {
-    throw new Error("This Shopify product is not configured correctly.");
-  }
-  return match[1];
-}
-
 function normalizeAttributes(
   attributes: ShopifyCartAttribute[],
-): Array<{ key: string; value: string }> {
+): Array<{ key: ShopifyCartAttribute["key"]; value: string }> {
   const expectedKeys = new Set<ShopifyCartAttribute["key"]>([
     "hair_goal",
     "preferred_length",
@@ -55,32 +39,38 @@ function normalizeAttributes(
     throw new Error("Please complete your Hair Match preferences.");
   }
 
-  return [
-    {
-      key: "source",
-      value: HAIR_MATCH_SHOPIFY_CONTRACT.source,
-    },
-    {
-      key: "offer",
-      value: HAIR_MATCH_SHOPIFY_CONTRACT.offerCode,
-    },
-    ...normalized,
-  ];
+  return normalized;
 }
 
-export function createHairMatchCheckout(
+export async function createHairMatchCheckout(
   attributes: ShopifyCartAttribute[],
-): { checkoutUrl: string } {
-  const domain = normalizedShopDomain();
-  const variantId = numericVariantId();
-  const checkout = new URL(
-    `https://${domain}/cart/${variantId}:${HAIR_MATCH_SHOPIFY_CONTRACT.quantity}`,
-  );
+): Promise<{ checkoutUrl: string }> {
+  const response = await fetch("/api/shopify/cart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      lines: [
+        {
+          merchandiseId: HAIR_MATCH_SHOPIFY_CONTRACT.variantGid,
+          quantity: HAIR_MATCH_SHOPIFY_CONTRACT.quantity,
+        },
+      ],
+      hairMatch: {
+        offer: HAIR_MATCH_SHOPIFY_CONTRACT.offerCode,
+        attributes: normalizeAttributes(attributes),
+      },
+    }),
+  });
 
-  for (const { key, value } of normalizeAttributes(attributes)) {
-    checkout.searchParams.set(`attributes[${key}]`, value);
+  const payload = (await response.json().catch(() => ({}))) as {
+    checkoutUrl?: string;
+    error?: string;
+  };
+  if (!response.ok || !payload.checkoutUrl) {
+    throw new Error(payload.error || "Shopify checkout could not be started. Please try again.");
   }
-  checkout.searchParams.set("ref", HAIR_MATCH_SHOPIFY_CONTRACT.offerCode);
 
-  return { checkoutUrl: checkout.toString() };
+  return {
+    checkoutUrl: assertApprovedShopifyCheckoutRedirect(payload.checkoutUrl),
+  };
 }

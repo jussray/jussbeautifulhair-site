@@ -15,15 +15,15 @@ const vitePath = fileURLToPath(
 const shopifyCatalogFixture = {
   products: [
     {
-      id: "body-wave-human-hair-bundle-deal",
-      shopifyProductId: "gid://shopify/Product/55900000000001",
-      name: "Body Wave Human Hair Bundle Deal",
+      id: "body-wave-human-hair-bundles",
+      shopifyProductId: "gid://shopify/Product/9719789060339",
+      name: "Body Wave Human Hair Bundles",
       category: "Bundles",
       tagline: "Live Shopify inventory",
       description: "Supplier-backed body wave bundles fulfilled through the connected Shopify catalog.",
       variants: [
         {
-          id: "gid://shopify/ProductVariant/55900000000001",
+          id: "gid://shopify/ProductVariant/50273899900001",
           option: '14\"',
           price: 75,
           availableForSale: true,
@@ -35,6 +35,7 @@ const shopifyCatalogFixture = {
   ],
 };
 let serverOutput = "";
+let catalogMode = "success";
 
 const server = spawn(
   process.execPath,
@@ -107,6 +108,18 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.route("**/api/shopify/catalog", async (route) => {
+    if (catalogMode === "failure") {
+      // Use an HTTP-successful but contract-invalid response. The storefront must
+      // still fail closed because `products` is absent, while the browser console
+      // remains clean enough to catch unrelated runtime errors independently.
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "proof fixture: Shopify catalog unreadable" }),
+      });
+      return;
+    }
+
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -125,12 +138,16 @@ try {
   for (const pillar of ["story", "quality", "care", "proof"]) {
     assert(await page.getByTestId(`brand-moat-${pillar}`).isVisible(), `Brand moat pillar ${pillar} is missing.`);
   }
+  await page.getByText("Live from Shopify", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+  await page
+    .getByText("Lawless Body Wave Bundles", { exact: true })
+    .first()
+    .waitFor({ state: "visible", timeout: 15_000 });
   const desktopText = await page.locator("body").innerText();
   for (const riskyClaim of ["Quality Guaranteed", "never tangles", "lasts 2+ years", "factory pricing"]) {
     assert(!desktopText.includes(riskyClaim), `Unsupported certainty is still public: ${riskyClaim}`);
   }
-  assert(desktopText.includes("Live from Shopify"), "Shopify catalog authority label is missing.");
-  assert(desktopText.includes("Body Wave Human Hair Bundle Deal"), "Shopify-backed signature product did not render.");
+  assert(desktopText.includes("Lawless Body Wave Bundles"), "Shopify-backed signature product did not render.");
   assert(!desktopText.includes("Crown Logo Cap"), "Untold Stories product leaked into the hair storefront.");
   await assertNoHorizontalOverflow(page, "desktop homepage");
   await page.screenshot({ path: `${outputDir}/home-desktop.png`, fullPage: true });
@@ -148,6 +165,34 @@ try {
   await assertNoHorizontalOverflow(page, "mobile homepage");
   await page.screenshot({ path: `${outputDir}/home-mobile.png`, fullPage: true });
 
+  catalogMode = "failure";
+  await page.goto(baseURL, { waitUntil: "domcontentloaded" });
+  const unavailable = page.getByTestId("home-catalog-unavailable");
+  await unavailable.waitFor({ state: "visible", timeout: 15_000 });
+  const unavailableText = await unavailable.innerText();
+  assert(
+    unavailableText.includes("Live inventory could not be verified"),
+    `Homepage did not label failed catalog truth explicitly: ${unavailableText}`,
+  );
+  assert(
+    unavailableText.includes("No stale prices or availability are being shown."),
+    "Homepage failed state does not preserve the no-stale-commerce contract.",
+  );
+  assert(
+    await page.getByTestId("button-retry-home-catalog").isVisible(),
+    "Homepage failed catalog state is missing a retry action.",
+  );
+  const failedHomeText = await page.locator("body").innerText();
+  assert(
+    !failedHomeText.includes("Lawless Body Wave Bundles"),
+    "Homepage showed prior catalog product data after the authoritative catalog read failed.",
+  );
+  await assertNoHorizontalOverflow(page, "mobile homepage unavailable state");
+  await page.screenshot({
+    path: `${outputDir}/home-mobile-catalog-unavailable.png`,
+    fullPage: true,
+  });
+
   assert(consoleErrors.length === 0, `Browser console errors: ${consoleErrors.join(" | ")}`);
   await writeFile(
     `${outputDir}/manifest.json`,
@@ -160,6 +205,8 @@ try {
         "four brand pillars visible",
         "unsupported certainty absent",
         "Shopify-backed JBH product renders while Untold Stories catalog remains separate",
+        "unusable Shopify catalog response renders an explicit unavailable state with no stale products",
+        "failed Shopify catalog state keeps a real retry action",
         "desktop and mobile have no horizontal overflow",
         "mobile CTA remains visible",
         "browser console remains clean",

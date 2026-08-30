@@ -115,9 +115,10 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
-function captureConsoleErrors(page, consoleErrors) {
+function captureConsoleErrors(page, consoleErrors, shouldIgnore = () => false) {
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    const text = message.text();
+    if (message.type() === "error" && !shouldIgnore(text)) consoleErrors.push(text);
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 }
@@ -205,7 +206,12 @@ async function triggerCatalogRefetch(page) {
 
 async function proveProductRefetchFailClosed(browser, viewport, label, consoleErrors) {
   const page = await browser.newPage({ viewport });
-  captureConsoleErrors(page, consoleErrors);
+  let expectingCatalog503 = false;
+  captureConsoleErrors(
+    page,
+    consoleErrors,
+    (text) => expectingCatalog503 && /Failed to load resource:.*503 \(Service Unavailable\)/.test(text),
+  );
   const catalogMock = await configureRefetchTruthMock(page);
   const mobile = label === "mobile";
   const addToCartTestId = mobile ? "button-add-to-cart-mobile" : "button-add-to-cart";
@@ -218,9 +224,11 @@ async function proveProductRefetchFailClosed(browser, viewport, label, consoleEr
   await page.getByTestId(addToCartTestId).waitFor({ state: "visible" });
   await assertNoHorizontalOverflow(page, `${label} Product success state`);
 
+  expectingCatalog503 = true;
   catalogMock.fail();
   await triggerCatalogRefetch(page);
   await page.getByTestId("product-catalog-unavailable").waitFor({ state: "visible" });
+  expectingCatalog503 = false;
 
   assert(
     (await page.getByTestId("text-product-price").count()) === 0,
@@ -384,7 +392,7 @@ try {
           "failed background refetch exposes no stale price, desktop Add-to-Cart, or mobile Add-to-Cart authority",
           "desktop and mobile Product views both recover after a successful retry",
           "desktop and mobile layouts have no horizontal overflow",
-          "browser console remained clean",
+          "browser console remained clean outside the intentionally induced catalog 503 window",
         ],
       },
       null,

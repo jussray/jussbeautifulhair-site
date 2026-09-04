@@ -57,6 +57,44 @@ try {
     versionPayload.sha === expectedHead,
     `version SHA mismatch: expected ${expectedHead}, received ${versionPayload.sha}.`,
   );
+
+  const knowledgePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const knowledgeResponse = await knowledgePage.request.get(
+    `${baseURL}/.well-known/jbh-meta-agent.json`,
+    { headers: { accept: "application/json" } },
+  );
+  assert(
+    knowledgeResponse.ok(),
+    `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse.status()}.`,
+  );
+  const knowledge = await knowledgeResponse.json();
+  assert(
+    knowledge.schema === "jbh-meta-business-agent@v1",
+    "Meta Business Agent knowledge schema drifted.",
+  );
+  assert(knowledge.brand === "Juss Beautiful Hair", "Meta Business Agent brand drifted.");
+  assert(
+    knowledge.catalog?.url === `${baseURL}/api/shopify/catalog`,
+    "Meta Business Agent catalog authority must point to the live JBH Cloudflare Shopify catalog route.",
+  );
+  assert(
+    knowledge.checkout?.url === baseURL,
+    "Meta Business Agent checkout must return customers to the branded JBH storefront.",
+  );
+  assert(
+    knowledge.conversation?.shippingAddress === "Collect at checkout, not in chat.",
+    "Meta Business Agent must keep shipping-address collection at checkout.",
+  );
+  assert(
+    knowledge.conversation?.payment?.includes("Never collect card numbers"),
+    "Meta Business Agent must keep payment credentials out of chat.",
+  );
+  assert(
+    Array.isArray(knowledge.humanHandoff) && knowledge.humanHandoff.includes("custom pricing"),
+    "Meta Business Agent must hand custom pricing to the owner.",
+  );
+  await knowledgePage.close();
+
   for (const viewport of [
     { label: "desktop", width: 1440, height: 1000 },
     { label: "mobile", width: 390, height: 844 },
@@ -118,6 +156,8 @@ try {
           "root responds successfully on desktop and mobile",
           "Cloudflare Worker security headers prove the Worker served the root response",
           "version route serves the exact approved main SHA",
+          "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
+          "Meta Business Agent keeps shipping-address and payment credential collection out of chat",
           "Shopify password-wall markers are absent",
           "Juss Beautiful Hair title and storefront text render",
           "shipping, returns, privacy, and terms routes render through the branded origin",

@@ -55,7 +55,10 @@ const workerSource = await readFile(resolve(root, 'worker/index.ts'), 'utf8');
 requireValue(workerSource.includes('"Cache-Control": "no-store"'), 'checkout Worker responses must remain no-store');
 requireValue(workerSource.includes('Vary: "Origin"'), 'checkout Worker must vary API responses by Origin');
 const wrangler = await readFile(resolve(root, 'wrangler.toml'), 'utf8');
-requireValue(wrangler.includes('run_worker_first = ["/api/*"]'), 'only API requests should enter the payment Worker before static assets');
+requireValue(
+  wrangler.includes('run_worker_first = ["/api/*", "/version", "/.well-known/jbh-meta-agent.json"]'),
+  'Worker-first routing must remain limited to API plus the two explicit public runtime-truth endpoints',
+);
 
 if (errors.length) {
   console.error('Cookie contract verification failed:');
@@ -65,3 +68,4 @@ if (errors.length) {
 console.log(`Cookie contract verified for ${manifest.repository}.`);
 console.log('Declared first-party cookies: 1 functional preference');
 console.log('Checkout API cache policy: no-store');
+console.log('Worker-first non-API routes: /version and /.well-known/jbh-meta-agent.json only');

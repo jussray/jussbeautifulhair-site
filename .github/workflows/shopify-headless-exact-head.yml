@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "worker/index.ts"
+      - "worker/entry.ts"
       - "client/src/components/Layout.tsx"
       - "client/src/components/ProductCard.tsx"
       - "client/src/lib/cart.tsx"
@@ -24,6 +25,7 @@ on:
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
       - "tests/frontdoor-activation-contract.test.mjs"
+      - "tests/runtime-build-proof-version-contract.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
       - ".github/workflows/frontdoor-activate.yml"
@@ -31,6 +33,7 @@ on:
     branches: [main]
     paths:
       - "worker/index.ts"
+      - "worker/entry.ts"
       - "client/src/components/Layout.tsx"
       - "client/src/components/ProductCard.tsx"
       - "client/src/lib/cart.tsx"
@@ -51,6 +54,7 @@ on:
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
       - "tests/frontdoor-activation-contract.test.mjs"
+      - "tests/runtime-build-proof-version-contract.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
       - ".github/workflows/frontdoor-activate.yml"
@@ -94,7 +98,7 @@ jobs:
         run: npm run check
 
       - name: Verify Shopify checkout and production-witness contracts
-        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs
+        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs
 
       - name: Build production storefront
         run: npm run build

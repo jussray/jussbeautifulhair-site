@@ -10,6 +10,20 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function parseJsonResponse(response, label) {
+  const contentType = response.headers().get("content-type") || "";
+  const body = await response.text();
+  assert(
+    contentType.toLowerCase().includes("application/json"),
+    `${label} expected application/json, received ${contentType || "no content-type"}; body=${JSON.stringify(body.slice(0, 80))}`,
+  );
+  try {
+    return JSON.parse(body);
+  } catch {
+    throw new Error(`${label} returned invalid JSON: ${JSON.stringify(body.slice(0, 80))}`);
+  }
+}
+
 function assertStorefrontResponse(response, label) {
   assert(response, `${label}: navigation returned no main response.`);
   assert(response.ok(), `${label}: storefront returned HTTP ${response.status()}.`);
@@ -51,7 +65,7 @@ try {
     versionResponse.ok,
     `version route returned HTTP ${versionResponse.status}.`,
   );
-  const versionPayload = await versionResponse.json();
+  const versionPayload = await parseJsonResponse(versionResponse, "version route");
   assert(versionPayload.ok === true, "version route did not report ok=true.");
   assert(
     versionPayload.sha === expectedHead,
@@ -168,7 +182,7 @@ try {
         assertions: [
           "root responds successfully on desktop and mobile",
           "Cloudflare Worker security headers prove the Worker served the root response",
-          "version route serves the exact approved main SHA",
+          "version route serves application/json for the exact approved main SHA",
           "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
           "Meta Business Agent knowledge endpoint returns application/json rather than the SPA fallback",
           "Meta Business Agent keeps shipping-address and payment credential collection out of chat",

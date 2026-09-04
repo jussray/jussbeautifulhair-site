@@ -11,7 +11,7 @@ function assert(condition, message) {
 }
 
 async function parseJsonResponse(response, label) {
-  const contentType = response.headers().get("content-type") || "";
+  const contentType = response.headers.get("content-type") || "";
   const body = await response.text();
   assert(
     contentType.toLowerCase().includes("application/json"),

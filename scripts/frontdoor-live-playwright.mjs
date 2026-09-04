@@ -67,7 +67,20 @@ try {
     knowledgeResponse.ok(),
     `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse.status()}.`,
   );
-  const knowledge = await knowledgeResponse.json();
+  const knowledgeContentType = knowledgeResponse.headers()["content-type"] || "";
+  assert(
+    knowledgeContentType.toLowerCase().includes("application/json"),
+    `Meta Business Agent knowledge contract expected application/json, received ${knowledgeContentType || "no content-type"}.`,
+  );
+  const knowledgeBody = await knowledgeResponse.text();
+  let knowledge;
+  try {
+    knowledge = JSON.parse(knowledgeBody);
+  } catch {
+    throw new Error(
+      `Meta Business Agent knowledge contract returned non-JSON content: ${JSON.stringify(knowledgeBody.slice(0, 80))}`,
+    );
+  }
   assert(
     knowledge.schema === "jbh-meta-business-agent@v1",
     "Meta Business Agent knowledge schema drifted.",
@@ -157,6 +170,7 @@ try {
           "Cloudflare Worker security headers prove the Worker served the root response",
           "version route serves the exact approved main SHA",
           "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
+          "Meta Business Agent knowledge endpoint returns application/json rather than the SPA fallback",
           "Meta Business Agent keeps shipping-address and payment credential collection out of chat",
           "Shopify password-wall markers are absent",
           "Juss Beautiful Hair title and storefront text render",

@@ -26,6 +26,16 @@ const worker = await readFile(
   new URL("../worker/index.ts", import.meta.url),
   "utf8",
 );
+const workerEntry = await readFile(
+  new URL("../worker/entry.ts", import.meta.url),
+  "utf8",
+);
+const metaAgentKnowledge = JSON.parse(
+  await readFile(
+    new URL("../client/public/.well-known/jbh-meta-agent.json", import.meta.url),
+    "utf8",
+  ),
+);
 
 test("front-door production activation remains manual, founder-approved, and exact-head gated", () => {
   assert.match(activationWorkflow, /^on:\s*\n\s+workflow_dispatch:/m);
@@ -105,6 +115,9 @@ test("live Playwright proof binds to the branded origin and rejects Shopify pass
   assert.match(livePlaywright, /opening soon/);
   assert.match(livePlaywright, /\"shipping\", \"returns\", \"privacy\", \"terms\"/);
   assert.match(livePlaywright, /Juss Beautiful Hair/);
+  assert.match(livePlaywright, /knowledgeContentType/);
+  assert.match(livePlaywright, /application\/json/);
+  assert.match(livePlaywright, /returned non-JSON content/);
   assert.match(activationWorkflow, /node scripts\/frontdoor-live-playwright\.mjs/);
 });
 
@@ -153,9 +166,19 @@ test("front-door Wrangler config remains one route for the branded root", () => 
   assert.match(frontdoorConfig, /^zone_name\s*=\s*\"jussbeautifulhair\.com\"\s*$/m);
   assert.match(
     frontdoorConfig,
-    /run_worker_first\s*=\s*\[\s*\"\/api\/\*\"\s*,\s*\"\/version\"\s*\]/,
+    /run_worker_first\s*=\s*\[\s*\"\/api\/\*\"\s*,\s*\"\/version\"\s*,\s*\"\/\.well-known\/jbh-meta-agent\.json\"\s*\]/,
   );
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
+});
+
+test("Meta Business Agent knowledge endpoint is explicit Worker-routed JSON", () => {
+  assert.equal(metaAgentKnowledge.schema, "jbh-meta-business-agent@v1");
+  assert.equal(metaAgentKnowledge.brand, "Juss Beautiful Hair");
+  assert.match(workerEntry, /import metaAgentKnowledge from \"\.\.\/client\/public\/\.well-known\/jbh-meta-agent\.json\"/);
+  assert.match(workerEntry, /META_AGENT_KNOWLEDGE_PATH = \"\/\.well-known\/jbh-meta-agent\.json\"/);
+  assert.match(workerEntry, /pathname === META_AGENT_KNOWLEDGE_PATH/);
+  assert.match(workerEntry, /\"Content-Type\": \"application\/json; charset=utf-8\"/);
+  assert.match(workerEntry, /JSON\.stringify\(metaAgentKnowledge\)/);
 });
 
 test("Worker version route reads the explicit release binding", () => {

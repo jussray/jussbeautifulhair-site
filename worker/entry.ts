@@ -1,3 +1,4 @@
+import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json";
 import worker from "./index";
 
 type BaseEnv = Parameters<typeof worker.fetch>[1];
@@ -6,6 +7,7 @@ type Env = BaseEnv & {
 };
 
 const LEGACY_STRIPE_SESSION_PREFIX = "/api/checkout/session/";
+const META_AGENT_KNOWLEDGE_PATH = "/.well-known/jbh-meta-agent.json";
 
 function isLegacyStripeCheckout(pathname: string): boolean {
   return pathname === "/api/checkout" || pathname.startsWith(LEGACY_STRIPE_SESSION_PREFIX);
@@ -15,9 +17,39 @@ function legacyStripeEnabled(env: Env): boolean {
   return env.ENABLE_LEGACY_STRIPE_CHECKOUT?.trim().toLowerCase() === "true";
 }
 
+function metaAgentKnowledgeResponse(request: Request): Response {
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method not allowed", {
+      status: 405,
+      headers: {
+        Allow: "GET, HEAD",
+        "Cache-Control": "no-store",
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+
+  return new Response(
+    request.method === "HEAD" ? null : JSON.stringify(metaAgentKnowledge),
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, max-age=300",
+        "Content-Type": "application/json; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
+    },
+  );
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const pathname = new URL(request.url).pathname;
+
+    if (pathname === META_AGENT_KNOWLEDGE_PATH) {
+      return metaAgentKnowledgeResponse(request);
+    }
 
     if (isLegacyStripeCheckout(pathname) && !legacyStripeEnabled(env)) {
       return new Response("Not found", {

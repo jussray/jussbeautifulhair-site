@@ -9,6 +9,25 @@ const endpoint = `https://${shopDomain}/api/${apiVersion}/graphql.json`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-physical-live";
 
+const webBotAuth = Object.freeze({
+  signatureAgent: process.env.SHOPIFY_WEB_BOT_SIGNATURE_AGENT?.trim() || "",
+  signatureInput: process.env.SHOPIFY_WEB_BOT_SIGNATURE_INPUT?.trim() || "",
+  signature: process.env.SHOPIFY_WEB_BOT_SIGNATURE?.trim() || "",
+});
+const configuredWebBotAuthValues = Object.values(webBotAuth).filter(Boolean).length;
+assert.ok(
+  configuredWebBotAuthValues === 0 || configuredWebBotAuthValues === 3,
+  "Shopify Web Bot Auth must provide Signature-Agent, Signature-Input, and Signature together.",
+);
+const webBotAuthEnabled = configuredWebBotAuthValues === 3;
+const webBotAuthHeaders = webBotAuthEnabled
+  ? {
+      "Signature-Agent": webBotAuth.signatureAgent,
+      "Signature-Input": webBotAuth.signatureInput,
+      Signature: webBotAuth.signature,
+    }
+  : {};
+
 const catalogQuery = `
   query JbhLiveCatalogSmoke($first: Int!, $query: String!) {
     products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
@@ -48,7 +67,11 @@ const cartMutation = `
 async function storefrontRequest(query, variables) {
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...webBotAuthHeaders,
+    },
     body: JSON.stringify({ query, variables }),
   });
   const payload = await response.json().catch(() => ({}));
@@ -106,6 +129,7 @@ const cartDiagnostics = JSON.stringify({
   userErrors: created.cartCreate.userErrors,
   warnings: created.cartCreate.warnings,
   totalQuantity: created.cartCreate.cart?.totalQuantity ?? null,
+  webBotAuthMode: webBotAuthEnabled ? "signed" : "anonymous",
 });
 console.log(`Live Shopify cart diagnostics: ${cartDiagnostics}`);
 
@@ -140,6 +164,7 @@ await writeFile(
       verifiedAt: new Date().toISOString(),
       shopDomain,
       apiVersion,
+      webBotAuthMode: webBotAuthEnabled ? "signed" : "anonymous",
       supplierProductCount: supplierProducts.length,
       selectedProductHandle: product.handle,
       selectedVariantId: variant.id,
@@ -147,6 +172,8 @@ await writeFile(
       checkoutPathPrefix: checkout.pathname.split("/").slice(0, 3).join("/"),
       assertions: [
         "bounded tokenless Storefront catalog returned JBH vendor products",
+        "Shopify Web Bot Auth headers are attached only when all three signed values are configured",
+        "partial Shopify Web Bot Auth configuration fails closed before any Storefront request",
         "at least one supplier-backed variant was available for sale",
         "Shopify created a one-line no-payment cart",
         "checkout URL was HTTPS and stayed on an exact approved JBH/Shopify host",
@@ -158,4 +185,6 @@ await writeFile(
   )}\n`,
 );
 
-console.log(`Live Shopify physical-cart smoke passed for ${expectedHead}.`);
+console.log(
+  `Live Shopify physical-cart smoke passed for ${expectedHead} (${webBotAuthEnabled ? "signed Web Bot Auth" : "anonymous"}).`,
+);

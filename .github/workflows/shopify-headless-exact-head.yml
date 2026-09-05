@@ -116,6 +116,10 @@ jobs:
         run: node scripts/shopify-physical-playwright.mjs
 
       - name: Verify live Shopify catalog and no-payment cart
+        env:
+          SHOPIFY_WEB_BOT_SIGNATURE_AGENT: ${{ secrets.SHOPIFY_WEB_BOT_SIGNATURE_AGENT }}
+          SHOPIFY_WEB_BOT_SIGNATURE_INPUT: ${{ secrets.SHOPIFY_WEB_BOT_SIGNATURE_INPUT }}
+          SHOPIFY_WEB_BOT_SIGNATURE: ${{ secrets.SHOPIFY_WEB_BOT_SIGNATURE }}
         run: node scripts/shopify-physical-live-smoke.mjs
 
       - name: Wait for exact Cloudflare Worker build

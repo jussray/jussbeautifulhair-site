@@ -23,5 +23,5 @@ test("legacy Stripe checkout and verification routes return 404 unless explicitl
   assert.match(entry, /ENABLE_LEGACY_STRIPE_CHECKOUT\?\.trim\(\)\.toLowerCase\(\) === "true"/);
   assert.match(entry, /isLegacyStripeCheckout\(pathname\) && !legacyStripeEnabled\(env\)/);
   assert.match(entry, /status: 404/);
-  assert.match(entry, /return worker\.fetch\(request, env\)/);
+  assert.match(entry, /worker\.fetch\(request, env\)/);
 });

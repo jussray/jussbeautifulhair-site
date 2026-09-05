@@ -55,7 +55,16 @@ assert(parsedBase.origin === expectedOrigin, `LIVE_STOREFRONT_URL must be exactl
 await mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const consoleErrors = [];
+const forbiddenRuntimeRequests = [];
 const results = [];
+
+function watchForbiddenRuntimeRequests(page, label) {
+  page.on("request", (request) => {
+    if (request.url().includes("/_vercel/speed-insights/")) {
+      forbiddenRuntimeRequests.push(`${label}: ${request.url()}`);
+    }
+  });
+}
 
 try {
   const versionResponse = await fetch(`${baseURL}/version`, {
@@ -127,6 +136,7 @@ try {
     { label: "mobile", width: 390, height: 844 },
   ]) {
     const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height } });
+    watchForbiddenRuntimeRequests(page, viewport.label);
     page.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(`${viewport.label}: ${message.text()}`);
     });
@@ -158,6 +168,7 @@ try {
   }
 
   const policyPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  watchForbiddenRuntimeRequests(policyPage, "policy");
   let policyDocumentVerified = false;
   for (const route of ["shipping", "returns", "privacy", "terms"]) {
     const response = await policyPage.goto(`${baseURL}/#/${route}`, {
@@ -184,6 +195,10 @@ try {
   }
   await policyPage.close();
 
+  assert(
+    forbiddenRuntimeRequests.length === 0,
+    `Stale Vercel analytics runtime requested: ${forbiddenRuntimeRequests.join(" | ")}`,
+  );
   assert(consoleErrors.length === 0, `Live browser console errors: ${consoleErrors.join(" | ")}`);
 
   await writeFile(
@@ -203,6 +218,7 @@ try {
           "Shopify password-wall markers are absent",
           "Juss Beautiful Hair title and storefront text render",
           "shipping, returns, privacy, and terms routes render through the branded origin",
+          "stale Vercel Speed Insights runtime requests are absent",
           "desktop and mobile browser consoles remain clean",
         ],
         results,

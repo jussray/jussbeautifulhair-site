@@ -97,30 +97,45 @@ try {
   await page.getByTestId("button-place-order").waitFor({ state: "visible", timeout: 30_000 });
   await page.screenshot({ path: `${outputDir}/checkout.png`, fullPage: true });
 
-  const cartResponsePromise = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).origin === expectedOrigin &&
-      new URL(response.url()).pathname === "/api/shopify/cart" &&
-      response.request().method() === "POST",
-    { timeout: 60_000 },
-  );
+  let capturedCartStatus = null;
+  let capturedCartRequestPayload = null;
+  let capturedCartPayload = null;
+  let resolveCartCapture;
+  let rejectCartCapture;
+  const cartCapturePromise = new Promise((resolve, reject) => {
+    resolveCartCapture = resolve;
+    rejectCartCapture = reject;
+  });
+
+  await page.route(`${expectedOrigin}/api/shopify/cart`, async (route) => {
+    try {
+      capturedCartRequestPayload = route.request().postDataJSON();
+      const upstreamResponse = await route.fetch();
+      capturedCartStatus = upstreamResponse.status();
+      const upstreamBody = await upstreamResponse.text();
+      capturedCartPayload = JSON.parse(upstreamBody);
+      await route.fulfill({ response: upstreamResponse, body: upstreamBody });
+      resolveCartCapture();
+    } catch (error) {
+      rejectCartCapture(error);
+      await route.abort().catch(() => {});
+    }
+  });
 
   await page.getByTestId("button-place-order").click();
-  const cartResponse = await cartResponsePromise;
-  assert.equal(cartResponse.status(), 200, `/api/shopify/cart returned HTTP ${cartResponse.status()}.`);
+  await cartCapturePromise;
 
-  const requestPayload = cartResponse.request().postDataJSON();
+  assert.equal(capturedCartStatus, 200, `/api/shopify/cart returned HTTP ${capturedCartStatus}.`);
   assert.deepEqual(
-    requestPayload,
+    capturedCartRequestPayload,
     { lines: [{ merchandiseId: variant.id, quantity: 1 }] },
-    `production cart request widened beyond merchandiseId and quantity: ${JSON.stringify(requestPayload)}`,
+    `production cart request widened beyond merchandiseId and quantity: ${JSON.stringify(capturedCartRequestPayload)}`,
   );
 
-  const cartPayload = await cartResponse.json();
-  assert.equal(typeof cartPayload?.checkoutUrl, "string", "production Shopify cart response is missing checkoutUrl.");
-  assert.equal(cartPayload?.totalQuantity, 1, "production Shopify cart returned an unexpected quantity.");
+  assert.equal(typeof capturedCartPayload?.checkoutUrl, "string", "production Shopify cart response is missing checkoutUrl.");
+  assert.equal(capturedCartPayload?.totalQuantity, 1, "production Shopify cart returned an unexpected quantity.");
 
-  const checkout = new URL(cartPayload.checkoutUrl);
+  const checkout = new URL(capturedCartPayload.checkoutUrl);
   assert.equal(checkout.protocol, "https:", "production Shopify checkout URL must use HTTPS.");
   assert.equal(
     approvedCheckoutHosts.has(checkout.hostname.toLowerCase()),
@@ -130,6 +145,17 @@ try {
   assert.equal(checkout.username, "", "production Shopify checkout URL must not contain credentials.");
   assert.equal(checkout.password, "", "production Shopify checkout URL must not contain credentials.");
   assert.equal(checkout.port, "", "production Shopify checkout URL must not use a custom port.");
+
+  await page.getByRole("heading", { name: "Shopify handoff captured" }).waitFor({
+    state: "visible",
+    timeout: 30_000,
+  });
+  const observedCheckout = new URL(page.url());
+  assert.equal(
+    approvedCheckoutHosts.has(observedCheckout.hostname.toLowerCase()),
+    true,
+    `rendered checkout handoff reached unexpected host ${observedCheckout.hostname}.`,
+  );
 
   await writeFile(
     `${outputDir}/manifest.json`,
@@ -142,14 +168,16 @@ try {
         productHandle: product.id,
         variantId: variant.id,
         catalogStatus: catalogResponse.status(),
-        cartStatus: cartResponse.status(),
+        cartStatus: capturedCartStatus,
         checkoutHost: checkout.hostname,
+        renderedHandoffHost: observedCheckout.hostname,
         assertions: [
           "production /version matched the exact activated main SHA before commerce proof",
           "rendered production Shop consumed the live /api/shopify/catalog boundary",
           "a live sellable Shopify variant flowed through Product, Cart, and Checkout",
           "production /api/shopify/cart received only merchandiseId and quantity",
           "production cart creation returned an HTTPS checkout on an exact approved host",
+          "the rendered checkout button navigated to that approved Shopify handoff",
           "no order or payment was submitted",
         ],
       },

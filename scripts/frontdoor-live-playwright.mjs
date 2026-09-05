@@ -158,12 +158,26 @@ try {
   }
 
   const policyPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  let policyDocumentVerified = false;
   for (const route of ["shipping", "returns", "privacy", "terms"]) {
     const response = await policyPage.goto(`${baseURL}/#/${route}`, {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
-    assertStorefrontResponse(response, route);
+    if (response) {
+      assertStorefrontResponse(response, route);
+      policyDocumentVerified = true;
+    } else {
+      assert(
+        policyDocumentVerified,
+        `${route}: same-document hash navigation occurred before a branded storefront response was verified.`,
+      );
+    }
+    assert(
+      new URL(policyPage.url()).hash === `#/${route}`,
+      `${route}: browser did not reach the expected policy hash route.`,
+    );
+    await policyPage.locator("#root").waitFor({ state: "visible", timeout: 30_000 });
     const bodyText = await policyPage.locator("body").innerText();
     assertNotShopifyPassword(bodyText, route);
     assert(bodyText.toLowerCase().includes(route), `${route}: expected policy content did not render.`);

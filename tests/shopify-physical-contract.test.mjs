@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [worker, catalogClient, cart, checkout, shop, product, home] = await Promise.all([
+const [worker, catalogClient, cart, checkout, shop, product, home, liveSmoke, checkoutWorkflow] = await Promise.all([
   read("worker/index.ts"),
   read("client/src/lib/shopifyCatalog.ts"),
   read("client/src/lib/cart.tsx"),
@@ -11,6 +11,8 @@ const [worker, catalogClient, cart, checkout, shop, product, home] = await Promi
   read("client/src/pages/Shop.tsx"),
   read("client/src/pages/Product.tsx"),
   read("client/src/pages/Home.tsx"),
+  read("scripts/shopify-physical-live-smoke.mjs"),
+  read(".github/workflows/shopify-headless-exact-head.yml"),
 ]);
 
 test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
@@ -80,6 +82,25 @@ test("customer-facing product surfaces read live Shopify commerce through the JB
     /Dropship Beauty|Dropship Bundles|DSers|Faire|AZ Hair|APOHAIR|Indique|Jaipur|5S Hair/i,
   );
   assert.doesNotMatch(catalogClient, /X-Shopify-Storefront-Access-Token|access_token|STRIPE_SECRET_KEY/);
+});
+
+test("live Shopify verification supports Web Bot Auth without committing credentials", () => {
+  for (const envName of [
+    "SHOPIFY_WEB_BOT_SIGNATURE_AGENT",
+    "SHOPIFY_WEB_BOT_SIGNATURE_INPUT",
+    "SHOPIFY_WEB_BOT_SIGNATURE",
+  ]) {
+    assert.match(liveSmoke, new RegExp(envName));
+    assert.match(checkoutWorkflow, new RegExp(`secrets\\.${envName}`));
+  }
+
+  assert.match(liveSmoke, /"Signature-Agent"/);
+  assert.match(liveSmoke, /"Signature-Input"/);
+  assert.match(liveSmoke, /Signature:\s*webBotAuth\.signature/);
+  assert.match(liveSmoke, /configuredWebBotAuthValues === 0 \|\| configuredWebBotAuthValues === 3/);
+  assert.match(liveSmoke, /webBotAuthMode/);
+  assert.doesNotMatch(liveSmoke, /sig1=/);
+  assert.doesNotMatch(checkoutWorkflow, /sig1=/);
 });
 
 test("legacy Stripe checkout remains isolated as rollback-only server code", () => {

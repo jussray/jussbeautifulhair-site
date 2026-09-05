@@ -5,7 +5,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/lib/cart";
-import { SpeedInsights } from '@vercel/speed-insights/react';
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
@@ -53,7 +52,6 @@ function App() {
           <Router hook={useHashLocation}>
             <AppRouter />
           </Router>
-          <SpeedInsights />
         </CartProvider>
       </TooltipProvider>
     </QueryClientProvider>

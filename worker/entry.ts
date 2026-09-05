@@ -11,6 +11,7 @@ const META_AGENT_KNOWLEDGE_PATH = "/.well-known/jbh-meta-agent.json";
 const PUBLIC_BUILD_PROOF_PATH = "/.well-known/jbh-build-proof.json";
 const VERSION_PATH = "/version";
 const EXACT_SHA = /^[0-9a-f]{40}$/i;
+const CLOUDFLARE_WEB_ANALYTICS_SCRIPT_ORIGIN = "https://static.cloudflareinsights.com";
 
 function isLegacyStripeCheckout(pathname: string): boolean {
   return pathname === "/api/checkout" || pathname.startsWith(LEGACY_STRIPE_SESSION_PREFIX);
@@ -105,6 +106,27 @@ function metaAgentKnowledgeResponse(request: Request): Response {
   );
 }
 
+function allowCloudflareWebAnalytics(response: Response): Response {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.toLowerCase().includes("text/html")) return response;
+
+  const csp = response.headers.get("content-security-policy");
+  if (!csp) return response;
+
+  const existingScriptPolicy = "script-src 'self' https://challenges.cloudflare.com;";
+  if (!csp.includes(existingScriptPolicy)) return response;
+
+  const secured = new Response(response.body, response);
+  secured.headers.set(
+    "Content-Security-Policy",
+    csp.replace(
+      existingScriptPolicy,
+      `script-src 'self' https://challenges.cloudflare.com ${CLOUDFLARE_WEB_ANALYTICS_SCRIPT_ORIGIN};`,
+    ),
+  );
+  return secured;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const pathname = new URL(request.url).pathname;
@@ -129,6 +151,6 @@ export default {
       });
     }
 
-    return worker.fetch(request, env);
+    return allowCloudflareWebAnalytics(await worker.fetch(request, env));
   },
 };

@@ -56,8 +56,8 @@ requireValue(workerSource.includes('"Cache-Control": "no-store"'), 'checkout Wor
 requireValue(workerSource.includes('Vary: "Origin"'), 'checkout Worker must vary API responses by Origin');
 const wrangler = await readFile(resolve(root, 'wrangler.toml'), 'utf8');
 requireValue(
-  wrangler.includes('run_worker_first = ["/api/*", "/version", "/.well-known/jbh-meta-agent.json"]'),
-  'Worker-first routing must remain limited to API plus the two explicit public runtime-truth endpoints',
+  wrangler.includes('run_worker_first = true'),
+  'Worker-first routing must cover public assets so storefront security headers cannot be bypassed',
 );
 
 if (errors.length) {
@@ -68,4 +68,4 @@ if (errors.length) {
 console.log(`Cookie contract verified for ${manifest.repository}.`);
 console.log('Declared first-party cookies: 1 functional preference');
 console.log('Checkout API cache policy: no-store');
-console.log('Worker-first non-API routes: /version and /.well-known/jbh-meta-agent.json only');
+console.log('Worker-first routing: all public storefront asset responses');

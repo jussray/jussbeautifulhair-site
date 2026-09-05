@@ -207,8 +207,8 @@
         {
           "id": "wrangler-routes-api-first",
           "path": "wrangler.toml",
-          "marker": "run_worker_first = [\"/api/*\"]",
-          "description": "API traffic reaches the Worker before static assets."
+          "marker": "run_worker_first = true",
+          "description": "All public storefront traffic reaches the Worker before static assets so security and Content-Signal middleware applies."
         },
         {
           "id": "deployment-workflow-builds-after-boundary-check",

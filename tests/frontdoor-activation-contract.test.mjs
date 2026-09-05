@@ -164,10 +164,7 @@ test("front-door Wrangler config remains one route for the branded root", () => 
   assert.equal(routeBlocks.length, 1);
   assert.match(frontdoorConfig, /^pattern\s*=\s*\"jussbeautifulhair\.com\/\*\"\s*$/m);
   assert.match(frontdoorConfig, /^zone_name\s*=\s*\"jussbeautifulhair\.com\"\s*$/m);
-  assert.match(
-    frontdoorConfig,
-    /run_worker_first\s*=\s*\[\s*\"\/api\/\*\"\s*,\s*\"\/version\"\s*,\s*\"\/\.well-known\/jbh-meta-agent\.json\"\s*\]/,
-  );
+  assert.match(frontdoorConfig, /run_worker_first\s*=\s*true/);
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
 });
 
@@ -185,4 +182,20 @@ test("Worker version route reads the explicit release binding", () => {
   assert.match(worker, /url\.pathname === \"\/version\"/);
   assert.match(worker, /function getReleaseSha\(env: Env\)/);
   assert.match(worker, /sha: getReleaseSha\(env\)/);
+});
+
+test("Control Room routing evidence matches worker-first storefront reality", async () => {
+  const repositoryManifest = JSON.parse(
+    await readFile(
+      new URL("../.control-room/repository.manifest.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const deploymentCapability = repositoryManifest.capabilities.find(
+    ({ id }) => id === "production-only-cloudflare-deployment",
+  );
+  const routingAssertion = deploymentCapability?.usageAssertions?.find(
+    ({ id }) => id === "wrangler-routes-api-first",
+  );
+  assert.equal(routingAssertion?.marker, "run_worker_first = true");
 });

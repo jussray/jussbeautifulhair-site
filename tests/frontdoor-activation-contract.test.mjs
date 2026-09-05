@@ -183,3 +183,19 @@ test("Worker version route reads the explicit release binding", () => {
   assert.match(worker, /function getReleaseSha\(env: Env\)/);
   assert.match(worker, /sha: getReleaseSha\(env\)/);
 });
+
+test("Control Room routing evidence matches worker-first storefront reality", async () => {
+  const repositoryManifest = JSON.parse(
+    await readFile(
+      new URL("../.control-room/repository.manifest.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const deploymentCapability = repositoryManifest.capabilities.find(
+    ({ id }) => id === "production-only-cloudflare-deployment",
+  );
+  const routingAssertion = deploymentCapability?.usageAssertions?.find(
+    ({ id }) => id === "wrangler-routes-api-first",
+  );
+  assert.equal(routingAssertion?.marker, "run_worker_first = true");
+});

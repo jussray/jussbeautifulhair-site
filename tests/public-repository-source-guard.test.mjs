@@ -12,7 +12,7 @@ const forbiddenTrackedPathPatterns = [
   /(^|\/)\.env(?:\.|$)/i,
   /(^|\/)(?:id_rsa|id_ed25519)(?:\.|$)/i,
   /\.(?:p12|pfx|sqlite|sqlite3|db)$/i,
-  /(^|\/)(?:customers?|orders?|vendors?|suppliers?)[-_].*\.(?:csv|json|jsonl|xlsx)$/i,
+  /(^|\/)(?:customers?|orders?|vendors?|suppliers?)(?:[-_].*)?\.(?:csv|json|jsonl|xlsx)$/i,
 ];
 
 const allowedExamplePaths = new Set([

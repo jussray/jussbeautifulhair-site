@@ -32,35 +32,11 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "control-room.manifest.json"
-      - ".control-room/repository.manifest.json"
-      - ".github/workflows/control-room-current-main-exact-head.yml"
-      - ".github/workflows/quality-gate.yml"
-      - ".github/workflows/deployment-boundary.yml"
-      - "client/src/App.tsx"
-      - "client/src/pages/Checkout.tsx"
-      - "client/src/pages/success.tsx"
-      - "worker/index.ts"
-      - "shared/catalog.ts"
-      - "README.md"
-      - "AGENTS.md"
-      - "package.json"
-      - "vite.config.ts"
-      - "wrangler.toml"
-      - ".security/cookies.json"
-      - "scripts/lint-storefront.mjs"
-      - "scripts/verify-cookie-contract.mjs"
-      - "scripts/verify-ai-skills.mjs"
-      - "scripts/verify-mcp-config.mjs"
-      - "scripts/verify-deployment-boundary.mjs"
-      - "scripts/verify-control-room-manifest.mjs"
-      - "scripts/verify-control-room-tests.mjs"
-      - "docs/CONTROL_ROOM_FUTUREYOU.md"
   workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -88,6 +64,32 @@ jobs:
           actual="$(git rev-parse HEAD)"
           printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
           test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - name: Verify merged-PR provenance for current main
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          prs="$(curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD_SHA/pulls")"
+          PRS_JSON="$prs" node --input-type=module <<'NODE'
+          const prs = JSON.parse(process.env.PRS_JSON || "[]");
+          const mergedToMain = prs.filter((pr) =>
+            pr?.state === "closed" &&
+            pr?.merged_at &&
+            pr?.base?.ref === "main"
+          );
+          if (mergedToMain.length === 0) {
+            console.error(`Current main SHA ${process.env.EXPECTED_HEAD_SHA} has no merged PR provenance.`);
+            process.exit(1);
+          }
+          console.log(`Merged PR provenance verified: ${mergedToMain.map((pr) => `#${pr.number}`).join(", ")}`);
+          NODE
 
       - name: Set up Node
         uses: actions/setup-node@v4

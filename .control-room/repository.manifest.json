@@ -189,8 +189,8 @@
         {
           "id": "entry-delegates-to-storefront-worker",
           "path": "worker/entry.ts",
-          "marker": "return worker.fetch(request, env);",
-          "description": "The gated entrypoint delegates approved traffic to the existing storefront Worker."
+          "marker": "return allowCloudflareWebAnalytics(await worker.fetch(request, env));",
+          "description": "The gated entrypoint delegates approved traffic to the storefront Worker through the Cloudflare Web Analytics CSP wrapper."
         },
         {
           "id": "wrangler-disables-workers-dev",

@@ -4,10 +4,7 @@ import test from "node:test";
 
 const config = await readFile(new URL("../wrangler.toml", import.meta.url), "utf8");
 
-test("automatic Worker build keeps runtime truth routes out of SPA fallback", () => {
+test("automatic Worker build runs storefront middleware before every static asset", () => {
   assert.match(config, /not_found_handling\s*=\s*"single-page-application"/);
-  assert.match(
-    config,
-    /run_worker_first\s*=\s*\[\s*"\/api\/\*"\s*,\s*"\/version"\s*,\s*"\/\.well-known\/jbh-meta-agent\.json"\s*\]/,
-  );
+  assert.match(config, /run_worker_first\s*=\s*true/);
 });

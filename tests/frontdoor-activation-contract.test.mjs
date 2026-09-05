@@ -164,10 +164,7 @@ test("front-door Wrangler config remains one route for the branded root", () => 
   assert.equal(routeBlocks.length, 1);
   assert.match(frontdoorConfig, /^pattern\s*=\s*\"jussbeautifulhair\.com\/\*\"\s*$/m);
   assert.match(frontdoorConfig, /^zone_name\s*=\s*\"jussbeautifulhair\.com\"\s*$/m);
-  assert.match(
-    frontdoorConfig,
-    /run_worker_first\s*=\s*\[\s*\"\/api\/\*\"\s*,\s*\"\/version\"\s*,\s*\"\/\.well-known\/jbh-meta-agent\.json\"\s*\]/,
-  );
+  assert.match(frontdoorConfig, /run_worker_first\s*=\s*true/);
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
 });
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
+import { observeFunnel } from "@/lib/funnel";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 
 export default function Product() {
@@ -28,8 +29,21 @@ export default function Product() {
   useEffect(() => {
     if (!product) return;
     const firstAvailable = product.variants.findIndex((variant) => variant.availableForSale);
-    setVariantIdx(firstAvailable >= 0 ? firstAvailable : 0);
+    const initialVariantIdx = firstAvailable >= 0 ? firstAvailable : 0;
+    const initialVariant = product.variants[initialVariantIdx];
+    setVariantIdx(initialVariantIdx);
     setQty(1);
+
+    if (initialVariant) {
+      observeFunnel({
+        event: "product_view",
+        productHandle: product.id,
+        variantId: initialVariant.id,
+        route: window.location.pathname,
+        quantity: 1,
+        valueCents: Math.round(initialVariant.price * 100),
+      });
+    }
   }, [product?.id]);
 
   const related = useMemo(
@@ -111,6 +125,14 @@ export default function Product() {
       },
       qty,
     );
+    observeFunnel({
+      event: "add_to_cart",
+      productHandle: product.id,
+      variantId: variant.id,
+      route: window.location.pathname,
+      quantity: qty,
+      valueCents: Math.round(variant.price * qty * 100),
+    });
     toast({
       title: "Added to cart 💜",
       description: `${qty} × ${product.name} (${variant.option})`,

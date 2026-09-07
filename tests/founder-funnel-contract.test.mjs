@@ -7,6 +7,10 @@ const workerEntry = await readFile(new URL("../worker/entry.ts", import.meta.url
 const funnelClient = await readFile(new URL("../client/src/lib/funnel.ts", import.meta.url), "utf8");
 const productPage = await readFile(new URL("../client/src/pages/Product.tsx", import.meta.url), "utf8");
 const checkoutPage = await readFile(new URL("../client/src/pages/Checkout.tsx", import.meta.url), "utf8");
+const productionPlaywright = await readFile(
+  new URL("../scripts/shopify-production-playwright.mjs", import.meta.url),
+  "utf8",
+);
 
 test("Founder Funnel uses a first-party Analytics Engine binding", () => {
   assert.match(config, /\[\[analytics_engine_datasets\]\]/);
@@ -63,4 +67,23 @@ test("Shopify handoff is observed only after checkout URL approval", () => {
   assert.ok(approval >= 0, "approved Shopify URL boundary is missing");
   assert.ok(handoff > approval, "handoff event must follow URL approval");
   assert.ok(redirect > handoff, "browser redirect must follow handoff observation");
+});
+
+test("production Playwright marks only funnel telemetry as proof traffic", () => {
+  assert.match(productionPlaywright, /page\.route\(`\$\{expectedOrigin\}\/api\/funnel`/);
+  assert.match(productionPlaywright, /"x-jbh-traffic-class":\s*"proof"/);
+  assert.match(productionPlaywright, /observedFunnelEvents\.push\(payload\.event\)/);
+  for (const requiredEvent of [
+    "product_view",
+    "add_to_cart",
+    "checkout_start",
+    "shopify_handoff",
+  ]) {
+    assert.match(productionPlaywright, new RegExp(`"${requiredEvent}"`));
+  }
+  assert.doesNotMatch(
+    productionPlaywright,
+    /browser\.newPage\(\{[^}]*extraHTTPHeaders/s,
+    "proof classification must not widen to all browser requests",
+  );
 });

@@ -34,6 +34,26 @@ const browser = await chromium.launch({ headless: true });
 
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+  const observedFunnelEvents = [];
+
+  await page.route(`${expectedOrigin}/api/funnel`, async (route) => {
+    const request = route.request();
+    try {
+      const payload = request.postDataJSON();
+      if (payload && typeof payload.event === "string") {
+        observedFunnelEvents.push(payload.event);
+      }
+    } catch {
+      // Contract tests validate the payload shape. This route only classifies proof traffic.
+    }
+
+    await route.continue({
+      headers: {
+        ...request.headers(),
+        "x-jbh-traffic-class": "proof",
+      },
+    });
+  });
 
   await page.route("https://8qp1z2-az.myshopify.com/**", async (route) => {
     await route.fulfill({
@@ -157,6 +177,18 @@ try {
     `rendered checkout handoff reached unexpected host ${observedCheckout.hostname}.`,
   );
 
+  for (const requiredEvent of [
+    "product_view",
+    "add_to_cart",
+    "checkout_start",
+    "shopify_handoff",
+  ]) {
+    assert.ok(
+      observedFunnelEvents.includes(requiredEvent),
+      `production browser did not emit required proof funnel event ${requiredEvent}`,
+    );
+  }
+
   await writeFile(
     `${outputDir}/manifest.json`,
     `${JSON.stringify(
@@ -171,6 +203,7 @@ try {
         cartStatus: capturedCartStatus,
         checkoutHost: checkout.hostname,
         renderedHandoffHost: observedCheckout.hostname,
+        proofFunnelEvents: observedFunnelEvents,
         assertions: [
           "production /version matched the exact activated main SHA before commerce proof",
           "rendered production Shop consumed the live /api/shopify/catalog boundary",
@@ -178,6 +211,7 @@ try {
           "production /api/shopify/cart received only merchandiseId and quantity",
           "production cart creation returned an HTTPS checkout on an exact approved host",
           "the rendered checkout button navigated to that approved Shopify handoff",
+          "Founder Funnel browser events were marked proof without widening Shopify requests",
           "no order or payment was submitted",
         ],
       },

@@ -31,7 +31,7 @@ jobs:
   verify:
     name: Verify Founder Funnel exact-release readback
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Check out exact requested head
         uses: actions/checkout@v4
@@ -53,14 +53,29 @@ jobs:
       - name: Verify Founder Funnel readback contracts
         run: node --test tests/founder-funnel-readback-contract.test.mjs
 
+  production-readback:
+    name: Verify Founder Funnel production readback
+    if: github.event_name == 'push'
+    needs: verify
+    runs-on: ubuntu-22.04
+    environment: Production
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact requested head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Verify exact head
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
       - name: Wait for exact production Shopify proof
-        if: github.event_name == 'push'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          for attempt in {1..120}; do
+          for attempt in {1..180}; do
             checks="$(curl --fail --silent --show-error \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \
@@ -99,15 +114,24 @@ jobs:
               printf 'Exact production Shopify proof failed for %s\n' "$EXPECTED_HEAD_SHA" >&2
               exit 1
             fi
-            if [ "$attempt" -eq 120 ]; then
+            if [ "$attempt" -eq 180 ]; then
               printf 'Exact production Shopify proof did not complete for %s\n' "$EXPECTED_HEAD_SHA" >&2
               exit 1
             fi
             sleep 2
           done
 
+      - name: Verify production Cloudflare credentials are present
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
       - name: Verify exact-release Analytics Engine readback
-        if: github.event_name == 'push'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -115,7 +139,7 @@ jobs:
         run: node scripts/verify-founder-funnel-readback.mjs
 
       - name: Upload Founder Funnel readback proof
-        if: github.event_name == 'push' && always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: founder-funnel-readback-${{ env.EXPECTED_HEAD_SHA }}

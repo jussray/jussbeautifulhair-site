@@ -294,6 +294,7 @@ async function funnelResponse(request: Request, env: Env): Promise<Response> {
   const trafficClass = request.headers.get("X-JBH-Traffic-Class") === "proof"
     ? "proof"
     : "human";
+  const releaseSha = explicitReleaseSha(env) || await buildProofReleaseSha(request, env) || "unknown";
 
   try {
     env.FUNNEL_ANALYTICS?.writeDataPoint({
@@ -304,6 +305,7 @@ async function funnelResponse(request: Request, env: Env): Promise<Response> {
         payload.variantId || "",
         payload.route || "",
         trafficClass,
+        releaseSha,
       ],
       doubles: [payload.quantity || 0, payload.valueCents || 0],
     });

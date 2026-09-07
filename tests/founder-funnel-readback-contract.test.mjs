@@ -44,18 +44,38 @@ test("Analytics Engine readback requires proof traffic from the exact release SH
   assert.match(readbackScript, /contract: "jbh-founder-funnel-readback-v1"/);
 });
 
-test("Founder Funnel readback is a separate exact-head lane after production commerce proof", () => {
+test("Founder Funnel source verification remains secretless while production readback uses the Production environment", () => {
   assert.match(readbackWorkflow, /^name: Founder Funnel Exact-Head Gate$/m);
   assert.match(readbackWorkflow, /^\s*push:\s*\n\s+branches: \[main\]/m);
   assert.match(readbackWorkflow, /checks: read/);
-  assert.match(readbackWorkflow, /Verify tokenless Shopify checkout bridge/);
-  assert.match(readbackWorkflow, /secrets\.CLOUDFLARE_API_TOKEN/);
-  assert.match(readbackWorkflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
 
-  const productionWait = readbackWorkflow.indexOf("Wait for exact production Shopify proof");
-  const readback = readbackWorkflow.indexOf("node scripts/verify-founder-funnel-readback.mjs");
+  const sourceJob = readbackWorkflow.indexOf("  verify:\n");
+  const productionJob = readbackWorkflow.indexOf("  production-readback:\n");
+  assert.ok(sourceJob >= 0, "Secretless source verification job is missing.");
+  assert.ok(productionJob > sourceJob, "Push-only production readback job is missing.");
+
+  const sourceSection = readbackWorkflow.slice(sourceJob, productionJob);
+  const productionSection = readbackWorkflow.slice(productionJob);
+
+  assert.match(sourceSection, /name: Verify Founder Funnel exact-release readback/);
+  assert.match(sourceSection, /node --test tests\/founder-funnel-readback-contract\.test\.mjs/);
+  assert.doesNotMatch(sourceSection, /environment:\s*Production/);
+  assert.doesNotMatch(sourceSection, /secrets\.CLOUDFLARE_/);
+
+  assert.match(productionSection, /if: github\.event_name == 'push'/);
+  assert.match(productionSection, /needs: verify/);
+  assert.match(productionSection, /environment:\s*Production/);
+  assert.match(productionSection, /Verify tokenless Shopify checkout bridge/);
+  assert.match(productionSection, /Verify production Cloudflare credentials are present/);
+  assert.match(productionSection, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.match(productionSection, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
+
+  const productionWait = productionSection.indexOf("Wait for exact production Shopify proof");
+  const credentialPreflight = productionSection.indexOf("Verify production Cloudflare credentials are present");
+  const readback = productionSection.indexOf("node scripts/verify-founder-funnel-readback.mjs");
   assert.ok(productionWait >= 0, "Exact production Shopify proof wait is missing.");
-  assert.ok(readback > productionWait, "Analytics readback must run only after exact production commerce proof.");
+  assert.ok(credentialPreflight > productionWait, "Production credential preflight must follow commerce proof.");
+  assert.ok(readback > credentialPreflight, "Analytics readback must run only after credential preflight.");
 
   assert.doesNotMatch(readbackWorkflow, /wrangler[^\n]*deploy/i);
   assert.doesNotMatch(readbackWorkflow, /api-tokens|tokens\/permission|create token/i);

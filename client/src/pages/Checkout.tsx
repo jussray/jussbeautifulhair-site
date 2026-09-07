@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { Lock, Info } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
+import { observeFunnel } from "@/lib/funnel";
 import { assertApprovedShopifyCheckoutRedirect } from "@/lib/shopifyCatalog";
 
 export default function Checkout() {
@@ -12,6 +13,17 @@ export default function Checkout() {
   const [, navigate] = useLocation();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    observeFunnel({
+      event: "checkout_start",
+      route: window.location.pathname,
+      quantity: totalQuantity,
+      valueCents: Math.round(subtotal * 100),
+    });
+  }, [items.length, subtotal, totalQuantity]);
 
   if (items.length === 0) {
     return (
@@ -50,8 +62,21 @@ export default function Checkout() {
         throw new Error(data.error || "Shopify checkout failed. Please try again.");
       }
 
-      window.location.assign(assertApprovedShopifyCheckoutRedirect(data.checkoutUrl));
+      const approvedCheckoutUrl = assertApprovedShopifyCheckoutRedirect(data.checkoutUrl);
+      observeFunnel({
+        event: "shopify_handoff",
+        route: window.location.pathname,
+        quantity: totalQuantity,
+        valueCents: Math.round(subtotal * 100),
+      });
+      window.location.assign(approvedCheckoutUrl);
     } catch (checkoutError) {
+      observeFunnel({
+        event: "checkout_error",
+        route: window.location.pathname,
+        quantity: totalQuantity,
+        valueCents: Math.round(subtotal * 100),
+      });
       setError(
         checkoutError instanceof Error
           ? checkoutError.message

@@ -123,7 +123,27 @@ function captureConsoleErrors(page, consoleErrors, shouldIgnore = () => false) {
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 }
 
+async function configureFunnelMock(page, evidence) {
+  await page.route("**/api/funnel", async (route) => {
+    if (evidence) {
+      evidence.funnelRequests += 1;
+      try {
+        const payload = route.request().postDataJSON();
+        if (payload && typeof payload.event === "string") {
+          evidence.funnelEvents.push(payload.event);
+        }
+      } catch {
+        // Endpoint contract tests validate payload shape; browser proof records valid event names only.
+      }
+    }
+
+    await route.fulfill({ status: 204, body: "" });
+  });
+}
+
 async function configureMocks(page, evidence) {
+  await configureFunnelMock(page, evidence);
+
   await page.route("**/api/shopify/catalog", async (route) => {
     evidence.catalogRequests += 1;
     await route.fulfill({
@@ -212,6 +232,7 @@ async function proveProductRefetchFailClosed(browser, viewport, label, consoleEr
     consoleErrors,
     (text) => expectingCatalog503 && /Failed to load resource:.*503 \(Service Unavailable\)/.test(text),
   );
+  await configureFunnelMock(page);
   const catalogMock = await configureRefetchTruthMock(page);
   const mobile = label === "mobile";
   const addToCartTestId = mobile ? "button-add-to-cart-mobile" : "button-add-to-cart";
@@ -281,6 +302,8 @@ const evidence = {
   catalogRequests: 0,
   cartRequests: 0,
   checkoutNavigations: 0,
+  funnelRequests: 0,
+  funnelEvents: [],
   cartBody: null,
   checkoutUrl: null,
   refetchTruth: {
@@ -338,6 +361,17 @@ try {
     evidence.checkoutUrl === `https://${checkoutHost}/cart/c/jbh-browser-proof?key=exact-head`,
     `Branded Shopify checkout did not escape to the canonical host with its exact cart key: ${evidence.checkoutUrl}`,
   );
+  for (const requiredEvent of [
+    "product_view",
+    "add_to_cart",
+    "checkout_start",
+    "shopify_handoff",
+  ]) {
+    assert(
+      evidence.funnelEvents.includes(requiredEvent),
+      `Physical browser did not emit Founder Funnel event ${requiredEvent}.`,
+    );
+  }
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
   captureConsoleErrors(mobile, consoleErrors);
@@ -388,6 +422,8 @@ try {
           "physical checkout sends only merchandiseId and quantity",
           "physical checkout no longer presents Stripe as the active payment handoff",
           "branded Shopify checkout URL escapes to the canonical Shopify host without changing the cart path or key",
+          "Founder Funnel endpoint is modeled locally as a successful first-party 204 seam",
+          "rendered physical checkout emits product_view, add_to_cart, checkout_start, and shopify_handoff funnel stages",
           "a real QueryClient background refetch failure replaces retained Product data with the truthful unavailable/retry surface",
           "failed background refetch exposes no stale price, desktop Add-to-Cart, or mobile Add-to-Cart authority",
           "desktop and mobile Product views both recover after a successful retry",

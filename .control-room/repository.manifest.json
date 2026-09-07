@@ -268,7 +268,7 @@
     },
     {
       "id": "checkout-redirect-integrity",
-      "description": "Validates the server-returned Shopify checkout URL immediately before navigation and fails closed for malformed, insecure, credentialed, ported, arbitrary, and lookalike destinations.",
+      "description": "Validates the server-returned Shopify checkout URL before navigation and fails closed for malformed, insecure, credentialed, ported, arbitrary, and lookalike destinations.",
       "status": "active",
       "evidencePaths": [
         "client/src/pages/Checkout.tsx",
@@ -283,8 +283,14 @@
         {
           "id": "checkout-validates-returned-shopify-url",
           "path": "client/src/pages/Checkout.tsx",
-          "marker": "window.location.assign(assertApprovedShopifyCheckoutRedirect(data.checkoutUrl));",
-          "description": "Browser navigation uses the fail-closed Shopify checkout validator."
+          "marker": "const approvedCheckoutUrl = assertApprovedShopifyCheckoutRedirect(data.checkoutUrl);",
+          "description": "The server-returned Shopify checkout URL is passed through the fail-closed validator before it can become a navigation target."
+        },
+        {
+          "id": "checkout-navigates-only-approved-shopify-url",
+          "path": "client/src/pages/Checkout.tsx",
+          "marker": "window.location.assign(approvedCheckoutUrl);",
+          "description": "Browser navigation consumes only the value returned by the approved Shopify checkout validator."
         },
         {
           "id": "redirect-requires-exact-shopify-host",

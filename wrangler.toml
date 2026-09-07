@@ -15,6 +15,10 @@ command = "npm run build"
 STORE_ORIGIN = "https://jussbeautifulhair.com"
 ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
 
+[[analytics_engine_datasets]]
+binding = "FUNNEL_ANALYTICS"
+dataset = "jbh_funnel_v1"
+
 [assets]
 directory = "dist/public"
 binding = "ASSETS"

@@ -44,6 +44,23 @@ const founderLower = founder.toLowerCase();
 for (const command of ['/goalfix', '/ultrathink', '/truthmode', '/confess', '/redteam', '/lindymode', '/ooda', '/visualize']) {
   if (!founderLower.includes(command)) failures.push(`Founder Intelligence missing portable command: ${command}`);
 }
+const challengeStack = [
+  'ULTRATHINK',
+  'Red Team 1 — premise',
+  'Lindy mode',
+  'L99',
+  'Red Team 2 — implementation',
+  'OODA',
+  'Proof',
+  'Rollback / Next Gate',
+];
+let previousIndex = -1;
+for (const step of challengeStack) {
+  const index = founder.indexOf(step);
+  if (index < 0) failures.push(`Founder Intelligence missing challenge step: ${step}`);
+  if (index <= previousIndex) failures.push(`Founder Intelligence challenge stack out of order at: ${step}`);
+  if (index >= 0) previousIndex = index;
+}
 for (const phrase of [
   'reasoning/planning modes only',
   'never grant tool',

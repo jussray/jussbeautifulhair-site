@@ -19,6 +19,29 @@ Required loop:
 → Repeat
 ```
 
+## Canonical challenge stack for nontrivial storefront work
+
+```text
+ULTRATHINK
+→ Red Team 1 — premise
+→ Lindy mode
+→ L99
+→ Red Team 2 — implementation
+→ OODA
+→ Proof
+→ Rollback / Next Gate
+```
+
+- **ULTRATHINK:** reconcile founder intent, catalog truth, product/variant state, brand promises, checkout, payment, deployment, customer impact, and evidence before selecting a bounded path.
+- **Red Team 1:** challenge the premise, demand, evidence, scope, and whether the requested commerce change should exist.
+- **Lindy mode:** prefer the smallest durable, reversible existing Shopify/Hydrogen/storefront carrier and stable customer journey over novelty, duplicate state, or speculative architecture.
+- **L99:** bind the chosen path to catalog/product fingerprints, scoped authority, source/runtime evidence, checkout and deployment state, rollback, continuity, and drift.
+- **Red Team 2:** attack the selected implementation for catalog mismatch, misleading copy, checkout/payment regressions, privacy failures, provider drift, stale proof, hidden assumptions, overclaims, and missing recovery.
+- **OODA:** observe current catalog/runtime evidence, orient to repository-local commerce constraints, decide one bounded action, act only within existing authority, then re-observe the real customer path.
+- **Proof / Rollback / Next Gate:** separate repository, Shopify/catalog, deployment, checkout, payment, fulfillment, and customer-outcome truth; preserve rollback and the smallest next gate.
+
+A failed pass narrows, changes, or stops the work. These modes coordinate one founder intent and never authorize pricing, discounts, refunds, purchases, payment, publication, deployment, customer-data access, or other consequential commerce actions by themselves.
+
 ## Portable Juss OS command surface
 
 The shared portable command names below are reasoning/planning modes only. They never grant tool, provider, checkout, payment, publication, deployment, production, customer-data, credential, or founder authority, and they never weaken this repository's stricter commerce, privacy, brand, evidence, rollback, or approval rules.

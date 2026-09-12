@@ -57,6 +57,18 @@ The shared portable command names below are reasoning/planning modes only. They 
 
 These aliases supplement the existing founder loop, repository operator skill, `/sales`, `/devil`, Figma skill, exact-head checks, Playwright requirements, and explicit founder gates. When a local rule is stricter, the local rule wins.
 
+## Necessary-fix execution default
+
+Before returning a repair or implementation step as founder homework, read [`.control-room/necessary-fix-policy.json`](.control-room/necessary-fix-policy.json) and apply `policyId: necessary-fix-execution-default`.
+
+- `execute-now` when the fix is necessary, reversible, inside the current approved scope, and current authority plus applicable evidence/exact-head requirements are satisfied.
+- `proof-gated` when the action is reversible but the storefront requires proof before integration. Collect the proof and continue through the existing gate instead of asking the founder to perform automatable verification.
+- `founder-required` when the fix widens scope, publishes or communicates externally, spends money, is destructive or irreversible, expands authority, changes pricing/discount/refund/payment/provider state, or crosses a stricter commerce rule.
+- Incoming evidence may update or invalidate bidirectional continuity fingerprints/cookies; outgoing approved actions must update the corresponding markers and receipts. Those markers are non-secret continuity state and never authority.
+- Shopify or provider acceptance is execution evidence, not customer-outcome proof. Verify the real customer path, update continuity, and identify the next gate before claiming completion.
+
+This default never authorizes pricing, discounts, refunds, purchases, payment, customer communication, publication, deployment, customer-data access, credentials, or production routing by itself.
+
 Required remembrance question:
 
 > How would it be remembered by building this?

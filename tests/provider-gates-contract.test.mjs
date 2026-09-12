@@ -20,7 +20,7 @@ test("Control Room exports Shopify-first commerce truth without promoting stale 
   assert.ok(localManifest.controlRoom?.surfaces?.includes("wrangler.frontdoor.toml"));
 });
 
-test("provider gates remain non-authorizing and externally evidenced", () => {
+test("provider gates remain non-authorizing, non-stale, and externally evidenced", () => {
   assert.equal(providerGates.projectId, "juss-beautiful-hair");
   assert.equal(providerGates.repository, "jussray/jussbeautifulhair-site");
   assert.equal(providerGates.truthBoundary?.sourceMaySelfPromoteProviderGate, false);
@@ -36,8 +36,12 @@ test("provider gates remain non-authorizing and externally evidenced", () => {
   assert.equal(frontdoor.authority, "external-provider-evidence");
 
   assert.ok(governance, "GitHub provider governance gate must remain represented");
-  assert.equal(governance.portfolioStatus, "unsatisfied");
+  assert.equal(governance.portfolioStatus, "unverified");
   assert.equal(governance.authority, "github-provider-readback");
+
+  for (const gate of providerGates.gates) {
+    assert.equal(gate.portfolioStatus, "unverified", `${gate.id} must not freeze mutable provider state in source`);
+  }
 
   assert.equal(providerGates.proofCookie?.authorizes, false);
 });

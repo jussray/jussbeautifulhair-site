@@ -4,9 +4,10 @@
   "portfolioHub": "jussray/founder-control-room",
   "role": "commerce-surface",
   "authority": {
-    "sourceOfTruth": "Public storefront main, exact-head storefront contract, Stripe redirect behavior, and Cloudflare deployment-boundary evidence",
+    "sourceOfTruth": "Public storefront main, exact-head storefront contract, Shopify Storefront Cart plus Shopify-hosted checkout, and Cloudflare deployment-boundary evidence",
     "portfolioMode": "sanitized-read-only-observer",
     "canonicalIntegration": ".control-room/repository.manifest.json",
+    "providerGates": ".control-room/provider-gates.json",
     "productionMutation": "separate-founder-gate"
   },
   "controlRoom": {
@@ -14,10 +15,13 @@
     "surfaces": [
       "control-room.manifest.json",
       ".control-room/repository.manifest.json",
+      ".control-room/provider-gates.json",
       ".github/workflows/control-room-current-main-exact-head.yml",
+      ".github/workflows/frontdoor-activate.yml",
       "scripts/verify-control-room-manifest.mjs",
       "package.json",
-      "wrangler.toml"
+      "wrangler.toml",
+      "wrangler.frontdoor.toml"
     ],
     "privateContentAllowed": false
   },
@@ -26,26 +30,117 @@
     "aggregation": "sanitized-check-summary-to-founder-control-room",
     "rawLogsAllowed": false,
     "catalog": [
-      {"id": "typecheck", "name": "Storefront TypeScript", "kind": "typecheck", "command": "npm run check", "required": true, "status": "active", "evidencePaths": ["package.json", "tsconfig.json", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "lint", "name": "Storefront lint contract", "kind": "lint", "command": "npm run lint", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/lint-storefront.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "unit-tests", "name": "Storefront repository contracts", "kind": "unit", "command": "npm test", "required": true, "status": "active", "evidencePaths": ["package.json", "tests", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "cookie-contract", "name": "Storefront cookie contract", "kind": "security", "command": "npm run verify:cookies", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-cookie-contract.mjs", ".security/cookies.json", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "ai-skill-contract", "name": "Hair sales and adversarial AI-skill boundaries", "kind": "contract", "command": "npm run verify:ai-skills", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-ai-skills.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "mcp-contract", "name": "Storefront MCP contract", "kind": "contract", "command": "npm run verify:mcp", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-mcp-config.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "deployment-boundary-source", "name": "Source deployment boundary", "kind": "security", "command": "npm run security:deploy-boundary", "required": true, "status": "active", "evidencePaths": ["package.json", "scripts/verify-deployment-boundary.mjs", "wrangler.toml", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "production-build", "name": "Production storefront build", "kind": "build", "command": "npm run build", "required": true, "status": "active", "evidencePaths": ["package.json", "vite.config.ts", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "deployment-boundary-built", "name": "Built deployment boundary", "kind": "deployment", "command": "npm run security:deploy-boundary", "required": true, "status": "active", "evidencePaths": ["scripts/verify-deployment-boundary.mjs", "vite.config.ts", "wrangler.toml", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "control-room-packet", "name": "Sanitized Control Room packet", "kind": "contract", "command": "node scripts/verify-control-room-manifest.mjs", "required": true, "status": "active", "evidencePaths": ["control-room.manifest.json", ".control-room/repository.manifest.json", "scripts/verify-control-room-manifest.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]},
-      {"id": "hair-match-playwright", "name": "Hair Match desktop and mobile Playwright", "kind": "e2e", "command": "external-exact-head-proof", "required": true, "status": "active", "evidencePaths": ["client/src/pages/HairMatch.tsx", "client/src/lib/shopifyStorefront.ts", "tests/shopify-headless-contract.test.mjs", "scripts/shopify-headless-playwright.mjs", ".github/workflows/shopify-headless-exact-head.yml"]}
+      {
+        "id": "typecheck",
+        "name": "Storefront TypeScript",
+        "kind": "typecheck",
+        "command": "npm run check",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "tsconfig.json", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "lint",
+        "name": "Storefront lint contract",
+        "kind": "lint",
+        "command": "npm run lint",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "scripts/lint-storefront.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "unit-tests",
+        "name": "Storefront repository contracts",
+        "kind": "unit",
+        "command": "npm test",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "tests", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "cookie-contract",
+        "name": "Storefront cookie contract",
+        "kind": "security",
+        "command": "npm run verify:cookies",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "scripts/verify-cookie-contract.mjs", ".security/cookies.json", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "ai-skill-contract",
+        "name": "Hair sales and adversarial AI-skill boundaries",
+        "kind": "contract",
+        "command": "npm run verify:ai-skills",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "scripts/verify-ai-skills.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "mcp-contract",
+        "name": "Storefront MCP contract",
+        "kind": "contract",
+        "command": "npm run verify:mcp",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "scripts/verify-mcp-config.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "deployment-boundary-source",
+        "name": "Source deployment boundary",
+        "kind": "security",
+        "command": "npm run security:deploy-boundary",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "scripts/verify-deployment-boundary.mjs", "wrangler.toml", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "production-build",
+        "name": "Production storefront build",
+        "kind": "build",
+        "command": "npm run build",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["package.json", "vite.config.ts", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "deployment-boundary-built",
+        "name": "Built deployment boundary",
+        "kind": "deployment",
+        "command": "npm run security:deploy-boundary",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["scripts/verify-deployment-boundary.mjs", "vite.config.ts", "wrangler.toml", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "control-room-packet",
+        "name": "Sanitized Control Room packet",
+        "kind": "contract",
+        "command": "node scripts/verify-control-room-manifest.mjs",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["control-room.manifest.json", ".control-room/repository.manifest.json", ".control-room/provider-gates.json", "scripts/verify-control-room-manifest.mjs", ".github/workflows/control-room-current-main-exact-head.yml"]
+      },
+      {
+        "id": "hair-match-playwright",
+        "name": "Hair Match desktop and mobile Playwright",
+        "kind": "e2e",
+        "command": "external-exact-head-proof",
+        "required": true,
+        "status": "active",
+        "evidencePaths": ["client/src/pages/HairMatch.tsx", "client/src/lib/shopifyStorefront.ts", "tests/shopify-headless-contract.test.mjs", "scripts/shopify-headless-playwright.mjs", ".github/workflows/shopify-headless-exact-head.yml"]
+      }
     ]
   },
   "evidence": {
-    "status": "verified",
+    "status": "historical-source-contract",
     "commit": "fbaf7550e6597a25070e72f6dc1f023f0de8346f",
     "observedAt": "2026-08-04",
+    "currentHeadReacquireRequired": true,
+    "reason": "This retained receipt proves a historical source-contract observation only. It does not prove current Cloudflare front-door activation, current GitHub provider governance, or current production identity.",
     "proofRefs": [
       ".github/workflows/control-room-current-main-exact-head.yml",
       ".control-room/repository.manifest.json",
+      ".control-room/provider-gates.json",
       "scripts/verify-control-room-manifest.mjs",
       "package.json",
       "wrangler.toml"
@@ -54,11 +149,14 @@
   "risk": {
     "level": "high",
     "blockers": [
+      "Branded front-door activation is separate external-provider proof and cannot be inferred from source, merge, build, or historical browser evidence",
+      "GitHub main ruleset and branch-protection authority are separate external-provider governance and cannot be inferred from source or CI success",
+      "Stripe is retained rollback only and must not be reported as the active physical-product checkout",
       "Production checkout, order notification, fulfillment, and rollback require separate live evidence",
       "Public/private repository separation must remain enforced",
       "A catalog entry is not a pass until the exact current-main provider signal succeeds",
       "Rendered Hair Match proof must retain exact-head artifacts and cannot be inferred from unit tests"
     ]
   },
-  "nextGate": "Pass the expanded current-main contract, retain the sanitized packet, and keep production order and fulfillment proof behind separate founder approval."
+  "nextGate": "Reacquire exact current main, pass the current-main source contract and sanitized packet, then keep branded front-door activation and GitHub provider governance as separate external proof gates. Never promote either gate from repository source alone."
 }

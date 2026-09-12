@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "1.0",
+  "projectId": "juss-beautiful-hair",
+  "repository": "jussray/jussbeautifulhair-site",
+  "purpose": "Keep source-verifiable storefront capabilities separate from external provider activation and governance proof.",
+  "truthBoundary": {
+    "sourceMaySelfPromoteProviderGate": false,
+    "providerAcceptanceIsOutcomeProof": false,
+    "currentHeadMustBeReacquiredBeforeExecution": true,
+    "continuityMarkersAuthorize": false
+  },
+  "gates": [
+    {
+      "id": "branded-frontdoor-provider-activation",
+      "portfolioStatus": "unverified",
+      "authority": "external-provider-evidence",
+      "sourceCarrier": ".github/workflows/frontdoor-activate.yml",
+      "supportingSource": [
+        "wrangler.frontdoor.toml",
+        "scripts/frontdoor-live-playwright.mjs",
+        "scripts/shopify-production-playwright.mjs"
+      ],
+      "completionRequires": [
+        "explicit exact-current-main activation authority",
+        "Cloudflare DNS proxy readback",
+        "exactly one canonical jussbeautifulhair.com Worker route",
+        "live /version identity equal to the approved exact SHA",
+        "desktop and mobile branded storefront proof",
+        "Shopify no-payment purchase-path proof",
+        "retained provider activation receipt"
+      ]
+    },
+    {
+      "id": "github-main-provider-governance",
+      "portfolioStatus": "unsatisfied",
+      "authority": "github-provider-readback",
+      "completionRequires": [
+        "provider-enforced pull-request path for ordinary main changes",
+        "explicit deletion and non-fast-forward policy",
+        "auditable bypass actors and modes",
+        "bounded emergency recovery path",
+        "only proven exact-head checks promoted to required status",
+        "fresh positive and negative enforcement readback"
+      ]
+    }
+  ],
+  "promotionRule": "Neither gate may be reported VERIFIED from repository source, merge state, CI success, or historical browser receipts alone. Reacquire the relevant provider state and exact current source identity before every completion claim.",
+  "proofCookie": {
+    "value": "jbh-provider-gates-v1",
+    "authorizes": false,
+    "expiresOn": [
+      "provider contract change",
+      "front-door workflow change",
+      "repository governance change",
+      "stronger contradictory evidence"
+    ]
+  }
+}

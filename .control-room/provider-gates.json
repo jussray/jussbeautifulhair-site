@@ -32,7 +32,7 @@
     },
     {
       "id": "github-main-provider-governance",
-      "portfolioStatus": "unsatisfied",
+      "portfolioStatus": "unverified",
       "authority": "github-provider-readback",
       "completionRequires": [
         "provider-enforced pull-request path for ordinary main changes",

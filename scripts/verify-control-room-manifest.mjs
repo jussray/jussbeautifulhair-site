@@ -3,10 +3,15 @@ import { execFileSync } from "node:child_process";
 import { access, readFile, writeFile } from "node:fs/promises";
 
 const MANIFEST_PATH = ".control-room/repository.manifest.json";
+const PROVIDER_GATES_PATH = ".control-room/provider-gates.json";
 const EXPECTED_SCHEMA = "1.0";
 const EXPECTED_PROJECT = "juss-beautiful-hair";
 const EXPECTED_REPOSITORY = "jussray/jussbeautifulhair-site";
 const EXPECTED_SIGNAL_NAME = "Verify current-main storefront contract";
+const EXPECTED_PROVIDER_GATES = new Set([
+  "branded-frontdoor-provider-activation",
+  "github-main-provider-governance",
+]);
 const ALLOWED_STATUSES = new Set(["active", "planned", "retired"]);
 
 function fail(errors, message) {
@@ -43,13 +48,22 @@ async function fileExists(path) {
 
 const rawManifest = await readFile(MANIFEST_PATH, "utf8");
 const manifestHash = createHash("sha256").update(rawManifest).digest("hex");
+const rawProviderGates = await readFile(PROVIDER_GATES_PATH, "utf8");
 let manifest;
+let providerGates;
 const errors = [];
 
 try {
   manifest = JSON.parse(rawManifest);
 } catch (error) {
   console.error(`Control Room manifest is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
+
+try {
+  providerGates = JSON.parse(rawProviderGates);
+} catch (error) {
+  console.error(`Provider gate registry is not valid JSON: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
 }
 
@@ -67,6 +81,25 @@ if (manifest.repository?.identifier !== EXPECTED_REPOSITORY) {
 }
 if (manifest.repository?.defaultBranch !== "main") {
   fail(errors, "repository.defaultBranch must be main");
+}
+
+if (providerGates.schemaVersion !== EXPECTED_SCHEMA) {
+  fail(errors, `provider gates schemaVersion must be ${EXPECTED_SCHEMA}`);
+}
+if (providerGates.projectId !== EXPECTED_PROJECT) {
+  fail(errors, `provider gates projectId must be ${EXPECTED_PROJECT}`);
+}
+if (providerGates.repository !== EXPECTED_REPOSITORY) {
+  fail(errors, `provider gates repository must be ${EXPECTED_REPOSITORY}`);
+}
+if (providerGates.truthBoundary?.sourceMaySelfPromoteProviderGate !== false) {
+  fail(errors, "provider gates must forbid source self-promotion");
+}
+if (providerGates.truthBoundary?.currentHeadMustBeReacquiredBeforeExecution !== true) {
+  fail(errors, "provider gates must require current-head reacquisition before execution");
+}
+if (providerGates.truthBoundary?.continuityMarkersAuthorize !== false) {
+  fail(errors, "provider-gate continuity markers must remain non-authorizing");
 }
 
 const requiredSignals = manifest.verification?.requiredSignals;
@@ -180,6 +213,47 @@ if (!Array.isArray(manifest.privacy?.forbiddenData) || manifest.privacy.forbidde
   fail(errors, "privacy.forbiddenData must not be empty");
 }
 
+const seenProviderGates = new Set();
+for (const gate of Array.isArray(providerGates.gates) ? providerGates.gates : []) {
+  const gateErrors = [];
+  if (!gate?.id || !gate?.authority) {
+    fail(gateErrors, "provider gate must include id and authority");
+    continue;
+  }
+  if (seenProviderGates.has(gate.id)) fail(gateErrors, `duplicate provider gate id: ${gate.id}`);
+  seenProviderGates.add(gate.id);
+  if (capabilityIds.has(gate.id)) fail(gateErrors, `provider gate collides with capability id: ${gate.id}`);
+  if (gate.portfolioStatus !== "unverified") {
+    fail(gateErrors, `${gate.id} must remain unverified in source; mutable provider state belongs in provider readback`);
+  }
+
+  const evidencePaths = [
+    ...(typeof gate.sourceCarrier === "string" && gate.sourceCarrier ? [gate.sourceCarrier] : []),
+    ...(Array.isArray(gate.supportingSource) ? gate.supportingSource : []),
+  ];
+  for (const path of evidencePaths) {
+    if (!(await fileExists(path))) fail(gateErrors, `missing provider-gate source carrier: ${path}`);
+  }
+
+  observations.push({
+    id: gate.id,
+    claimedStatus: "planned",
+    observedStatus: "unverified",
+    evidencePaths,
+    usageAssertionIds: [],
+    failedUsageAssertionIds: [],
+    reason: `External provider evidence required (${gate.authority}); repository source cannot self-promote this gate.`,
+  });
+
+  for (const error of gateErrors) fail(errors, `${gate.id}: ${error}`);
+}
+
+for (const expectedGate of EXPECTED_PROVIDER_GATES) {
+  if (!seenProviderGates.has(expectedGate)) {
+    fail(errors, `missing required provider gate: ${expectedGate}`);
+  }
+}
+
 const passed = errors.length === 0;
 const packet = {
   schemaVersion: EXPECTED_SCHEMA,
@@ -220,4 +294,4 @@ if (!passed) {
   process.exit(1);
 }
 
-console.log(`Control Room manifest verified: ${observations.filter((item) => item.observedStatus === "verified").length} active capabilities verified; ${observations.filter((item) => item.claimedStatus === "planned").length} planned capabilities held unverified.`);
+console.log(`Control Room manifest verified: ${observations.filter((item) => item.observedStatus === "verified").length} source capabilities verified; ${observations.filter((item) => item.observedStatus === "unverified").length} planned/provider capabilities held unverified.`);

@@ -1,0 +1,49 @@
+# Juss Beautiful Hair crawler policy
+# Public storefront discovery is welcome. Training collection is not.
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+
+User-agent: Claude-User
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /checkout
+Disallow: /cart
+
+Sitemap: https://jussbeautifulhair.com/sitemap.xml

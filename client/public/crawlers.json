@@ -1,0 +1,32 @@
+{
+  "schema": "juss/ai-crawler-contract@v1",
+  "project": "juss-beautiful-hair",
+  "canonical_origin": "https://jussbeautifulhair.com",
+  "policy": {
+    "search_discovery": "allow_public_storefront",
+    "user_directed_retrieval": "allow_public_storefront",
+    "model_training": "deny",
+    "bulk_dataset_collection": "deny",
+    "write_or_action_authority": "none"
+  },
+  "bots": {
+    "OAI-SearchBot": "allow_public_storefront",
+    "ChatGPT-User": "allow_public_storefront",
+    "GPTBot": "deny",
+    "Claude-SearchBot": "allow_public_storefront",
+    "Claude-User": "allow_public_storefront",
+    "ClaudeBot": "deny",
+    "Googlebot": "allow_public_storefront",
+    "Google-Extended": "deny"
+  },
+  "private_or_transactional_paths": ["/api/", "/cart", "/checkout"],
+  "public_truth": {
+    "homepage": "https://jussbeautifulhair.com/",
+    "sitemap": "https://jussbeautifulhair.com/sitemap.xml"
+  },
+  "attribution": {
+    "requested": true,
+    "canonical_link_required_when_supported": true
+  },
+  "security_note": "Crawler policy is not access control. Checkout, payment and private business systems remain protected independently."
+}

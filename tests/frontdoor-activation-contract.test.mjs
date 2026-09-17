@@ -137,6 +137,12 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/catalog/);
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/cart/);
   assert.match(shopifyProductionPlaywright, /card-product-\$\{product\.id\}/);
+  assert.match(shopifyProductionPlaywright, /scrollIntoViewIfNeeded/);
+  assert.match(shopifyProductionPlaywright, /naturalWidth/);
+  assert.match(shopifyProductionPlaywright, /naturalHeight/);
+  assert.match(shopifyProductionPlaywright, /img-product/);
+  assert.match(shopifyProductionPlaywright, /sellable product card image/);
+  assert.match(shopifyProductionPlaywright, /sellable product detail image/);
   assert.match(shopifyProductionPlaywright, /button-place-order/);
   assert.match(shopifyProductionPlaywright, /merchandiseId: variant\.id, quantity: 1/);
   assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);

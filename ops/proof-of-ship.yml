@@ -1,0 +1,82 @@
+# Proof-of-Ship — verified build-in-public auto-post (VERIFY-ONLY, CLOUDFLARE-ONLY)
+#
+# On meaningful pushes to main (feat|fix|perf touching src/workers), confirm the
+# Cloudflare Worker is serving THIS commit's SHA, then POST a draft to a Zapier
+# Catch Hook. No deploy, no DB write, no secret change. Reads only.
+# Inert until wired: if ZAPIER_CATCH_HOOK_URL is unset it verifies and no-ops.
+
+name: proof-of-ship
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'workers/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proof-of-ship-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  proof-of-ship:
+    name: Proof of Ship
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Classify commit
+        id: gate
+        run: |
+          set -euo pipefail
+          MSG="$(git log -1 --pretty=%s)"
+          echo "title=$MSG" >> "$GITHUB_OUTPUT"
+          if printf '%s' "$MSG" | grep -Eq '^(feat|fix|perf)(\(.+\))?!?:'; then
+            echo "meaningful=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "meaningful=false" >> "$GITHUB_OUTPUT"
+            echo "Commit '$MSG' is not feat|fix|perf — no post."
+          fi
+
+      - name: Verify Cloudflare deploy receipt
+        id: cloudflare
+        if: steps.gate.outputs.meaningful == 'true'
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+        run: |
+          set -euo pipefail
+          LIVE=""
+          for i in 1 2 3 4 5 6; do
+            LIVE="$(curl -sf "${DEPLOY_URL}/version" | jq -r '.gitSha // .sha // empty')" && [ -n "$LIVE" ] && break
+            echo "waiting for deploy to propagate ($i)…"; sleep 10
+          done
+          if [ "$LIVE" != "${GITHUB_SHA}" ]; then
+            echo "::error::Live SHA ($LIVE) != commit (${GITHUB_SHA}) — deploy not confirmed, skipping post."
+            exit 1
+          fi
+          echo "Cloudflare serving verified SHA $LIVE"
+
+      - name: Notify Zapier (verified proof-of-ship)
+        if: steps.gate.outputs.meaningful == 'true'
+        env:
+          HOOK: ${{ secrets.ZAPIER_CATCH_HOOK_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOOK:-}" ]; then
+            echo "Receipts verified, but ZAPIER_CATCH_HOOK_URL is unset — no webhook yet. No-op."
+            exit 0
+          fi
+          jq -n \
+            --arg repo "${GITHUB_REPOSITORY}" \
+            --arg sha "${GITHUB_SHA}" \
+            --arg title "${{ steps.gate.outputs.title }}" \
+            --arg commit_url "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}" \
+            '{repo:$repo, commit_sha:$sha, commit_title:$title, commit_url:$commit_url, live_state:"verified", cloudflare_live_sha:$sha, publish_allowed:false, idempotency_key:($repo+":"+$sha)}' \
+          | curl -sf -X POST "$HOOK" -H "Content-Type: application/json" -d @-
+          echo "Posted verified proof-of-ship to Zapier."

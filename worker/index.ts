@@ -25,7 +25,9 @@ const HAIR_MATCH_VARIANT_GID = "gid://shopify/ProductVariant/50196622344435";
 const HAIR_MATCH_OFFER_CODE = "jbh-hair-match-v1";
 
 const SHOPIFY_STOREFRONT = Object.freeze({
+  shopGid: "gid://shopify/Shop/84576043251",
   shopDomain: "8qp1z2-az.myshopify.com",
+  primaryDomain: "jussbeautifulhair.com",
   apiVersion: "2026-07",
   vendor: "JBH",
   catalogPageSize: 25,
@@ -35,6 +37,9 @@ const SHOPIFY_STOREFRONT_ENDPOINT = `https://${SHOPIFY_STOREFRONT.shopDomain}/ap
 
 const SHOPIFY_CATALOG_QUERY = `
   query JbhVendorCatalog($first: Int!, $query: String!) {
+    shop {
+      id
+    }
     products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
       nodes {
         id
@@ -70,6 +75,9 @@ const SHOPIFY_CATALOG_QUERY = `
 
 const SHOPIFY_VARIANT_PREFLIGHT_QUERY = `
   query JbhCartVariantPreflight($ids: [ID!]!) {
+    shop {
+      id
+    }
     nodes(ids: $ids) {
       ... on ProductVariant {
         id
@@ -315,6 +323,13 @@ async function shopifyStorefrontRequest<T>(
   return payload.data;
 }
 
+function assertExpectedShopifyIdentity(shopId: string): void {
+  if (shopId !== SHOPIFY_STOREFRONT.shopGid) {
+    console.error("[SHOPIFY] Store identity mismatch; refusing request");
+    throw new Error("SHOPIFY_STORE_IDENTITY_MISMATCH");
+  }
+}
+
 function inferShopifyCategory(productType: string, title: string): string {
   const normalized = `${productType} ${title}`.toLowerCase();
   if (normalized.includes("wig")) return "Wigs";
@@ -326,6 +341,7 @@ function inferShopifyCategory(productType: string, title: string): string {
 }
 
 type ShopifyCatalogData = {
+  shop: { id: string };
   products: {
     nodes: Array<{
       id: string;
@@ -365,6 +381,8 @@ async function handleShopifyCatalog(request: Request): Promise<Response> {
       first: SHOPIFY_STOREFRONT.catalogPageSize,
       query: `vendor:${SHOPIFY_STOREFRONT.vendor}`,
     });
+
+    assertExpectedShopifyIdentity(data.shop.id);
 
     if (data.products.pageInfo.hasNextPage) {
       console.error("[SHOPIFY] Catalog page limit reached; refusing partial catalog response");
@@ -410,6 +428,7 @@ async function handleShopifyCatalog(request: Request): Promise<Response> {
 }
 
 type ShopifyVariantPreflightData = {
+  shop: { id: string };
   nodes: Array<
     | {
         id: string;
@@ -521,6 +540,8 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
       SHOPIFY_VARIANT_PREFLIGHT_QUERY,
       { ids: requestedIds },
     );
+    assertExpectedShopifyIdentity(preflight.shop.id);
+
     const approvedIds = new Set(
       preflight.nodes
         .filter(

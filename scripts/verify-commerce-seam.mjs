@@ -36,7 +36,9 @@ requireTruth(worker.includes(`shopDomain: "${contract.shopify.shopDomain}"`), "p
 requireTruth(worker.includes(`primaryDomain: "${contract.shopify.primaryDomain}"`), "public Worker primary domain does not match the seam contract");
 requireTruth(worker.includes(`apiVersion: "${contract.shopify.apiVersion}"`), "public Worker Storefront API version does not match the seam contract");
 requireTruth(worker.includes(`vendor: "${contract.shopify.publicVendor}"`), "public Worker vendor boundary does not match the seam contract");
-requireTruth(worker.includes("data.shop.id !== SHOPIFY_STOREFRONT.shopGid"), "public Worker does not fail closed on Shopify shop id mismatch");
+requireTruth(worker.includes("shopId !== SHOPIFY_STOREFRONT.shopGid"), "public Worker identity helper does not fail closed on Shopify shop id mismatch");
+requireTruth(worker.includes("assertExpectedShopifyIdentity(data.shop.id)"), "public catalog path does not invoke the Shopify identity guard");
+requireTruth(worker.includes("assertExpectedShopifyIdentity(preflight.shop.id)"), "public cart path does not invoke the Shopify identity guard");
 requireTruth(worker.includes(`"${contract.shopify.catalogPath}"`), "public catalog route does not match the seam contract");
 requireTruth(worker.includes(`"${contract.shopify.cartPath}"`), "public cart route does not match the seam contract");
 requireTruth(!/SHOPIFY_ADMIN|admin[_-]?token/i.test(worker), "public Worker must not gain Shopify Admin authority");

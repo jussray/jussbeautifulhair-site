@@ -30,7 +30,12 @@
   "continuity": {
     "bidirectionalFingerprintsAndCookies": true,
     "incomingEvidenceMayInvalidateStaleState": true,
-    "outgoingApprovedActionsEmitUpdatedMarkersAndReceipts": true
+    "outgoingApprovedActionsEmitUpdatedMarkersAndReceipts": true,
+    "providerAndConnectorSessionStateAreSeparate": true,
+    "providerStateHasIndependentFingerprintAndProofCookie": true,
+    "connectorSessionHasIndependentFingerprintAndProofCookie": true,
+    "connectorFailureDoesNotInvalidateProviderStateWithoutProviderEvidence": true,
+    "staleConnectorProofBlocksConnectorActionsOnly": true
   },
   "loop": ["confess-reality","classify-evidence","identify-bottleneck","identify-necessary-fix","check-existing-authority","execute-now-or-proof-gate-or-founder-gate","verify-outcome","update-continuity","next-gate"]
 }

@@ -1,5 +1,8 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /cart
+Disallow: /checkout
+Disallow: /success
 
 Sitemap: https://jussbeautifulhair.com/sitemap.xml

@@ -145,6 +145,9 @@ try {
     const response = await page.goto(`${baseURL}/#/`, { waitUntil: "domcontentloaded", timeout: 60_000 });
     assertStorefrontResponse(response, viewport.label);
     await page.locator("#root").waitFor({ state: "visible", timeout: 30_000 });
+    const homeUrl = new URL(page.url());
+    assert(homeUrl.pathname === "/", `${viewport.label}: legacy root hash did not migrate to the canonical root path.`);
+    assert(homeUrl.hash === "", `${viewport.label}: legacy root hash was not cleared.`);
 
     const title = await page.title();
     const bodyText = await page.locator("body").innerText();
@@ -161,6 +164,7 @@ try {
       viewport: `${viewport.width}x${viewport.height}`,
       status: response.status(),
       title,
+      canonicalPath: homeUrl.pathname,
       workerHeadersVerified: true,
       shopifyPasswordWallAbsent: true,
     });
@@ -181,13 +185,15 @@ try {
     } else {
       assert(
         policyDocumentVerified,
-        `${route}: same-document hash navigation occurred before a branded storefront response was verified.`,
+        `${route}: same-document legacy navigation occurred before a branded storefront response was verified.`,
       );
     }
+    const policyUrl = new URL(policyPage.url());
     assert(
-      new URL(policyPage.url()).hash === `#/${route}`,
-      `${route}: browser did not reach the expected policy hash route.`,
+      policyUrl.pathname === `/${route}`,
+      `${route}: legacy hash route did not migrate to the canonical browser path.`,
     );
+    assert(policyUrl.hash === "", `${route}: legacy policy hash was not cleared.`);
     await policyPage.locator("#root").waitFor({ state: "visible", timeout: 30_000 });
     const bodyText = await policyPage.locator("body").innerText();
     assertNotShopifyPassword(bodyText, route);
@@ -210,6 +216,7 @@ try {
         origin: expectedOrigin,
         assertions: [
           "root responds successfully on desktop and mobile",
+          "legacy hash entry URLs migrate to canonical browser paths before customer interaction",
           "Cloudflare Worker security headers prove the Worker served the root response",
           "version route serves application/json for the exact approved main SHA",
           "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
@@ -217,7 +224,7 @@ try {
           "Meta Business Agent keeps shipping-address and payment credential collection out of chat",
           "Shopify password-wall markers are absent",
           "Juss Beautiful Hair title and storefront text render",
-          "shipping, returns, privacy, and terms routes render through the branded origin",
+          "shipping, returns, privacy, and terms canonical browser routes render through the branded origin",
           "stale Vercel Speed Insights runtime requests are absent",
           "desktop and mobile browser consoles remain clean",
         ],

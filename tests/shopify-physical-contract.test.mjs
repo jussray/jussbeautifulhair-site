@@ -27,7 +27,7 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
     "SHOPIFY_VARIANT_PREFLIGHT_QUERY",
     "SHOPIFY_CART_CREATE_MUTATION",
     "shop {\n      id\n    }",
-    "data.shop.id !== SHOPIFY_STOREFRONT.shopGid",
+    "shopId !== SHOPIFY_STOREFRONT.shopGid",
     "assertExpectedShopifyIdentity(data.shop.id)",
     "assertExpectedShopifyIdentity(preflight.shop.id)",
     "node.product.vendor === SHOPIFY_STOREFRONT.vendor",

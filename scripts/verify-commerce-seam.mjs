@@ -17,7 +17,9 @@ requireTruth(contract.schemaVersion === 1, "schemaVersion must remain 1");
 requireTruth(contract.contractId === "jbh-shopify-private-orders@v1", "unexpected contract id");
 requireTruth(contract.publicRepository === "jussray/jussbeautifulhair-site", "public repository authority drifted");
 requireTruth(contract.privateRepository === "jussray/jbh-private", "private repository authority drifted");
+requireTruth(contract.shopify.shopGid === "gid://shopify/Shop/84576043251", "Shopify immutable shop id drifted");
 requireTruth(contract.shopify.shopDomain === "8qp1z2-az.myshopify.com", "Shopify shop domain drifted");
+requireTruth(contract.shopify.primaryDomain === "jussbeautifulhair.com", "Shopify primary domain drifted");
 requireTruth(contract.shopify.apiVersion === "2026-07", "Storefront API version drifted");
 requireTruth(contract.shopify.publicVendor === "JBH", "public Shopify vendor boundary drifted");
 requireTruth(contract.shopify.catalogPath === "/api/shopify/catalog", "catalog route drifted");
@@ -29,9 +31,14 @@ requireTruth(contract.privateOrderControl.paidWebhookPath === "/webhooks/shopify
 requireTruth(contract.productionTruth.authority === "external-provider-evidence", "production truth must stay provider-backed");
 requireTruth(contract.productionTruth.repoMergeAloneIsActivationProof === false, "a repository merge must never count as activation proof");
 
+requireTruth(worker.includes(`shopGid: "${contract.shopify.shopGid}"`), "public Worker immutable shop id does not match the seam contract");
 requireTruth(worker.includes(`shopDomain: "${contract.shopify.shopDomain}"`), "public Worker shop domain does not match the seam contract");
+requireTruth(worker.includes(`primaryDomain: "${contract.shopify.primaryDomain}"`), "public Worker primary domain does not match the seam contract");
 requireTruth(worker.includes(`apiVersion: "${contract.shopify.apiVersion}"`), "public Worker Storefront API version does not match the seam contract");
 requireTruth(worker.includes(`vendor: "${contract.shopify.publicVendor}"`), "public Worker vendor boundary does not match the seam contract");
+requireTruth(worker.includes("shopId !== SHOPIFY_STOREFRONT.shopGid"), "public Worker identity helper does not fail closed on Shopify shop id mismatch");
+requireTruth(worker.includes("assertExpectedShopifyIdentity(data.shop.id)"), "public catalog path does not invoke the Shopify identity guard");
+requireTruth(worker.includes("assertExpectedShopifyIdentity(preflight.shop.id)"), "public cart path does not invoke the Shopify identity guard");
 requireTruth(worker.includes(`"${contract.shopify.catalogPath}"`), "public catalog route does not match the seam contract");
 requireTruth(worker.includes(`"${contract.shopify.cartPath}"`), "public cart route does not match the seam contract");
 requireTruth(!/SHOPIFY_ADMIN|admin[_-]?token/i.test(worker), "public Worker must not gain Shopify Admin authority");

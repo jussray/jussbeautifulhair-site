@@ -29,6 +29,8 @@ on:
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
       - ".github/workflows/frontdoor-activate.yml"
+      - "package.json"
+      - "package-lock.json"
   push:
     branches: [main]
   workflow_dispatch:
@@ -90,6 +92,13 @@ jobs:
 
       - name: Verify live Shopify catalog and no-payment cart
         run: node scripts/shopify-physical-live-smoke.mjs
+
+      - name: Exercise candidate production witness against exact live base without payment
+        if: github.event_name == 'pull_request'
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.base.sha }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: node scripts/shopify-production-playwright.mjs
 
       - name: Wait for exact Cloudflare Worker build
         if: github.event_name == 'push'
@@ -195,3 +204,65 @@ jobs:
             artifacts/production-proof/
           if-no-files-found: error
           retention-days: 30
+
+  dependency-cleanup-packet:
+    name: Generate focused dependency cleanup packet
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact requested head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Remove unused provider and database tooling from package metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm uninstall --package-lock-only --ignore-scripts --no-audit --save \
+            @neondatabase/serverless drizzle-orm drizzle-zod @vercel/speed-insights
+          npm uninstall --package-lock-only --ignore-scripts --no-audit --save-dev \
+            @vercel/node drizzle-kit
+          node --input-type=module <<'NODE'
+          import {readFile, writeFile} from 'node:fs/promises';
+          const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+          delete pkg.scripts?.['db:push'];
+          await writeFile('package.json', `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
+          NODE
+          npm audit fix --package-lock-only --ignore-scripts || true
+          npm install --package-lock-only --ignore-scripts --no-audit --save-dev vite@^7.3.6
+
+      - name: Prove removed dependencies stay absent and no moderate-or-higher advisories remain
+        shell: bash
+        run: |
+          set -euo pipefail
+          for needle in '@neondatabase/serverless' 'drizzle-orm' 'drizzle-zod' '@vercel/speed-insights' '@vercel/node' 'drizzle-kit' 'node_modules/tar"'; do
+            if grep -Fq "$needle" package.json package-lock.json; then
+              printf 'Unexpected removed dependency remains: %s\n' "$needle" >&2
+              exit 1
+            fi
+          done
+          npm audit --package-lock-only --audit-level=moderate
+
+      - name: Record dependency audit after cleanup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/dependency-cleanup
+          cp package.json package-lock.json artifacts/dependency-cleanup/
+          npm audit --package-lock-only --json > artifacts/dependency-cleanup/audit-all.json || true
+          npm audit --package-lock-only --omit=dev --json > artifacts/dependency-cleanup/audit-production.json || true
+
+      - name: Upload dependency cleanup packet
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-cleanup-${{ env.EXPECTED_HEAD_SHA }}
+          path: artifacts/dependency-cleanup/
+          if-no-files-found: error
+          retention-days: 7

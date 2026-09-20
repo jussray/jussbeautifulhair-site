@@ -15,7 +15,9 @@ const [worker, catalogClient, cart, checkout, shop, product, home] = await Promi
 
 test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
   for (const required of [
+    'shopGid: "gid://shopify/Shop/84576043251"',
     'shopDomain: "8qp1z2-az.myshopify.com"',
+    'primaryDomain: "jussbeautifulhair.com"',
     'apiVersion: "2026-07"',
     'vendor: "JBH"',
     'checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"]',
@@ -24,6 +26,10 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
     "SHOPIFY_CATALOG_QUERY",
     "SHOPIFY_VARIANT_PREFLIGHT_QUERY",
     "SHOPIFY_CART_CREATE_MUTATION",
+    "shop {\n      id\n    }",
+    "shopId !== SHOPIFY_STOREFRONT.shopGid",
+    "assertExpectedShopifyIdentity(data.shop.id)",
+    "assertExpectedShopifyIdentity(preflight.shop.id)",
     "node.product.vendor === SHOPIFY_STOREFRONT.vendor",
     "node.availableForSale",
     "node.product.availableForSale",
@@ -35,6 +41,7 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
   assert.doesNotMatch(worker, /SHOPIFY_ADMIN|admin[_-]?token/i);
   assert.match(worker, /merchandiseId:[\s\S]*ProductVariant/);
   assert.match(worker, /SHOPIFY_STOREFRONT\.checkoutHosts\.some/);
+  assert.match(worker, /throw new Error\("SHOPIFY_STORE_IDENTITY_MISMATCH"\)/);
   assert.doesNotMatch(worker.slice(worker.indexOf("const shopifyCartSchema"), worker.indexOf("const checkoutSessionIdSchema")), /\bprice\b|\bcurrency\b|\btotal\b/);
 });
 

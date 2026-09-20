@@ -8,6 +8,16 @@ A trusted repository operator may repair source, tests, CI, storefront routes/co
 
 Every consequential repair must bind to the canonical repository/base/head, verified JBH store fingerprint, Cloudflare project/Worker/runtime identity, failure fingerprint, evidence-only proof cookies, before state, rollback, and post-action readback. Identity movement expires inherited proof.
 
+## Repair OS inheritance
+
+JBH uses the portfolio fused repair loop:
+
+`LINDY → RED TEAM I → ATTACK TEN → OODA OBSERVE → OODA ORIENT → OODA DECIDE → L99 AUTHORITY → ACT → RED TEAM II → RECURSIVE HARDENING → VERIFY → LOOP/STOP`.
+
+Lindy prefers existing storefront/runtime primitives; Red Team I attacks whether the change should exist; ATTACK TEN pressures store identity, stale release proof, cart/checkout assumptions, hidden commercial mutation, rollback weakness, user-outcome mismatch, temporal races, and verification gaps; OODA reacquires repository/store/runtime state; L99 verifies subject, authority, evidence, rollback, continuity, and business consequence before Act; Red Team II attacks the implementation; recursive hardening pressures authority inversion, evidence falsification, human outcome, and temporal races; Verify requires exact source/runtime identity plus desktop/mobile Playwright for affected customer paths.
+
+Attack/Lindy/Red Team/OODA/L99 outputs may revise or block a repair but never create pricing, inventory, checkout/payment, order/customer, fulfillment, vendor, deployment, publication, or spending authority.
+
 ## Cloudflare storefront repairs
 
 A trusted provider executor may restore the already-approved public storefront topology or deploy an already-authorized exact release when:

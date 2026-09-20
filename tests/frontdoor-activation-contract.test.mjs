@@ -148,13 +148,31 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
   assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
 });
 
+test("pull requests execute the candidate production witness against the exact live base", () => {
+  const liveSmokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
+  const candidateWitnessIndex = mainShopifyWorkflow.indexOf(
+    "Exercise candidate production witness against exact live base without payment",
+  );
+  const pushProviderIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
+
+  assert.ok(liveSmokeIndex >= 0, "Live Shopify smoke is missing from the candidate gate.");
+  assert.ok(candidateWitnessIndex > liveSmokeIndex, "Candidate production witness must follow the live Shopify smoke.");
+  assert.ok(pushProviderIndex > candidateWitnessIndex, "Pull-request witness must remain separate from push-only provider proof.");
+  assert.match(mainShopifyWorkflow, /if: github\.event_name == 'pull_request'/);
+  assert.ok(
+    mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ github.event.pull_request.base.sha }}"),
+    "Pull-request production witness must bind to the exact live base SHA.",
+  );
+  assert.match(mainShopifyWorkflow, /run: node scripts\/shopify-production-playwright\.mjs/);
+});
+
 test("main commerce gate waits for the exact Worker build and emits verified only after live Playwright", () => {
   assert.match(mainShopifyWorkflow, /^\s*push:\s*\n\s+branches: \[main\]/m);
   assert.match(mainShopifyWorkflow, /checks: read/);
   assert.match(mainShopifyWorkflow, /Workers Builds: jussbeautifulhair-site/);
   const providerIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
-  const frontdoorIndex = mainShopifyWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs");
-  const productionIndex = mainShopifyWorkflow.indexOf("node scripts/shopify-production-playwright.mjs");
+  const frontdoorIndex = mainShopifyWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs", providerIndex);
+  const productionIndex = mainShopifyWorkflow.indexOf("node scripts/shopify-production-playwright.mjs", frontdoorIndex);
   const receiptIndex = mainShopifyWorkflow.indexOf("Write canonical production receipt");
   assert.ok(providerIndex >= 0, "Exact Worker-build wait is missing.");
   assert.ok(frontdoorIndex > providerIndex, "Live front-door Playwright must follow exact provider build proof.");

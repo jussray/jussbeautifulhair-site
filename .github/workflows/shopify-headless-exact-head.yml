@@ -91,6 +91,13 @@ jobs:
       - name: Verify live Shopify catalog and no-payment cart
         run: node scripts/shopify-physical-live-smoke.mjs
 
+      - name: Exercise candidate production witness against exact live base without payment
+        if: github.event_name == 'pull_request'
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.base.sha }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: node scripts/shopify-production-playwright.mjs
+
       - name: Wait for exact Cloudflare Worker build
         if: github.event_name == 'push'
         shell: bash

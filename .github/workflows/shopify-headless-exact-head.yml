@@ -235,9 +235,10 @@ jobs:
           delete pkg.scripts?.['db:push'];
           await writeFile('package.json', `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
           NODE
-          npm audit fix --package-lock-only --ignore-scripts
+          npm audit fix --package-lock-only --ignore-scripts || true
+          npm install --package-lock-only --ignore-scripts --no-audit --save-dev vite@^7.3.6
 
-      - name: Prove removed dependencies stay absent
+      - name: Prove removed dependencies stay absent and audit is clean
         shell: bash
         run: |
           set -euo pipefail
@@ -247,6 +248,7 @@ jobs:
               exit 1
             fi
           done
+          npm audit --package-lock-only --audit-level=low
 
       - name: Record dependency audit after cleanup
         shell: bash
@@ -254,8 +256,8 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/dependency-cleanup
           cp package.json package-lock.json artifacts/dependency-cleanup/
-          npm audit --package-lock-only --json > artifacts/dependency-cleanup/audit-all.json || true
-          npm audit --package-lock-only --omit=dev --json > artifacts/dependency-cleanup/audit-production.json || true
+          npm audit --package-lock-only --json > artifacts/dependency-cleanup/audit-all.json
+          npm audit --package-lock-only --omit=dev --json > artifacts/dependency-cleanup/audit-production.json
 
       - name: Upload dependency cleanup packet
         uses: actions/upload-artifact@v4

@@ -235,6 +235,7 @@ jobs:
           delete pkg.scripts?.['db:push'];
           await writeFile('package.json', `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
           NODE
+          npm audit fix --package-lock-only --ignore-scripts
 
       - name: Prove removed dependencies stay absent
         shell: bash

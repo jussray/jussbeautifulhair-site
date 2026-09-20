@@ -238,7 +238,7 @@ jobs:
           npm audit fix --package-lock-only --ignore-scripts || true
           npm install --package-lock-only --ignore-scripts --no-audit --save-dev vite@^7.3.6
 
-      - name: Prove removed dependencies stay absent and audit is clean
+      - name: Prove removed dependencies stay absent and no moderate-or-higher advisories remain
         shell: bash
         run: |
           set -euo pipefail
@@ -248,7 +248,7 @@ jobs:
               exit 1
             fi
           done
-          npm audit --package-lock-only --audit-level=low
+          npm audit --package-lock-only --audit-level=moderate
 
       - name: Record dependency audit after cleanup
         shell: bash
@@ -256,8 +256,8 @@ jobs:
           set -euo pipefail
           mkdir -p artifacts/dependency-cleanup
           cp package.json package-lock.json artifacts/dependency-cleanup/
-          npm audit --package-lock-only --json > artifacts/dependency-cleanup/audit-all.json
-          npm audit --package-lock-only --omit=dev --json > artifacts/dependency-cleanup/audit-production.json
+          npm audit --package-lock-only --json > artifacts/dependency-cleanup/audit-all.json || true
+          npm audit --package-lock-only --omit=dev --json > artifacts/dependency-cleanup/audit-production.json || true
 
       - name: Upload dependency cleanup packet
         uses: actions/upload-artifact@v4

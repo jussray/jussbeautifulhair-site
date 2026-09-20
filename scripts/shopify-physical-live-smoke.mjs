@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import process from "node:process";
 
+const expectedShopGid = "gid://shopify/Shop/84576043251";
 const shopDomain = "8qp1z2-az.myshopify.com";
 const checkoutHosts = new Set(["jussbeautifulhair.com", shopDomain]);
 const apiVersion = "2026-07";
@@ -11,6 +12,9 @@ const outputDir = "artifacts/shopify-physical-live";
 
 const catalogQuery = `
   query JbhLiveCatalogSmoke($first: Int!, $query: String!) {
+    shop {
+      id
+    }
     products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
       nodes {
         id
@@ -73,6 +77,12 @@ const catalog = await storefrontRequest(catalogQuery, {
   first: 10,
   query: "vendor:JBH",
 });
+
+assert.equal(
+  catalog.shop?.id,
+  expectedShopGid,
+  "Live Shopify Storefront endpoint no longer matches the approved immutable JBH shop identity",
+);
 
 const supplierProducts = catalog.products.nodes.filter((product) => product.vendor === "JBH");
 assert.ok(supplierProducts.length > 0, "No JBH supplier-backed products were visible through the Storefront API");
@@ -138,6 +148,7 @@ await writeFile(
     {
       expectedHead,
       verifiedAt: new Date().toISOString(),
+      shopGid: catalog.shop.id,
       shopDomain,
       apiVersion,
       supplierProductCount: supplierProducts.length,
@@ -146,6 +157,7 @@ await writeFile(
       checkoutHost: checkout.hostname,
       checkoutPathPrefix: checkout.pathname.split("/").slice(0, 3).join("/"),
       assertions: [
+        "live Storefront shop.id matched the approved immutable JBH shop identity",
         "bounded tokenless Storefront catalog returned JBH vendor products",
         "at least one supplier-backed variant was available for sale",
         "Shopify created a one-line no-payment cart",

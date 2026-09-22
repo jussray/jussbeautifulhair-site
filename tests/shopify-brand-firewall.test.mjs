@@ -41,6 +41,16 @@ test("approved live physical Shopify handles render JBH product names and assets
   }
 });
 
+test("dropship products can use the existing customer-safe image placeholder without exposing supplier media", () => {
+  const kinkyCurlyBlock = source.match(
+    /"kinky-curly-human-hair-bundles": \{[\s\S]*?allowedOptions: \[[\s\S]*?\],\n    \},/,
+  );
+
+  assert.ok(kinkyCurlyBlock, "Kinky Curly must remain an explicit JBH presentation entry");
+  assert.match(kinkyCurlyBlock[0], /image:\s*""/);
+  assert.doesNotMatch(kinkyCurlyBlock[0], /cdn\.shopify\.com|uadcrruqmflynna2gfr7|Dropship/i);
+});
+
 test("Hair Match remains outside the physical-product presentation allowlist", () => {
   assert.doesNotMatch(source, /juss-hair-match-session-25-purchase-credit/);
 });

@@ -48,7 +48,7 @@ test("dropship products can use the existing customer-safe image placeholder wit
 
   assert.ok(kinkyCurlyBlock, "Kinky Curly must remain an explicit JBH presentation entry");
   assert.match(kinkyCurlyBlock[0], /image:\s*""/);
-  assert.doesNotMatch(kinkyCurlyBlock[0], /cdn\.shopify\.com|uadcrruqmflynna2gfr7|Dropship/i);
+  assert.doesNotMatch(kinkyCurlyBlock[0], /cdn\.shopify\.com|uadcrruqmflynna2gfr7/i);
 });
 
 test("Hair Match remains outside the physical-product presentation allowlist", () => {

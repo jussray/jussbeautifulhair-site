@@ -81,6 +81,18 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       image: "/products/bundle-kinkystraight.jpg",
       allowedOptions: ['14"', '18"', '22"', '26"'],
     },
+    "kinky-curly-human-hair-bundles": {
+      name: "Kinky Curly Human Hair Bundles",
+      category: "Bundles",
+      tagline: "Defined kinky-curly texture with full volume.",
+      description:
+        "Kinky-curly human hair bundles. Choose your length using live Shopify availability.",
+      // Deliberately blank until JBH has an approved branded Kinky Curly asset.
+      // ProductCard/Product render the existing customer-safe placeholder instead
+      // of leaking supplier photography into the public storefront.
+      image: "",
+      allowedOptions: ['10"', '12"', '14"', '16"', '18"', '20"', '22"', '24"', '26"', '28"', '30"', '32"'],
+    },
     "lawless-bone-straight-bundle-raw-vietnamese": {
       name: "Lawless Bone Straight Bundle — Raw Vietnamese",
       category: "Bundles",

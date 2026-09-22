@@ -44,12 +44,15 @@ test("static shell keeps a branded root fallback while app rewrites discovery me
   assert.match(app, /ogUrl\.content = canonicalHref/);
 });
 
-test("browser history is authoritative while legacy hash routes migrate forward", () => {
+test("browser history is authoritative while legacy entry routes migrate forward", () => {
   assert.doesNotMatch(app, /useHashLocation/);
   assert.match(app, /useLocation/);
   assert.match(app, /NON_INDEXABLE_ROUTES = new Set\(\["\/cart", "\/checkout", "\/success"\]\)/);
   assert.match(main, /window\.location\.hash\.startsWith\("#\/"\)/);
   assert.match(main, /window\.history\.replaceState\(null, "", legacyHashRoute\)/);
+  assert.match(main, /legacyShopifyProductRoute/);
+  assert.match(main, /\^\\\/products\\\/\(\[\^\/\]\+\)\\\/?\$/);
+  assert.match(main, /`\/product\/\$\{handle\}\$\{window\.location\.search\}\$\{window\.location\.hash\}`/);
   assert.match(wrangler, /not_found_handling\s*=\s*"single-page-application"/);
 });
 

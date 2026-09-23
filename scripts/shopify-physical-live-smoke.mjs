@@ -10,22 +10,35 @@ const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-physical-live";
 
 const catalogQuery = `
-  query JbhLiveCatalogSmoke($first: Int!, $query: String!) {
+  query JbhVendorCatalog($first: Int!, $query: String!) {
     products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
       nodes {
         id
         handle
         title
+        description
+        productType
         vendor
         availableForSale
-        variants(first: 10) {
+        featuredImage {
+          url
+          altText
+        }
+        variants(first: 20) {
           nodes {
             id
             title
             availableForSale
-            price { amount currencyCode }
+            price {
+              amount
+              currencyCode
+            }
           }
         }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
   }
@@ -52,7 +65,7 @@ async function storefrontRequest(query, variables) {
     body: JSON.stringify({ query, variables }),
   });
   const payload = await response.json().catch(() => ({}));
-  const errorSummary = JSON.stringify(payload.errors ?? payload).slice(0, 500);
+  const errorSummary = JSON.stringify(payload.errors ?? payload).slice(0, 1000);
   assert.equal(
     response.ok,
     true,
@@ -70,9 +83,15 @@ async function storefrontRequest(query, variables) {
 await mkdir(outputDir, { recursive: true });
 
 const catalog = await storefrontRequest(catalogQuery, {
-  first: 10,
+  first: 25,
   query: "vendor:JBH",
 });
+
+assert.equal(
+  catalog.products.pageInfo.hasNextPage,
+  false,
+  "Production catalog page size is no longer sufficient for the JBH vendor boundary",
+);
 
 const supplierProducts = catalog.products.nodes.filter((product) => product.vendor === "JBH");
 assert.ok(supplierProducts.length > 0, "No JBH supplier-backed products were visible through the Storefront API");
@@ -146,7 +165,8 @@ await writeFile(
       checkoutHost: checkout.hostname,
       checkoutPathPrefix: checkout.pathname.split("/").slice(0, 3).join("/"),
       assertions: [
-        "bounded tokenless Storefront catalog returned JBH vendor products",
+        "exact production tokenless Storefront catalog query returned JBH vendor products",
+        "production catalog page size returned the complete JBH vendor boundary",
         "at least one supplier-backed variant was available for sale",
         "Shopify created a one-line no-payment cart",
         "checkout URL was HTTPS and stayed on an exact approved JBH/Shopify host",

@@ -45,6 +45,44 @@ export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
 // intentionally excluded instead of leaking supplier merchandising into the store.
 export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation>> =
   Object.freeze({
+    "body-wave-human-hair-bundle-deal": {
+      name: "Body Wave Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles with soft body-wave movement.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set with soft body-wave movement. Choose the length set that matches your finished look.",
+      // Keep the customer-safe placeholder until a reviewed image is proven to
+      // depict this three-bundle deal without off-brand or misleading packaging.
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
+    "straight-human-hair-bundle-deal": {
+      name: "Straight Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles for a sleek straight install.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set for a sleek straight install. Choose the length set that matches your finished look.",
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
+    "deep-wave-human-hair-bundle-deal": {
+      name: "Deep Wave Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles with defined deep-wave texture.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set with defined deep-wave texture. Choose the length set that matches your finished look.",
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
+    "loose-wave-human-hair-bundle-deal": {
+      name: "Loose Wave Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles with soft loose-wave movement.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set with soft loose-wave movement. Choose the length set that matches your finished look.",
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
     "body-wave-human-hair-bundles": {
       name: "Lawless Body Wave Bundles",
       category: "Bundles",

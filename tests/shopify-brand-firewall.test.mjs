@@ -38,6 +38,39 @@ test("approved live physical Shopify handles render JBH product names and assets
   }
 });
 
+test("campaign bundle deals remain approved with exact Shopify option sets and safe imagery", () => {
+  const handles = [
+    "body-wave-human-hair-bundle-deal",
+    "straight-human-hair-bundle-deal",
+    "deep-wave-human-hair-bundle-deal",
+    "loose-wave-human-hair-bundle-deal",
+  ];
+  const exactOptions = [
+    '10"/12"/14"',
+    '12"/14"/16"',
+    '14"/16"/18"',
+    '16"/18"/20"',
+    '18"/20"/22"',
+    '20"/22"/24"',
+    '22"/24"/26"',
+    '24"/26"/28"',
+    '26"/28"/30"',
+    '28"/30"/32"',
+  ];
+
+  for (const handle of handles) {
+    const block = source.match(
+      new RegExp(`"${handle}": \\{[\\s\\S]*?allowedOptions: \\[[^\\]]*\\],\\n    \\},`),
+    );
+    assert.ok(block, `${handle} must remain an explicit JBH presentation entry`);
+    assert.match(block[0], /image:\s*""/);
+    assert.doesNotMatch(block[0], /cdn\.shopify\.com|\/products\//);
+    for (const option of exactOptions) {
+      assert.ok(block[0].includes(`'${option}'`), `${handle} must retain ${option}`);
+    }
+  }
+});
+
 test("dropship products can use the existing customer-safe image placeholder without exposing supplier media", () => {
   const kinkyCurlyBlock = source.match(
     /"kinky-curly-human-hair-bundles": \{[\s\S]*?allowedOptions: \[[\s\S]*?\],\n    \},/,

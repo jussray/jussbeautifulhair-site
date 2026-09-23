@@ -370,7 +370,7 @@ async function fetchCompleteShopifyCatalog(request: Request): Promise<ShopifyCat
   let cursor: string | null = null;
 
   for (let page = 0; page < SHOPIFY_STOREFRONT.catalogMaxPages; page += 1) {
-    const data = await shopifyStorefrontRequest<ShopifyCatalogData>(
+    const data: ShopifyCatalogData = await shopifyStorefrontRequest<ShopifyCatalogData>(
       request,
       SHOPIFY_CATALOG_QUERY,
       {
@@ -383,7 +383,7 @@ async function fetchCompleteShopifyCatalog(request: Request): Promise<ShopifyCat
     nodes.push(...data.products.nodes);
     if (!data.products.pageInfo.hasNextPage) return nodes;
 
-    const nextCursor = data.products.pageInfo.endCursor;
+    const nextCursor: string | null = data.products.pageInfo.endCursor;
     if (!nextCursor || nextCursor === cursor) {
       console.error("[SHOPIFY] Catalog pagination cursor did not advance");
       throw new Error("SHOPIFY_CATALOG_CURSOR_INVALID");

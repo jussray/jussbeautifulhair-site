@@ -293,16 +293,26 @@ type ShopifyGraphqlPayload<T> = {
   errors?: Array<{ message?: string }>;
 };
 
+function getShopifyBuyerIp(request: Request): string | undefined {
+  const buyerIp = request.headers.get("CF-Connecting-IP")?.trim();
+  return buyerIp && buyerIp.length <= 64 ? buyerIp : undefined;
+}
+
 async function shopifyStorefrontRequest<T>(
+  request: Request,
   query: string,
   variables: Record<string, unknown>,
 ): Promise<T> {
+  const headers = new Headers({
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  });
+  const buyerIp = getShopifyBuyerIp(request);
+  if (buyerIp) headers.set("Shopify-Storefront-Buyer-IP", buyerIp);
+
   const response = await fetch(SHOPIFY_STOREFRONT_ENDPOINT, {
     method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify({ query, variables }),
   });
 
@@ -361,10 +371,14 @@ async function handleShopifyCatalog(request: Request): Promise<Response> {
   }
 
   try {
-    const data = await shopifyStorefrontRequest<ShopifyCatalogData>(SHOPIFY_CATALOG_QUERY, {
-      first: SHOPIFY_STOREFRONT.catalogPageSize,
-      query: `vendor:${SHOPIFY_STOREFRONT.vendor}`,
-    });
+    const data = await shopifyStorefrontRequest<ShopifyCatalogData>(
+      request,
+      SHOPIFY_CATALOG_QUERY,
+      {
+        first: SHOPIFY_STOREFRONT.catalogPageSize,
+        query: `vendor:${SHOPIFY_STOREFRONT.vendor}`,
+      },
+    );
 
     if (data.products.pageInfo.hasNextPage) {
       console.error("[SHOPIFY] Catalog page limit reached; refusing partial catalog response");
@@ -518,6 +532,7 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
   try {
     const requestedIds = [...new Set(parsed.data.lines.map((line) => line.merchandiseId))];
     const preflight = await shopifyStorefrontRequest<ShopifyVariantPreflightData>(
+      request,
       SHOPIFY_VARIANT_PREFLIGHT_QUERY,
       { ids: requestedIds },
     );
@@ -541,6 +556,7 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
 
     const hairMatchAttributes = parsed.data.hairMatch?.attributes ?? [];
     const created = await shopifyStorefrontRequest<ShopifyCartCreateData>(
+      request,
       SHOPIFY_CART_CREATE_MUTATION,
       {
         input: {
@@ -737,7 +753,7 @@ async function handleCheckoutSessionVerification(
   }
 
   if (origin && !allowedOrigins.includes(origin)) {
-    return json({ error: "Origin not allowed" }, 403);
+    return json({ error: "Origin not allowed" }, 403, responseOrigin);
   }
 
   if (request.method !== "GET") {

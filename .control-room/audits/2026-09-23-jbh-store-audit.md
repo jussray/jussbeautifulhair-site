@@ -75,3 +75,95 @@ Audit the current JBH store with emphasis on Dropship Beauty product imagery, br
 
 ## Next Gate
 Repair the Dropship Beauty image set at the actual public presentation authority, then run production Playwright on `jussbeautifulhair.com` before calling the store image issue fixed.
+---
+
+## Continuation — Dropship Beauty image repair (agent session 013zvvpW2dxmJ5UxNJyLdK3r)
+
+### SHAs
+- Starting: `main` @ `87bfba1556a35bf5e6114ec2bf2cf9cbc9e6a543` (this receipt). Repair branch
+  `claude/dropship-beauty-images-qqlu53` held `ff55a13` and `66dfd67` (earlier pass), then merged `main` at `b2d170b`.
+- Ending code SHA: `be6a46d` (relabel tool). This receipt update is the commit after it.
+- Nothing is merged to `main` or deployed. Merge requires exact founder approval.
+
+### Image rule, as the founder clarified it
+"Never present an AI-generated hair product as the real item" means **never misrepresent the
+merchandise**. Styled or generated JBH brand imagery is allowed when it shows the correct
+product type, texture, and construction. Not allowed: a wrong texture, another texture's photo
+reused, the wrong construction, or supplier or off-brand identity on the product.
+
+### Correction to the earlier pass
+The first pass took "Dropship Beauty products" from `jbh-private`'s vendor-selection record
+(edge control, lace melt spray, hair oil). This receipt's Shopify evidence shows the
+`dropship-beauty` tag is on 24 products, including the mapped bundles. It is UNKNOWN whether
+the three essentials carry that tag. Their placeholder change (`ff55a13`) still stands on its
+own grounds: the images showed printed brand text that did not match the product sold.
+
+### Presentation map review (all 17 entries, repo side)
+| Handle | Public name | Image source | Status |
+|---|---|---|---|
+| body-wave-human-hair-bundles | Lawless Body Wave Bundles | repo `bundle-bodywave.jpg` | APPROVED, IMAGE REPAIR NEEDED: "LUXE CROWNS" ribbons; LAWLESS relabel prepared, not installed |
+| deep-wave-human-hair-bundles | Lawless Deep Wave Bundles | repo `bundle-deepwave.jpg` | APPROVED + READY (plain ribbon, deep-wave texture) |
+| loose-wave-human-hair-bundles | Lawless Loose Wave Bundles | repo `bundle-loosewave.jpg` | APPROVED, IMAGE REPAIR NEEDED: "LUXE CROWNS" and 3 crown marks; relabel prepared, not installed. TEXTURE QUESTION: the photo's broad S-wave looks like body wave |
+| kinky-straight-human-hair-bundles | Flawless Kinky Straight Bundles | repo `bundle-kinkystraight.jpg` | APPROVED + READY (plain ribbon) |
+| kinky-curly-human-hair-bundles | Kinky Curly Human Hair Bundles | placeholder | APPROVED, IMAGE REPAIR NEEDED: no kinky-curly image exists; placeholder kept |
+| lawless-bone-straight-bundle-raw-vietnamese | Lawless Bone Straight Bundle — Raw Vietnamese | Shopify CDN | Off-brand "LUXE Hair Collection" card prop (not a ribbon; founder call) |
+| royal-raw-indian-temple-bundle | Royal Raw Indian Temple Bundle | Shopify CDN | READY (plain gold ribbon) |
+| lawless-4-4 / 5-5 closure, 13-4 frontal | Lawless … | Shopify CDN | Construction shown matches; no brand text seen |
+| flawless-13-6 bob, u-part, 13-4 straight, glueless 4x4 | Flawless … | Shopify CDN | U-part image has a "…CROWNED" box and a logo bottle prop (founder call); others show no brand text |
+| lawless-edge-control / lace-melt-spray / hair-oil | Lawless … | placeholder | Withheld by `ff55a13` |
+
+The repo view is based on local copies. The CDN files were assumed to match their local
+namesakes and were not fetched (egress blocked).
+
+### Bundle deals and duplication (Tasks 5 and 6)
+- Bundle deals, the other closures and frontals, lashes, Spanish Wave, Straight, Blonde, and Afro
+  Kinky are **not in the allowlist**, so they are hidden. There is no public collision today, and none were added:
+  each needs its exact Shopify handle and option titles, which are BLOCKED.
+- Likely overlap once they are added: the manual-procurement closures, frontal, and bone straight
+  (public, reportedly zero inventory) against Dropship Beauty-backed closures, frontals, and straight
+  bundles (hidden). Smallest safe path: for each pair, keep one public handle. Point the JBH record
+  at the stocked Shopify handle and drop the zero-stock one from the map (no deletion in Shopify).
+  This needs the founder's choice per pair.
+- A bundle deal must get its own JBH name ("… 3-Bundle Deal"), its own option list, and a hero image
+  showing three bundles. It must never reuse the single-bundle photo.
+
+### Changes this continuation
+- `scripts/assets/relabel-bundle-ribbons.py` (`be6a46d`): founder-authorised ribbon relabel.
+  Byte-reproducible output. Only the measured ribbon bands change: 3.4% / 2.6% of pixels.
+  Outside the bands the drift is mean 0.05/255 with p99 <= 2, from JPEG re-encoding with the
+  source's own tables. File size is at parity (126 KB vs 127 KB, 131 KB vs 132 KB).
+  - Candidate sha256: bodywave `ba102cb7…67ba`, loosewave `59fc1f81…0424`.
+  - Current live assets: bodywave `724cc5b2…6240`, loosewave `9e3961d9…e724`.
+- Shopify records changed: none. Price, inventory, checkout: untouched.
+
+### BLOCKED
+1. **Shopify Admin for `8qp1z2-az`**: the connector was switched off the wrong store
+   (`pd0vqx-eg` / show-appreciation-acceptance-deication) with founder approval. It now needs
+   re-authorisation at claude.ai/customize/connectors and a new session. Until then there is
+   no 24-product reconciliation: inventory, SKUs, Shopify media, and tags are all unavailable.
+2. **Egress**: `jussbeautifulhair.com`, `cdn.shopify.com`, and `*.myshopify.com` return 403 from
+   the agent environment. There is no production Playwright and no checkout handoff proof.
+3. **Asset install**: overwriting `client/public/products/bundle-{bodywave,loosewave}.jpg` was
+   refused by the agent permission classifier despite founder approval. The tool and its hashes
+   are committed so the install can be reproduced exactly.
+
+### Tests
+The code and tests are unchanged since `66dfd67`. There, `npm test` ran 90/91; the one failure
+(`browser history is authoritative…`) is pre-existing on `a2166f6`. Local Playwright
+(`scripts/beauty-essentials-image-playwright.mjs`) passes desktop and mobile. It is mocked-catalog
+proof only, not production.
+
+### Rollback
+- Tool: `git revert be6a46d`.
+- Earlier essentials placeholder: `git revert 66dfd67 ff55a13`.
+- If the relabelled assets are installed later, revert that commit to restore the originals
+  (still in git history).
+
+### Next gate
+1. Founder: reconnect Shopify to the JBH store and allow egress to `jussbeautifulhair.com`
+   (environment network settings), then start a new session on this branch.
+2. That session: install the two relabelled assets from `be6a46d` and reconcile the 24 tagged
+   products. Add approved deals, closures, and straight bundles as explicit allowlist records.
+   Then run production Playwright through the Shopify checkout handoff (no payment).
+3. Founder decisions: loose-wave texture accuracy; the bone-straight card and U-part box props;
+   and one handle per overlapping manual / Dropship Beauty pair.

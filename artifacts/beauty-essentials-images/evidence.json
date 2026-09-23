@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-09-23T05:33:51.527Z",
+  "recordedAt": "2026-09-23T05:38:12.034Z",
   "baseURL": "http://127.0.0.1:4176",
   "results": [
     {
@@ -14,6 +14,38 @@
           "status": 200
         },
         {
+          "url": "/products/bundle-deepwave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-loosewave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-kinkystraight.jpg",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-bodywave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-deepwave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-loosewave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-kinkystraight.jpg",
+          "status": 200
+        },
+        {
           "url": "/jbh_profile.png",
           "status": 200
         },
@@ -36,10 +68,205 @@
         "fonts.googleapis.com",
         "fonts.googleapis.com",
         "fonts.googleapis.com",
+        "fonts.googleapis.com",
         "fonts.googleapis.com"
       ],
       "consoleErrors": [],
-      "approvedImageNaturalWidth": 800
+      "approvedImageNaturalWidth": 800,
+      "healthyCardSignature": {
+        "rowTop": 483,
+        "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+        "card": {
+          "width": 293,
+          "height": 415,
+          "borderRadius": "9px",
+          "borderTopWidth": "1px",
+          "borderTopColor": "rgb(231, 226, 238)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "overflow": "hidden",
+          "transitionProperty": "transform, box-shadow"
+        },
+        "media": {
+          "width": 291,
+          "height": 291,
+          "aspectRatio": "1 / 1",
+          "backgroundColor": "rgb(239, 235, 244)",
+          "overflow": "hidden"
+        },
+        "body": {
+          "width": 291,
+          "height": 122,
+          "paddingTop": "16px",
+          "paddingLeft": "16px"
+        },
+        "title": {
+          "fontFamily": "\"Playfair Display\", Georgia, serif",
+          "fontSize": "16px",
+          "lineHeight": "22px",
+          "color": "rgb(36, 22, 60)",
+          "minHeight": "41.6px"
+        },
+        "category": {
+          "fontSize": "11px",
+          "letterSpacing": "1.98px",
+          "textTransform": "uppercase",
+          "color": "rgb(102, 88, 126)"
+        }
+      },
+      "repairedCardSignatures": {
+        "lawless-edge-control-4-oz": {
+          "rowTop": 483,
+          "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+          "card": {
+            "width": 293,
+            "height": 415,
+            "borderRadius": "9px",
+            "borderTopWidth": "1px",
+            "borderTopColor": "rgb(231, 226, 238)",
+            "backgroundColor": "rgb(255, 255, 255)",
+            "overflow": "hidden",
+            "transitionProperty": "transform, box-shadow"
+          },
+          "media": {
+            "width": 291,
+            "height": 291,
+            "aspectRatio": "1 / 1",
+            "backgroundColor": "rgb(239, 235, 244)",
+            "overflow": "hidden"
+          },
+          "body": {
+            "width": 291,
+            "height": 122,
+            "paddingTop": "16px",
+            "paddingLeft": "16px"
+          },
+          "title": {
+            "fontFamily": "\"Playfair Display\", Georgia, serif",
+            "fontSize": "16px",
+            "lineHeight": "22px",
+            "color": "rgb(36, 22, 60)",
+            "minHeight": "41.6px"
+          },
+          "category": {
+            "fontSize": "11px",
+            "letterSpacing": "1.98px",
+            "textTransform": "uppercase",
+            "color": "rgb(102, 88, 126)"
+          },
+          "rowNeighbour": "body-wave-human-hair-bundles"
+        },
+        "lawless-lace-melt-spray": {
+          "rowTop": 483,
+          "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+          "card": {
+            "width": 293,
+            "height": 415,
+            "borderRadius": "9px",
+            "borderTopWidth": "1px",
+            "borderTopColor": "rgb(231, 226, 238)",
+            "backgroundColor": "rgb(255, 255, 255)",
+            "overflow": "hidden",
+            "transitionProperty": "transform, box-shadow"
+          },
+          "media": {
+            "width": 291,
+            "height": 291,
+            "aspectRatio": "1 / 1",
+            "backgroundColor": "rgb(239, 235, 244)",
+            "overflow": "hidden"
+          },
+          "body": {
+            "width": 291,
+            "height": 122,
+            "paddingTop": "16px",
+            "paddingLeft": "16px"
+          },
+          "title": {
+            "fontFamily": "\"Playfair Display\", Georgia, serif",
+            "fontSize": "16px",
+            "lineHeight": "22px",
+            "color": "rgb(36, 22, 60)",
+            "minHeight": "41.6px"
+          },
+          "category": {
+            "fontSize": "11px",
+            "letterSpacing": "1.98px",
+            "textTransform": "uppercase",
+            "color": "rgb(102, 88, 126)"
+          },
+          "rowNeighbour": "body-wave-human-hair-bundles"
+        },
+        "lawless-hair-oil-rosemary-mint": {
+          "rowTop": 918,
+          "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+          "card": {
+            "width": 293,
+            "height": 415,
+            "borderRadius": "9px",
+            "borderTopWidth": "1px",
+            "borderTopColor": "rgb(231, 226, 238)",
+            "backgroundColor": "rgb(255, 255, 255)",
+            "overflow": "hidden",
+            "transitionProperty": "transform, box-shadow"
+          },
+          "media": {
+            "width": 291,
+            "height": 291,
+            "aspectRatio": "1 / 1",
+            "backgroundColor": "rgb(239, 235, 244)",
+            "overflow": "hidden"
+          },
+          "body": {
+            "width": 291,
+            "height": 122,
+            "paddingTop": "16px",
+            "paddingLeft": "16px"
+          },
+          "title": {
+            "fontFamily": "\"Playfair Display\", Georgia, serif",
+            "fontSize": "16px",
+            "lineHeight": "22px",
+            "color": "rgb(36, 22, 60)",
+            "minHeight": "41.6px"
+          },
+          "category": {
+            "fontSize": "11px",
+            "letterSpacing": "1.98px",
+            "textTransform": "uppercase",
+            "color": "rgb(102, 88, 126)"
+          },
+          "rowNeighbour": "loose-wave-human-hair-bundles"
+        }
+      },
+      "healthyPdpSignature": {
+        "gridColumns": "584px 584px",
+        "media": {
+          "x": 104,
+          "width": 584,
+          "height": 584,
+          "borderRadius": "9px",
+          "backgroundColor": "rgb(239, 235, 244)",
+          "borderTopWidth": "1px"
+        },
+        "mediaInner": {
+          "x": 105,
+          "width": 582,
+          "height": 582,
+          "aspectRatio": "1 / 1"
+        },
+        "heading": {
+          "x": 752,
+          "fontFamily": "\"Playfair Display\", Georgia, serif",
+          "fontSize": "36px",
+          "color": "rgb(36, 22, 60)"
+        },
+        "addButton": {
+          "backgroundColor": "rgb(42, 26, 71)",
+          "borderRadius": "6px",
+          "fontFamily": "Montserrat, sans-serif",
+          "height": "40px"
+        }
+      }
     },
     {
       "label": "mobile",
@@ -53,6 +280,38 @@
           "status": 200
         },
         {
+          "url": "/products/bundle-deepwave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-loosewave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-kinkystraight.jpg",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-bodywave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-deepwave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-loosewave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-kinkystraight.jpg",
+          "status": 200
+        },
+        {
           "url": "/jbh_profile.png",
           "status": 200
         },
@@ -75,10 +334,205 @@
         "fonts.googleapis.com",
         "fonts.googleapis.com",
         "fonts.googleapis.com",
+        "fonts.googleapis.com",
         "fonts.googleapis.com"
       ],
       "consoleErrors": [],
-      "approvedImageNaturalWidth": 800
+      "approvedImageNaturalWidth": 800,
+      "healthyCardSignature": {
+        "rowTop": 516,
+        "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+        "card": {
+          "width": 161,
+          "height": 302,
+          "borderRadius": "9px",
+          "borderTopWidth": "1px",
+          "borderTopColor": "rgb(231, 226, 238)",
+          "backgroundColor": "rgb(255, 255, 255)",
+          "overflow": "hidden",
+          "transitionProperty": "transform, box-shadow"
+        },
+        "media": {
+          "width": 159,
+          "height": 159,
+          "aspectRatio": "1 / 1",
+          "backgroundColor": "rgb(239, 235, 244)",
+          "overflow": "hidden"
+        },
+        "body": {
+          "width": 159,
+          "height": 125,
+          "paddingTop": "16px",
+          "paddingLeft": "16px"
+        },
+        "title": {
+          "fontFamily": "\"Playfair Display\", Georgia, serif",
+          "fontSize": "16px",
+          "lineHeight": "22px",
+          "color": "rgb(36, 22, 60)",
+          "minHeight": "41.6px"
+        },
+        "category": {
+          "fontSize": "11px",
+          "letterSpacing": "1.98px",
+          "textTransform": "uppercase",
+          "color": "rgb(102, 88, 126)"
+        }
+      },
+      "repairedCardSignatures": {
+        "lawless-edge-control-4-oz": {
+          "rowTop": 516,
+          "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+          "card": {
+            "width": 161,
+            "height": 302,
+            "borderRadius": "9px",
+            "borderTopWidth": "1px",
+            "borderTopColor": "rgb(231, 226, 238)",
+            "backgroundColor": "rgb(255, 255, 255)",
+            "overflow": "hidden",
+            "transitionProperty": "transform, box-shadow"
+          },
+          "media": {
+            "width": 159,
+            "height": 159,
+            "aspectRatio": "1 / 1",
+            "backgroundColor": "rgb(239, 235, 244)",
+            "overflow": "hidden"
+          },
+          "body": {
+            "width": 159,
+            "height": 141,
+            "paddingTop": "16px",
+            "paddingLeft": "16px"
+          },
+          "title": {
+            "fontFamily": "\"Playfair Display\", Georgia, serif",
+            "fontSize": "16px",
+            "lineHeight": "22px",
+            "color": "rgb(36, 22, 60)",
+            "minHeight": "41.6px"
+          },
+          "category": {
+            "fontSize": "11px",
+            "letterSpacing": "1.98px",
+            "textTransform": "uppercase",
+            "color": "rgb(102, 88, 126)"
+          },
+          "rowNeighbour": "body-wave-human-hair-bundles"
+        },
+        "lawless-lace-melt-spray": {
+          "rowTop": 838,
+          "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+          "card": {
+            "width": 161,
+            "height": 302,
+            "borderRadius": "9px",
+            "borderTopWidth": "1px",
+            "borderTopColor": "rgb(231, 226, 238)",
+            "backgroundColor": "rgb(255, 255, 255)",
+            "overflow": "hidden",
+            "transitionProperty": "transform, box-shadow"
+          },
+          "media": {
+            "width": 159,
+            "height": 159,
+            "aspectRatio": "1 / 1",
+            "backgroundColor": "rgb(239, 235, 244)",
+            "overflow": "hidden"
+          },
+          "body": {
+            "width": 159,
+            "height": 141,
+            "paddingTop": "16px",
+            "paddingLeft": "16px"
+          },
+          "title": {
+            "fontFamily": "\"Playfair Display\", Georgia, serif",
+            "fontSize": "16px",
+            "lineHeight": "22px",
+            "color": "rgb(36, 22, 60)",
+            "minHeight": "41.6px"
+          },
+          "category": {
+            "fontSize": "11px",
+            "letterSpacing": "1.98px",
+            "textTransform": "uppercase",
+            "color": "rgb(102, 88, 126)"
+          },
+          "rowNeighbour": "deep-wave-human-hair-bundles"
+        },
+        "lawless-hair-oil-rosemary-mint": {
+          "rowTop": 1160,
+          "className": "group block card-lift rounded-lg overflow-hidden bg-card border border-card-border",
+          "card": {
+            "width": 161,
+            "height": 302,
+            "borderRadius": "9px",
+            "borderTopWidth": "1px",
+            "borderTopColor": "rgb(231, 226, 238)",
+            "backgroundColor": "rgb(255, 255, 255)",
+            "overflow": "hidden",
+            "transitionProperty": "transform, box-shadow"
+          },
+          "media": {
+            "width": 159,
+            "height": 159,
+            "aspectRatio": "1 / 1",
+            "backgroundColor": "rgb(239, 235, 244)",
+            "overflow": "hidden"
+          },
+          "body": {
+            "width": 159,
+            "height": 141,
+            "paddingTop": "16px",
+            "paddingLeft": "16px"
+          },
+          "title": {
+            "fontFamily": "\"Playfair Display\", Georgia, serif",
+            "fontSize": "16px",
+            "lineHeight": "22px",
+            "color": "rgb(36, 22, 60)",
+            "minHeight": "41.6px"
+          },
+          "category": {
+            "fontSize": "11px",
+            "letterSpacing": "1.98px",
+            "textTransform": "uppercase",
+            "color": "rgb(102, 88, 126)"
+          },
+          "rowNeighbour": "loose-wave-human-hair-bundles"
+        }
+      },
+      "healthyPdpSignature": {
+        "gridColumns": "342px",
+        "media": {
+          "x": 24,
+          "width": 342,
+          "height": 342,
+          "borderRadius": "9px",
+          "backgroundColor": "rgb(239, 235, 244)",
+          "borderTopWidth": "1px"
+        },
+        "mediaInner": {
+          "x": 25,
+          "width": 340,
+          "height": 340,
+          "aspectRatio": "1 / 1"
+        },
+        "heading": {
+          "x": 24,
+          "fontFamily": "\"Playfair Display\", Georgia, serif",
+          "fontSize": "30px",
+          "color": "rgb(36, 22, 60)"
+        },
+        "addButton": {
+          "backgroundColor": "rgb(42, 26, 71)",
+          "borderRadius": "6px",
+          "fontFamily": "Montserrat, sans-serif",
+          "height": "40px"
+        }
+      }
     }
   ]
 }

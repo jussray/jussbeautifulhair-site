@@ -37,6 +37,30 @@ pattern as `kinky-curly-human-hair-bundles`, commit `0045602`). No files deleted
   bundle image loads (naturalWidth 800), and there is no horizontal overflow.
   Evidence: `artifacts/beauty-essentials-images/`.
 
+## Visual consistency lock (founder directive, same day)
+No JBH layout, CSS, component, typography, spacing, radius, hover, gallery, or
+purchase-flow code changed. The repair only changes each handle's image source, and the
+placeholder is the existing JBH `ProductCard`/PDP empty state.
+The harness now interleaves 4 healthy JBH bundle cards with the 3 repaired cards and asserts:
+- identical card class, border radius, border, background, transition, square media box,
+  body padding, and title/category typography against the healthy reference card
+- equal card height to a healthy card in the **same grid row** (desktop 293×415, mobile 161×302,
+  media 291×291 / 159×159). Heights differ between rows for healthy cards too, because CSS grid
+  stretches each row to its tallest title.
+- PDP structure identical to the healthy bundle PDP: grid columns, media box, radius,
+  aspect 1/1, heading font, and Add-to-Cart styling
+- hover lift (`card-lift`) active on repaired and healthy cards alike
+Screenshots: `shop-*`, `collection-beauty-essentials-*`, `shop-hover-repaired-desktop`,
+`pdp-body-wave-human-hair-bundles-*` beside `pdp-lawless-*`.
+
+Honest visual gap: the geometry matches, but a flat placeholder tile next to satin
+photography reads as "image pending", not as finished JBH merchandising. Only an approved real photo
+closes this gap. No new placeholder style was introduced, per the lock.
+
+Adjacent finding (not changed, founder call): the healthy bundle photos show ribbons printed
+"LUXE CROWNS" on products sold as "Lawless". This is the same kind of brand-text mismatch. It is outside
+this scope, and there the ribbon is a prop rather than the product's packaging.
+
 ## Not proven
 - Live `jussbeautifulhair.com`: not reachable from the agent environment (egress policy 403).
 - Shopify admin product media / Shopify-hosted checkout thumbnails: no connector to the JBH shop.

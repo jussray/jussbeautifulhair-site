@@ -189,8 +189,10 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       tagline: "Strong, polished hold for everyday styling.",
       description:
         "4 oz edge control designed for smooth styling and firm hold without a flaky finish.",
-      image:
-        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/edge-control_18dc1db5-8a31-403b-b3b7-7c6751359a57.jpg?v=1786301802",
+      // Withheld: the prior asset showed printed brand text that does not match
+      // this product's name or the sticker-labelled container customers receive.
+      // The customer-safe placeholder renders until an approved photo exists.
+      image: "",
       allowedOptions: ["4 oz"],
     },
     "lawless-lace-melt-spray": {
@@ -199,8 +201,10 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       tagline: "A clean finishing step for lace installs.",
       description:
         "2 oz lace melt spray designed for HD and Swiss lace installs and a smooth finished look.",
-      image:
-        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/lace-melt-spray_082f9766-685a-4d0f-a1dd-4831988e0678.jpg?v=1786301882",
+      // Withheld: the prior asset showed printed brand text that does not match
+      // this product's name or the sticker-labelled container customers receive.
+      // The customer-safe placeholder renders until an approved photo exists.
+      image: "",
       allowedOptions: ["2 oz"],
     },
     "lawless-hair-oil-rosemary-mint": {
@@ -209,8 +213,10 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       tagline: "Lightweight scalp care for natural hair and installs.",
       description:
         "2 oz rosemary, mint, and castor scalp oil designed for lightweight care with natural hair and protective installs.",
-      image:
-        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/hair-oil_66810ed7-a883-4113-8c21-934002c3b41d.jpg?v=1786301875",
+      // Withheld: the prior asset showed printed brand text that does not match
+      // this product's name or the sticker-labelled container customers receive.
+      // The customer-safe placeholder renders until an approved photo exists.
+      image: "",
       allowedOptions: ["2 oz"],
     },
   });

@@ -1,0 +1,84 @@
+{
+  "recordedAt": "2026-09-23T05:33:51.527Z",
+  "baseURL": "http://127.0.0.1:4176",
+  "results": [
+    {
+      "label": "desktop",
+      "imageResponses": [
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-bodywave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        }
+      ],
+      "withheldRequests": [],
+      "abortedExternalRequests": [
+        "fonts.googleapis.com",
+        "fonts.googleapis.com",
+        "fonts.googleapis.com",
+        "fonts.googleapis.com",
+        "fonts.googleapis.com"
+      ],
+      "consoleErrors": [],
+      "approvedImageNaturalWidth": 800
+    },
+    {
+      "label": "mobile",
+      "imageResponses": [
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/products/bundle-bodywave.jpg",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        },
+        {
+          "url": "/jbh_profile.png",
+          "status": 200
+        }
+      ],
+      "withheldRequests": [],
+      "abortedExternalRequests": [
+        "fonts.googleapis.com",
+        "fonts.googleapis.com",
+        "fonts.googleapis.com",
+        "fonts.googleapis.com",
+        "fonts.googleapis.com"
+      ],
+      "consoleErrors": [],
+      "approvedImageNaturalWidth": 800
+    }
+  ]
+}

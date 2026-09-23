@@ -12,6 +12,7 @@ import Product from "@/pages/Product";
 import Cart from "@/pages/Cart";
 import Checkout from "@/pages/Checkout";
 import HairMatch from "@/pages/HairMatch";
+import CompleteInstallDeals from "@/pages/CompleteInstallDeals";
 import SuccessPage from "@/pages/success";
 import About from "@/pages/About";
 import FAQ from "@/pages/FAQ";
@@ -71,6 +72,7 @@ function AppRouter() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/shop" component={Shop} />
+      <Route path="/collections/complete-install-bundle-deals" component={CompleteInstallDeals} />
       <Route path="/product/:id" component={Product} />
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />

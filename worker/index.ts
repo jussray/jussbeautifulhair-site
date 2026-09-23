@@ -29,13 +29,14 @@ const SHOPIFY_STOREFRONT = Object.freeze({
   apiVersion: "2026-07",
   vendor: "JBH",
   catalogPageSize: 25,
+  catalogMaxPages: 10,
   checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 const SHOPIFY_STOREFRONT_ENDPOINT = `https://${SHOPIFY_STOREFRONT.shopDomain}/api/${SHOPIFY_STOREFRONT.apiVersion}/graphql.json`;
 
 const SHOPIFY_CATALOG_QUERY = `
-  query JbhVendorCatalog($first: Int!, $query: String!) {
-    products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
+  query JbhVendorCatalog($first: Int!, $after: String, $query: String!) {
+    products(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
       nodes {
         id
         handle
@@ -362,6 +363,38 @@ type ShopifyCatalogData = {
   };
 };
 
+type ShopifyCatalogProduct = ShopifyCatalogData["products"]["nodes"][number];
+
+async function fetchCompleteShopifyCatalog(request: Request): Promise<ShopifyCatalogProduct[]> {
+  const nodes: ShopifyCatalogProduct[] = [];
+  let cursor: string | null = null;
+
+  for (let page = 0; page < SHOPIFY_STOREFRONT.catalogMaxPages; page += 1) {
+    const data: ShopifyCatalogData = await shopifyStorefrontRequest<ShopifyCatalogData>(
+      request,
+      SHOPIFY_CATALOG_QUERY,
+      {
+        first: SHOPIFY_STOREFRONT.catalogPageSize,
+        after: cursor,
+        query: `vendor:${SHOPIFY_STOREFRONT.vendor}`,
+      },
+    );
+
+    nodes.push(...data.products.nodes);
+    if (!data.products.pageInfo.hasNextPage) return nodes;
+
+    const nextCursor: string | null = data.products.pageInfo.endCursor;
+    if (!nextCursor || nextCursor === cursor) {
+      console.error("[SHOPIFY] Catalog pagination cursor did not advance");
+      throw new Error("SHOPIFY_CATALOG_CURSOR_INVALID");
+    }
+    cursor = nextCursor;
+  }
+
+  console.error("[SHOPIFY] Catalog pagination exceeded the bounded page limit");
+  throw new Error("SHOPIFY_CATALOG_PAGE_LIMIT");
+}
+
 async function handleShopifyCatalog(request: Request): Promise<Response> {
   if (request.method !== "GET") {
     return new Response("Method not allowed", {
@@ -371,21 +404,9 @@ async function handleShopifyCatalog(request: Request): Promise<Response> {
   }
 
   try {
-    const data = await shopifyStorefrontRequest<ShopifyCatalogData>(
-      request,
-      SHOPIFY_CATALOG_QUERY,
-      {
-        first: SHOPIFY_STOREFRONT.catalogPageSize,
-        query: `vendor:${SHOPIFY_STOREFRONT.vendor}`,
-      },
-    );
+    const catalogProducts = await fetchCompleteShopifyCatalog(request);
 
-    if (data.products.pageInfo.hasNextPage) {
-      console.error("[SHOPIFY] Catalog page limit reached; refusing partial catalog response");
-      throw new Error("SHOPIFY_CATALOG_PAGE_LIMIT");
-    }
-
-    const products = data.products.nodes
+    const products = catalogProducts
       .filter((product) => product.vendor === SHOPIFY_STOREFRONT.vendor)
       .map((product) => {
         const variants = product.variants.nodes

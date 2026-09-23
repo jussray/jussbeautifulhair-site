@@ -51,7 +51,10 @@ test("browser history is authoritative while legacy entry routes migrate forward
   assert.match(main, /window\.location\.hash\.startsWith\("#\/"\)/);
   assert.match(main, /window\.history\.replaceState\(null, "", legacyHashRoute\)/);
   assert.match(main, /legacyShopifyProductRoute/);
-  assert.match(main, /\^\\\/products\\\/\(\[\^\/\]\+\)\\\/?\$/);
+  assert.ok(
+    main.includes('window.location.pathname.match(/^\\/products\\/([^/]+)\\/?$/);'),
+    "legacy Shopify product route migration must match /products/:handle exactly",
+  );
   assert.match(main, /`\/product\/\$\{handle\}\$\{window\.location\.search\}\$\{window\.location\.hash\}`/);
   assert.match(wrangler, /not_found_handling\s*=\s*"single-page-application"/);
 });

@@ -24,6 +24,8 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
     "SHOPIFY_CATALOG_QUERY",
     "SHOPIFY_VARIANT_PREFLIGHT_QUERY",
     "SHOPIFY_CART_CREATE_MUTATION",
+    "CF-Connecting-IP",
+    "Shopify-Storefront-Buyer-IP",
     "node.product.vendor === SHOPIFY_STOREFRONT.vendor",
     "node.availableForSale",
     "node.product.availableForSale",
@@ -31,6 +33,9 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
     assert.ok(worker.includes(required), `missing Shopify Worker contract: ${required}`);
   }
 
+  assert.match(worker, /shopifyStorefrontRequest<ShopifyCatalogData>\(\s*request,/);
+  assert.match(worker, /shopifyStorefrontRequest<ShopifyVariantPreflightData>\(\s*request,/);
+  assert.match(worker, /shopifyStorefrontRequest<ShopifyCartCreateData>\(\s*request,/);
   assert.doesNotMatch(worker, /X-Shopify-Storefront-Access-Token/);
   assert.doesNotMatch(worker, /SHOPIFY_ADMIN|admin[_-]?token/i);
   assert.match(worker, /merchandiseId:[\s\S]*ProductVariant/);

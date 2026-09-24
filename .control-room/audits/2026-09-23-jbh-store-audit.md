@@ -48,12 +48,14 @@ Audit the current JBH store with emphasis on Dropship Beauty product imagery, br
 5. Full real-browser customer path from product card → PDP → variant → cart → Shopify checkout on the current deployment.
 
 ## BLOCKED
-- Direct live browser verification was blocked because the Opera Browser Connector was not connected during this audit and the generic web fetch could not access the storefront.
-- Therefore no new Playwright/runtime screenshot proof was produced in this pass.
+- No new Playwright/runtime screenshot proof was produced in this audit pass, so rendered storefront behavior remained unverified.
+- The Opera Browser Connector was also disconnected during the pass, but Opera is not the JBH browser authority and its connection state is not a release or verification blocker.
+- The next valid browser-proof action is Playwright on the exact target head/deployment. Generic web fetches or Opera screenshots do not substitute for that gate.
 
 ## Fixes Applied
 - No storefront code or Shopify product media was changed in this audit pass.
 - This continuity receipt was added so the next agent can resume without re-auditing the source-of-truth.
+- Continuity correction on 2026-09-24: Playwright is the primary browser/runtime proof authority; Opera is optional secondary tooling only and must never block progress.
 
 ## Required Repair
 1. Treat `client/src/lib/shopifyCatalog.ts` and approved JBH `/products/...` assets as the image presentation authority for the custom storefront.

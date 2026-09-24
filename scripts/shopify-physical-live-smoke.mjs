@@ -8,10 +8,12 @@ const apiVersion = "2026-07";
 const endpoint = `https://${shopDomain}/api/${apiVersion}/graphql.json`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-physical-live";
+const catalogPageSize = 25;
+const catalogMaxPages = 20;
 
 const catalogQuery = `
-  query JbhVendorCatalog($first: Int!, $query: String!) {
-    products(first: $first, query: $query, sortKey: CREATED_AT, reverse: true) {
+  query JbhVendorCatalog($first: Int!, $after: String, $query: String!) {
+    products(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
       nodes {
         id
         handle
@@ -80,20 +82,41 @@ async function storefrontRequest(query, variables) {
   return payload.data;
 }
 
+async function fetchVendorCatalog() {
+  const products = [];
+  let after = null;
+
+  for (let page = 0; page < catalogMaxPages; page += 1) {
+    const catalog = await storefrontRequest(catalogQuery, {
+      first: catalogPageSize,
+      after,
+      query: "vendor:JBH",
+    });
+
+    products.push(...catalog.products.nodes);
+
+    if (!catalog.products.pageInfo.hasNextPage) {
+      return { products, pagesFetched: page + 1 };
+    }
+
+    const nextCursor = catalog.products.pageInfo.endCursor;
+    assert.ok(
+      nextCursor && nextCursor !== after,
+      "Storefront catalog pagination returned an invalid next cursor",
+    );
+    after = nextCursor;
+  }
+
+  assert.fail(
+    `Production JBH catalog exceeded the bounded pagination limit of ${catalogPageSize * catalogMaxPages} products`,
+  );
+}
+
 await mkdir(outputDir, { recursive: true });
 
-const catalog = await storefrontRequest(catalogQuery, {
-  first: 25,
-  query: "vendor:JBH",
-});
+const { products: catalogProducts, pagesFetched } = await fetchVendorCatalog();
 
-assert.equal(
-  catalog.products.pageInfo.hasNextPage,
-  false,
-  "Production catalog page size is no longer sufficient for the JBH vendor boundary",
-);
-
-const supplierProducts = catalog.products.nodes.filter((product) => product.vendor === "JBH");
+const supplierProducts = catalogProducts.filter((product) => product.vendor === "JBH");
 assert.ok(supplierProducts.length > 0, "No JBH supplier-backed products were visible through the Storefront API");
 
 const product = supplierProducts.find(
@@ -159,6 +182,9 @@ await writeFile(
       verifiedAt: new Date().toISOString(),
       shopDomain,
       apiVersion,
+      catalogPageSize,
+      catalogMaxPages,
+      pagesFetched,
       supplierProductCount: supplierProducts.length,
       selectedProductHandle: product.handle,
       selectedVariantId: variant.id,
@@ -166,7 +192,7 @@ await writeFile(
       checkoutPathPrefix: checkout.pathname.split("/").slice(0, 3).join("/"),
       assertions: [
         "exact production tokenless Storefront catalog query returned JBH vendor products",
-        "production catalog page size returned the complete JBH vendor boundary",
+        "production JBH vendor catalog was read completely through bounded cursor pagination",
         "at least one supplier-backed variant was available for sale",
         "Shopify created a one-line no-payment cart",
         "checkout URL was HTTPS and stayed on an exact approved JBH/Shopify host",

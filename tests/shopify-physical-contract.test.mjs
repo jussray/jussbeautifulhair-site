@@ -58,7 +58,7 @@ test("Shopify vendor catalog uses bounded cursor pagination instead of a fixed o
 
   assert.match(liveSmoke, /const catalogPageSize = 25/);
   assert.match(liveSmoke, /const catalogMaxPages = 20/);
-  assert.match(liveSmoke, /after:\s*after/);
+  assert.match(liveSmoke, /\bafter(?:\s*:\s*after)?\s*,/);
   assert.match(liveSmoke, /products\.push\(\.\.\.catalog\.products\.nodes\)/);
   assert.match(liveSmoke, /pagesFetched/);
 });

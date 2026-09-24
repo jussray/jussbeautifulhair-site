@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
-const [worker, catalogClient, cart, checkout, shop, product, home] = await Promise.all([
+const [worker, catalogClient, cart, checkout, shop, product, home, liveSmoke] = await Promise.all([
   read("worker/index.ts"),
   read("client/src/lib/shopifyCatalog.ts"),
   read("client/src/lib/cart.tsx"),
@@ -11,6 +11,7 @@ const [worker, catalogClient, cart, checkout, shop, product, home] = await Promi
   read("client/src/pages/Shop.tsx"),
   read("client/src/pages/Product.tsx"),
   read("client/src/pages/Home.tsx"),
+  read("scripts/shopify-physical-live-smoke.mjs"),
 ]);
 
 test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
@@ -41,6 +42,24 @@ test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
   assert.match(worker, /merchandiseId:[\s\S]*ProductVariant/);
   assert.match(worker, /SHOPIFY_STOREFRONT\.checkoutHosts\.some/);
   assert.doesNotMatch(worker.slice(worker.indexOf("const shopifyCartSchema"), worker.indexOf("const checkoutSessionIdSchema")), /\bprice\b|\bcurrency\b|\btotal\b/);
+});
+
+test("Shopify vendor catalog uses bounded cursor pagination instead of a fixed one-page ceiling", () => {
+  assert.match(worker, /catalogPageSize:\s*25/);
+  assert.match(worker, /catalogMaxPages:\s*20/);
+  assert.match(worker, /query JbhVendorCatalog\(\$first: Int!, \$after: String, \$query: String!\)/);
+  assert.match(worker, /products\(first: \$first, after: \$after, query: \$query/);
+  assert.match(worker, /for \(let page = 0; page < SHOPIFY_STOREFRONT\.catalogMaxPages; page \+= 1\)/);
+  assert.match(worker, /after:\s*after/);
+  assert.match(worker, /nextCursor && nextCursor !== after/);
+  assert.match(worker, /after = nextCursor/);
+  assert.match(worker, /SHOPIFY_CATALOG_PAGE_LIMIT/);
+
+  assert.match(liveSmoke, /const catalogPageSize = 25/);
+  assert.match(liveSmoke, /const catalogMaxPages = 20/);
+  assert.match(liveSmoke, /after:\s*after/);
+  assert.match(liveSmoke, /products\.push\(\.\.\.catalog\.products\.nodes\)/);
+  assert.match(liveSmoke, /pagesFetched/);
 });
 
 test("physical checkout sends only Shopify variant IDs and quantities", () => {

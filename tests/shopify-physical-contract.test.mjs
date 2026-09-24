@@ -51,7 +51,8 @@ test("Shopify vendor catalog uses bounded cursor pagination instead of a fixed o
   assert.match(worker, /products\(first: \$first, after: \$after, query: \$query/);
   assert.match(worker, /for \(let page = 0; page < SHOPIFY_STOREFRONT\.catalogMaxPages; page \+= 1\)/);
   assert.match(worker, /after:\s*after/);
-  assert.match(worker, /nextCursor && nextCursor !== after/);
+  assert.match(worker, /!nextCursor \|\| nextCursor === after/);
+  assert.match(worker, /SHOPIFY_CATALOG_CURSOR_INVALID/);
   assert.match(worker, /after = nextCursor/);
   assert.match(worker, /SHOPIFY_CATALOG_PAGE_LIMIT/);
 

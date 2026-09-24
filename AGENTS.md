@@ -87,6 +87,14 @@ Never commit `.codex/.env`, `OPENAI_API_KEY`, `MODEL_API_KEY`, service-role keys
 
 For UI, route, browser, release, onboarding, checkout, auth-flow, or runtime behavior changes, verify with Playwright on the exact changed head before calling the task complete. If Playwright is not applicable, say why. If Playwright cannot run because of infrastructure, missing secrets, missing browser dependencies, or a GitHub runner outage, record that as a verification blocker rather than converting it into code blame.
 
+### Browser authority
+
+- Playwright is the primary browser and runtime proof authority for this repository.
+- Desktop and mobile Playwright evidence is required for changed customer-facing paths before cutover or completion.
+- Opera Browser Connector may be used as an optional exploratory or secondary readback surface, but it is never the release authority and its connection state must never block work that Playwright can perform.
+- Do not substitute Opera screenshots, generic web fetches, or manual browsing for required Playwright evidence.
+- If Opera is unavailable, continue through Playwright, repository tests, Shopify/API truth, CI, and deployment/runtime evidence as applicable.
+
 ## Merge authority
 
 Agents may merge when the merge is the correct evidence-backed integration step, not merely because a PR exists or a badge looks green.
@@ -117,17 +125,3 @@ Before nontrivial work, read:
 - `.agents/skills/jbh-storefront-operator/SKILL.md` for 5W1H, public-storefront identity, proof, and rollback;
 - `.agents/skills/sales/SKILL.md` for positioning, merchandising, offer clarity, checkout support, conversion, and retention;
 - `.agents/skills/devil/SKILL.md` for premise and selected-plan attacks before material public commercial changes.
-
-For commercial work add to the founder stack:
-
-```text
-/sales /devil
-```
-
-Keep private admin pages, vendors, costs, sourcing records, customer/order exports, credentials, and strategy in the private repository. Keep Juss Beautiful Hair and Untold Stories catalogs, customers, suppliers, checkout, and fulfillment separate. Never use dark patterns, deceptive urgency, unsupported claims, sensitive traits, or private customer content for persuasion.
-
-## Figma build and implementation
-
-For every Figma, design-system, storefront-design, design-to-code, Code Connect, or visual QA task, also read `.agents/skills/figma-build-implement/SKILL.md` and `.figma/repository-profile.json`.
-
-Figma must remain public-storefront-only. It may not absorb private admin, vendor, sourcing, order, customer, secret, or payment-authority data. An editable design or prototype is not checkout, catalog, Worker, domain, or deployment proof.

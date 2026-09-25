@@ -23,6 +23,7 @@ on:
       - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
       - "scripts/catalog-images-live-playwright.mjs"
+      - "scripts/shopify-image-ledger.mjs"
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
       - "tests/frontdoor-activation-contract.test.mjs"
@@ -165,6 +166,12 @@ jobs:
           REQUIRE_EXACT_HEAD: ${{ github.event_name == 'push' }}
         run: node scripts/catalog-images-live-playwright.mjs
 
+      - name: Audit Shopify product media against JBH presentation (read-only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: node scripts/shopify-image-ledger.mjs
+
       - name: Write canonical production receipt
         if: github.event_name == 'push' && success()
         shell: bash
@@ -203,5 +210,6 @@ jobs:
             artifacts/shopify-production/
             artifacts/production-proof/
             artifacts/catalog-images-live/
+            artifacts/shopify-image-ledger/
           if-no-files-found: error
           retention-days: 30

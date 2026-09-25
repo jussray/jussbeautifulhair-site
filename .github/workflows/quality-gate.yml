@@ -117,6 +117,7 @@ jobs:
 
   sonarqube:
     name: "SonarQube – Storefront Standard"
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

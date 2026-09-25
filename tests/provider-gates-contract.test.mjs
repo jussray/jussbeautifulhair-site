@@ -7,6 +7,7 @@ const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
 const localManifest = await readJson("control-room.manifest.json");
 const providerGates = await readJson(".control-room/provider-gates.json");
 const frontdoorWorkflow = await readFile(".github/workflows/frontdoor-activate.yml", "utf8");
+const founderFunnelWorkflow = await readFile(".github/workflows/founder-funnel-exact-head.yml", "utf8");
 
 test("Control Room exports Shopify-first commerce truth without promoting stale Stripe proof", () => {
   const sourceOfTruth = localManifest.authority?.sourceOfTruth ?? "";
@@ -29,11 +30,20 @@ test("provider gates remain non-authorizing, non-stale, and externally evidenced
 
   const gates = new Map(providerGates.gates.map((gate) => [gate.id, gate]));
   const frontdoor = gates.get("branded-frontdoor-provider-activation");
+  const founderFunnel = gates.get("founder-funnel-cloudflare-readback");
   const governance = gates.get("github-main-provider-governance");
 
   assert.ok(frontdoor, "front-door provider gate must remain represented");
   assert.equal(frontdoor.portfolioStatus, "unverified");
-  assert.equal(frontdoor.authority, "external-provider-evidence");
+  assert.equal(frontdoor.authority, "cloudflare-provider-readback");
+  assert.equal(frontdoor.decisionMode, "readback-first");
+  assert.match(frontdoor.conditionalMutation ?? "", /only when read-only provider state proves the canonical route is absent/);
+
+  assert.ok(founderFunnel, "Founder Funnel Cloudflare readback gate must remain represented");
+  assert.equal(founderFunnel.portfolioStatus, "unverified");
+  assert.equal(founderFunnel.authority, "cloudflare-provider-readback");
+  assert.equal(founderFunnel.sourceCarrier, ".github/workflows/founder-funnel-exact-head.yml");
+  assert.ok(founderFunnel.supportingSource?.includes("scripts/verify-founder-funnel-readback.mjs"));
 
   assert.ok(governance, "GitHub provider governance gate must remain represented");
   assert.equal(governance.portfolioStatus, "unverified");
@@ -46,7 +56,7 @@ test("provider gates remain non-authorizing, non-stale, and externally evidenced
   assert.equal(providerGates.proofCookie?.authorizes, false);
 });
 
-test("front-door carrier remains exact-head, browser-proved, and fail-closed", () => {
+test("front-door carrier remains readback-first, exact-head, browser-proved, and fail-closed", () => {
   assert.match(frontdoorWorkflow, /workflow_dispatch:/);
   assert.match(frontdoorWorkflow, /expected_main_sha:/);
   assert.match(frontdoorWorkflow, /test \"\$EXPECTED_HEAD_SHA\" = \"\$actual\"/);
@@ -54,4 +64,12 @@ test("front-door carrier remains exact-head, browser-proved, and fail-closed", (
   assert.match(frontdoorWorkflow, /node scripts\/shopify-production-playwright\.mjs/);
   assert.match(frontdoorWorkflow, /Remove newly-created route if post-activation proof fails/);
   assert.match(frontdoorWorkflow, /if: failure\(\) && steps\.activate_route\.outcome == 'success'/);
+});
+
+test("Founder Funnel production readback fails closed until Cloudflare provider authority is visible", () => {
+  assert.match(founderFunnelWorkflow, /environment: Production/);
+  assert.match(founderFunnelWorkflow, /Verify production Cloudflare credentials are present/);
+  assert.match(founderFunnelWorkflow, /CLOUDFLARE_API_TOKEN: \$\{\{ secrets\.CLOUDFLARE_API_TOKEN \}\}/);
+  assert.match(founderFunnelWorkflow, /CLOUDFLARE_ACCOUNT_ID: \$\{\{ secrets\.CLOUDFLARE_ACCOUNT_ID \}\}/);
+  assert.match(founderFunnelWorkflow, /node scripts\/verify-founder-funnel-readback\.mjs/);
 });

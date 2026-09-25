@@ -2,7 +2,7 @@
   "schemaVersion": "1.0",
   "projectId": "juss-beautiful-hair",
   "repository": "jussray/jussbeautifulhair-site",
-  "purpose": "Keep source-verifiable storefront capabilities separate from external provider activation and governance proof.",
+  "purpose": "Keep source-verifiable storefront capabilities separate from external provider activation, readback, and governance proof.",
   "truthBoundary": {
     "sourceMaySelfPromoteProviderGate": false,
     "providerAcceptanceIsOutcomeProof": false,
@@ -12,8 +12,10 @@
   "gates": [
     {
       "id": "branded-frontdoor-provider-activation",
+      "description": "Proves current Cloudflare DNS and Worker-route ownership for the branded front door. Activation is conditional and is only valid if read-only provider state proves the canonical route is absent.",
       "portfolioStatus": "unverified",
-      "authority": "external-provider-evidence",
+      "authority": "cloudflare-provider-readback",
+      "decisionMode": "readback-first",
       "sourceCarrier": ".github/workflows/frontdoor-activate.yml",
       "supportingSource": [
         "wrangler.frontdoor.toml",
@@ -21,17 +23,35 @@
         "scripts/shopify-production-playwright.mjs"
       ],
       "completionRequires": [
-        "explicit exact-current-main activation authority",
-        "Cloudflare DNS proxy readback",
-        "exactly one canonical jussbeautifulhair.com Worker route",
+        "Cloudflare root DNS proxy readback",
+        "exactly one canonical jussbeautifulhair.com Worker route owned by jussbeautifulhair-site",
         "live /version identity equal to the approved exact SHA",
         "desktop and mobile branded storefront proof",
         "Shopify no-payment purchase-path proof",
-        "retained provider activation receipt"
+        "retained provider ownership receipt"
+      ],
+      "conditionalMutation": "Use the existing founder-authorized first-activation workflow only when read-only provider state proves the canonical route is absent."
+    },
+    {
+      "id": "founder-funnel-cloudflare-readback",
+      "description": "Proves the Founder Funnel Analytics Engine against the exact current release through workflow-visible read-only Cloudflare provider authority.",
+      "portfolioStatus": "unverified",
+      "authority": "cloudflare-provider-readback",
+      "sourceCarrier": ".github/workflows/founder-funnel-exact-head.yml",
+      "supportingSource": [
+        "scripts/verify-founder-funnel-readback.mjs",
+        "tests/founder-funnel-readback-contract.test.mjs"
+      ],
+      "completionRequires": [
+        "workflow-visible Cloudflare read-only credentials are present in the Production environment",
+        "exact-current-main Shopify production proof is green",
+        "exact-release Analytics Engine provider readback succeeds",
+        "retained Founder Funnel readback receipt binds repository, exact SHA, provider observation time, and result"
       ]
     },
     {
       "id": "github-main-provider-governance",
+      "description": "Proves GitHub itself enforces the intended main-branch merge membrane rather than inferring authority from source or CI.",
       "portfolioStatus": "unverified",
       "authority": "github-provider-readback",
       "completionRequires": [
@@ -44,13 +64,14 @@
       ]
     }
   ],
-  "promotionRule": "Neither gate may be reported VERIFIED from repository source, merge state, CI success, or historical browser receipts alone. Reacquire the relevant provider state and exact current source identity before every completion claim.",
+  "promotionRule": "No gate may be reported VERIFIED from repository source, merge state, CI success, or historical browser receipts alone. Reacquire the relevant provider state and exact current source identity before every completion claim.",
   "proofCookie": {
-    "value": "jbh-provider-gates-v1",
+    "value": "jbh-provider-gates-v2",
     "authorizes": false,
     "expiresOn": [
       "provider contract change",
       "front-door workflow change",
+      "Founder Funnel provider-readback workflow or credential contract change",
       "repository governance change",
       "stronger contradictory evidence"
     ]

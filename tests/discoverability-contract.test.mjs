@@ -50,6 +50,7 @@ test("browser history is authoritative while legacy entry routes migrate forward
   assert.match(app, /NON_INDEXABLE_ROUTES = new Set\(\["\/cart", "\/checkout", "\/success"\]\)/);
   assert.match(main, /window\.location\.hash\.startsWith\("#\/"\)/);
   assert.match(main, /window\.history\.replaceState\(null, "", legacyHashRoute\)/);
+  assert.match(main, /window\.addEventListener\("hashchange", migrateLegacyHashRoute\)/);
   assert.match(main, /legacyShopifyProductRoute/);
   assert.ok(
     main.includes('window.location.pathname.match(/^\\/products\\/([^/]+)\\/?$/);'),
@@ -57,6 +58,13 @@ test("browser history is authoritative while legacy entry routes migrate forward
   );
   assert.match(main, /`\/product\/\$\{handle\}\$\{window\.location\.search\}\$\{window\.location\.hash\}`/);
   assert.match(wrangler, /not_found_handling\s*=\s*"single-page-application"/);
+});
+
+test("in-app policy links use browser paths, not legacy hash routes", async () => {
+  for (const page of ["Privacy", "Contact", "Terms"]) {
+    const source = await readFile(new URL(`../client/src/pages/${page}.tsx`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /href="\/#\//, `${page} must link to /route, not /#/route`);
+  }
 });
 
 test("robots allows public discovery and keeps transactional or API routes out", () => {

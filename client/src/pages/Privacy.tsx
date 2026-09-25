@@ -80,7 +80,7 @@ export default function Privacy() {
           <h2 className="font-display text-2xl mt-8 mb-3">Contact</h2>
           <p>
             Questions? Email <a href="mailto:hello@jussbeautifulhair.com" className="underline">hello@jussbeautifulhair.com</a> or
-            visit our <a href="/#/contact" className="underline">Contact page</a>.
+            visit our <a href="/contact" className="underline">Contact page</a>.
           </p>
         </div>
       </section>

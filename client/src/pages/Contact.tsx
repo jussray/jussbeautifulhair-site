@@ -367,7 +367,7 @@ export default function Contact() {
                 <span>
                   I agree that Juss Beautiful Hair may store this message and my
                   email to review and reply, as explained in the{" "}
-                  <a href="/#/privacy" className="font-medium text-primary underline">
+                  <a href="/privacy" className="font-medium text-primary underline">
                     Privacy Policy
                   </a>
                   .

@@ -243,7 +243,7 @@ Therefore:
 ### SHAs
 - Starting: `main` @ `a231ac46691c781f3c0dca47ae7daedc0640718f` (#102, which landed the LAWLESS ribbons, the essentials placeholders, and 4 bundle deals).
 - This lane: branch `claude/dropship-beauty-images-qqlu53` was reset onto `a231ac4`. Its earlier commits were squashed into #102, and no content was lost (verified file by file).
-- Ending code SHA: `665fadf` (live image proof). This receipt update is the commit after it. Not merged.
+- Code commits on the PR branch, in linear order: `665fadf` (live image proof) → `318f9ac` (this receipt) → later commits recorded below. Not merged.
 
 ### Correction to the 2026-09-25 continuation above
 That section says the image lane was "NOT YET VERIFIED" and that `shopifyCatalog.ts` last changed in `0045602`.
@@ -257,7 +257,7 @@ It proves, on desktop 1440 and mobile 390:
   `ba102cb7…67ba` and `59fc1f81…0424`.
 - Every live `/shop` card image loads (`naturalWidth > 0`) from `jussbeautifulhair.com` or `cdn.shopify.com`. Every card
   without an image shows the JBH placeholder. All card media is square, and all card widths are equal.
-- No supplier identity (Dropship Beauty, Dropship Bundles, DSers, Faire, AZ Hair, APOHAIR, Indique, Jaipur, 5S Hair, LUXE CROWNS) renders on `/shop`.
+- No supplier identity (Dropship Beauty, Dropship Bundles, DSers, Faire, AZ Hair, APOHAIR, Indique, Jaipur, 5S Hair, LUXE CROWNS) appears in `/shop` **page text**. Branding printed inside image pixels is not text-detectable; for the relabelled assets it is covered by the byte hashes, and for all other images by founder review.
 - All 4 bundle deals are live and named "… Bundle Deal", so their option titles match live Shopify variants.
 - Body Wave: card → PDP (image `/products/bundle-bodywave.jpg` loaded, alt text = JBH name) → a sellable variant → live price
   → add to cart → cart row keeps the same name, option, and loaded image.
@@ -283,7 +283,7 @@ It proves, on desktop 1440 and mobile 390:
 - Founder Funnel Exact-Head Gate is red on `a231ac4` and also on `338eda4` before it, so it is not caused by this lane.
 
 ### Rollback
-`git revert 665fadf` removes the live proof and its workflow step. The storefront itself is not affected.
+Revert the PR #103 merge commit, or `git revert --no-edit 665fadf^..<PR head>` before merge. That removes the live proof, the ledger, their workflow steps, and this receipt section together. The storefront itself is not affected.
 
 ### Next gate
 1. Founder: approve merging `claude/dropship-beauty-images-qqlu53`, so every future push to main re-proves live image authority.

@@ -35,6 +35,33 @@ test("live catalog image proof walks card to PDP to cart on desktop and mobile w
   assert.doesNotMatch(script, /button-checkout|button-place-order|api\/shopify\/cart/);
 });
 
+test("live catalog image proof binds every card to its allowlisted image and fails fast on broken images", () => {
+  assert.match(script, /APPROVED_IMAGE_BY_HANDLE/);
+  assert.match(script, /renders \$\{src\}, not its approved \$\{approved\}/);
+  assert.match(script, /held on the placeholder but rendered an image/);
+  assert.match(script, /addEventListener\("error"/);
+  assert.match(script, /IMAGE_TIMEOUT_MS/);
+});
+
+test("live catalog image proof requires the displayed price to equal the selected live Shopify variant", () => {
+  assert.match(script, /\/api\/shopify\/catalog/);
+  assert.match(script, /variant\.option === chosenOption/);
+  assert.match(script, /assert\.equal\(price, expectedPrice/);
+  assert.match(script, /cart row lost the live price/);
+});
+
+test("read-only image ledger compares Shopify media to JBH images visually, including fine detail", () => {
+  const ledger = readFileSync(new URL("../scripts/shopify-image-ledger.mjs", import.meta.url), "utf8");
+  assert.match(ledger, /dhash/);
+  assert.match(ledger, /detailDifference/);
+  assert.match(ledger, /DETAIL_MATCH_SHARE = 0\.0003/);
+  assert.match(ledger, /stale image: same photo but/);
+  const graphql = ledger.match(/const query = `([\s\S]*?)`;/)?.[1] ?? "";
+  assert.match(graphql, /query JbhImageLedger/);
+  assert.doesNotMatch(graphql, /\btags\b|\bmutation\b/i, "ledger must stay read-only and never read supplier tags");
+  assert.match(workflow, /if: github\.event_name == 'workflow_dispatch'\n[\s\S]*?run: node scripts\/shopify-image-ledger\.mjs/);
+});
+
 test("exact-head gate runs the live image proof after push and on dispatch, and keeps its evidence", () => {
   assert.match(workflow, /run: node scripts\/catalog-images-live-playwright\.mjs/);
   assert.match(workflow, /if: github\.event_name != 'pull_request'\n[\s\S]*?REQUIRE_EXACT_HEAD: \$\{\{ github\.event_name == 'push' \}\}/);

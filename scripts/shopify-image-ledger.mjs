@@ -103,6 +103,35 @@ async function fingerprint(page, url, cache) {
 
 const distance = (a, b) => (a?.dhash && b?.dhash ? [...a.dhash].filter((bit, i) => bit !== b.dhash[i]).length : null);
 
+// Fine detail check. A 64-bit dHash cannot see small edits such as ribbon
+// lettering, so when two images look alike overall, compare them pixel by
+// pixel at 400x600 and report the share of pixels that differ strongly (any
+// channel > 48 levels). JPEG re-encoding stays far below DETAIL_MATCH_SHARE.
+const DETAIL_MATCH_SHARE = 0.0003; // measured: re-encode q40 ~0, LUXE->LAWLESS relabel 0.0011-0.0012
+async function detailDifference(page, urlA, urlB) {
+  try {
+    const [a, b] = await Promise.all([download(urlA), download(urlB)]);
+    return await page.evaluate(async ({ a, b }) => {
+      const pixels = async ({ type, base64 }) => {
+        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+        const bitmap = await createImageBitmap(new Blob([bytes], { type }));
+        const canvas = new OffscreenCanvas(400, 600);
+        const context = canvas.getContext("2d");
+        context.drawImage(bitmap, 0, 0, 400, 600);
+        return context.getImageData(0, 0, 400, 600).data;
+      };
+      const [pa, pb] = await Promise.all([pixels(a), pixels(b)]);
+      let changed = 0;
+      for (let i = 0; i < pa.length; i += 4) {
+        if (Math.max(Math.abs(pa[i] - pb[i]), Math.abs(pa[i + 1] - pb[i + 1]), Math.abs(pa[i + 2] - pb[i + 2])) > 48) changed += 1;
+      }
+      return changed / (pa.length / 4);
+    }, { a, b });
+  } catch {
+    return null;
+  }
+}
+
 async function liveRender(page, handles) {
   const cards = {};
   await page.goto(`${liveBase}/shop`, { waitUntil: "networkidle", timeout: 60_000 });
@@ -146,6 +175,10 @@ function classify(row) {
   }
   const d = row.compare.featuredVsJbh;
   if (d === null) return { status: "UNKNOWN", issues: [...issues, "image could not be decoded"], action: "re-run" };
+  if (d <= MATCH_DISTANCE && row.compare.featuredDetailVsJbh !== null && row.compare.featuredDetailVsJbh > DETAIL_MATCH_SHARE) {
+    issues.push(`stale image: same photo but ${(row.compare.featuredDetailVsJbh * 100).toFixed(2)}% of pixels differ from the approved JBH asset`);
+    return { status: "MISMATCH", issues, action: "replace Shopify featured image with the approved JBH asset bytes" };
+  }
   if (d > MATCH_DISTANCE) {
     issues.push("wrong featured image");
     const inGallery = row.compare.galleryVsJbh.some((value) => value !== null && value <= MATCH_DISTANCE);
@@ -192,6 +225,7 @@ try {
       live: { card: live.cards[product.handle] ?? null, pdp: live.pdps[product.handle] ?? null },
       compare: {
         featuredVsJbh: distance(featuredPrint, jbhPrint),
+        featuredDetailVsJbh: jbhUrl && featured ? await detailDifference(hashPage, featured, jbhUrl) : null,
         galleryVsJbh: galleryPrints.map((print) => distance(print, jbhPrint)),
         liveCardIsJbh: presentation ? (live.cards[product.handle] ?? null) === (presentation.image || "") : null,
       },
@@ -221,6 +255,7 @@ for (const row of ledger) {
       featuredSize: row.shopify.featuredSize,
       gallery: row.shopify.galleryCount,
       dFeatured: row.compare.featuredVsJbh,
+      detailShare: row.compare.featuredDetailVsJbh,
       dGallery: row.compare.galleryVsJbh,
     })}`,
   );

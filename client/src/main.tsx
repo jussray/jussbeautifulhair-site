@@ -2,13 +2,20 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-const legacyHashRoute = window.location.hash.startsWith("#/")
-  ? window.location.hash.slice(1)
-  : null;
+function migrateLegacyHashRoute() {
+  const legacyHashRoute = window.location.hash.startsWith("#/")
+    ? window.location.hash.slice(1)
+    : null;
 
-if (legacyHashRoute) {
-  window.history.replaceState(null, "", legacyHashRoute);
+  if (legacyHashRoute) {
+    window.history.replaceState(null, "", legacyHashRoute);
+  }
 }
+
+migrateLegacyHashRoute();
+// Same-document hash edits (old links, typed URLs) must migrate too; wouter
+// observes replaceState, so the router follows without a reload.
+window.addEventListener("hashchange", migrateLegacyHashRoute);
 
 const legacyShopifyProductRoute = window.location.pathname.match(/^\/products\/([^/]+)\/?$/);
 

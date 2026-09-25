@@ -40,13 +40,13 @@ export default function Terms() {
 
           <h2 className="font-display text-2xl mt-8 mb-3">Shipping</h2>
           <p>
-            See our <a href="/#/shipping" className="underline">Shipping Policy</a> for delivery times and rates.
+            See our <a href="/shipping" className="underline">Shipping Policy</a> for delivery times and rates.
             Risk of loss passes to you once the carrier scans the package as delivered.
           </p>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Returns and refunds</h2>
           <p>
-            See our <a href="/#/returns" className="underline">Return &amp; Refund Policy</a> for the full process and timelines.
+            See our <a href="/returns" className="underline">Return &amp; Refund Policy</a> for the full process and timelines.
             Final-sale items are non-returnable.
           </p>
 

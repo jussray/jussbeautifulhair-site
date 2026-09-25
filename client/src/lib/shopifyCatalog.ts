@@ -45,6 +45,44 @@ export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
 // intentionally excluded instead of leaking supplier merchandising into the store.
 export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation>> =
   Object.freeze({
+    "body-wave-human-hair-bundle-deal": {
+      name: "Body Wave Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles with soft body-wave movement.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set with soft body-wave movement. Choose the length set that matches your finished look.",
+      // Keep the customer-safe placeholder until a reviewed image is proven to
+      // depict this three-bundle deal without off-brand or misleading packaging.
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
+    "straight-human-hair-bundle-deal": {
+      name: "Straight Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles for a sleek straight install.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set for a sleek straight install. Choose the length set that matches your finished look.",
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
+    "deep-wave-human-hair-bundle-deal": {
+      name: "Deep Wave Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles with defined deep-wave texture.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set with defined deep-wave texture. Choose the length set that matches your finished look.",
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
+    "loose-wave-human-hair-bundle-deal": {
+      name: "Loose Wave Human Hair Bundle Deal",
+      category: "Bundles",
+      tagline: "Three graduated bundles with soft loose-wave movement.",
+      description:
+        "Three 100% virgin human-hair bundles in one graduated-length set with soft loose-wave movement. Choose the length set that matches your finished look.",
+      image: "",
+      allowedOptions: ['10"/12"/14"', '12"/14"/16"', '14"/16"/18"', '16"/18"/20"', '18"/20"/22"', '20"/22"/24"', '22"/24"/26"', '24"/26"/28"', '26"/28"/30"', '28"/30"/32"'],
+    },
     "body-wave-human-hair-bundles": {
       name: "Lawless Body Wave Bundles",
       category: "Bundles",
@@ -189,8 +227,10 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       tagline: "Strong, polished hold for everyday styling.",
       description:
         "4 oz edge control designed for smooth styling and firm hold without a flaky finish.",
-      image:
-        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/edge-control_18dc1db5-8a31-403b-b3b7-7c6751359a57.jpg?v=1786301802",
+      // Withheld: the prior asset showed printed brand text that does not match
+      // this product's name or the sticker-labelled container customers receive.
+      // The customer-safe placeholder renders until an approved photo exists.
+      image: "",
       allowedOptions: ["4 oz"],
     },
     "lawless-lace-melt-spray": {
@@ -199,8 +239,10 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       tagline: "A clean finishing step for lace installs.",
       description:
         "2 oz lace melt spray designed for HD and Swiss lace installs and a smooth finished look.",
-      image:
-        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/lace-melt-spray_082f9766-685a-4d0f-a1dd-4831988e0678.jpg?v=1786301882",
+      // Withheld: the prior asset showed printed brand text that does not match
+      // this product's name or the sticker-labelled container customers receive.
+      // The customer-safe placeholder renders until an approved photo exists.
+      image: "",
       allowedOptions: ["2 oz"],
     },
     "lawless-hair-oil-rosemary-mint": {
@@ -209,8 +251,10 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       tagline: "Lightweight scalp care for natural hair and installs.",
       description:
         "2 oz rosemary, mint, and castor scalp oil designed for lightweight care with natural hair and protective installs.",
-      image:
-        "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/hair-oil_66810ed7-a883-4113-8c21-934002c3b41d.jpg?v=1786301875",
+      // Withheld: the prior asset showed printed brand text that does not match
+      // this product's name or the sticker-labelled container customers receive.
+      // The customer-safe placeholder renders until an approved photo exists.
+      image: "",
       allowedOptions: ["2 oz"],
     },
   });

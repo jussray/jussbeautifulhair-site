@@ -10,6 +10,7 @@ const EXPECTED_REPOSITORY = "jussray/jussbeautifulhair-site";
 const EXPECTED_SIGNAL_NAME = "Verify current-main storefront contract";
 const EXPECTED_PROVIDER_GATES = new Set([
   "branded-frontdoor-provider-activation",
+  "founder-funnel-cloudflare-readback",
   "github-main-provider-governance",
 ]);
 const ALLOWED_STATUSES = new Set(["active", "planned", "retired"]);

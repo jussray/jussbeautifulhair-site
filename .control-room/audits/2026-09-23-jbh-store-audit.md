@@ -235,3 +235,57 @@ Therefore:
 ### Next gate
 1. Founder decision: remove/replace the stale `www.jussbeautifulhair.com -> jbh-private` Worker Route, or document why it is intentionally required.
 2. Independently, continue the Dropship Beauty image repair at the JBH presentation layer; do not treat today’s general storefront green as image-proof.
+
+---
+
+## Continuation — live image proof after #102 (agent session 013zvvpW2dxmJ5UxNJyLdK3r)
+
+### SHAs
+- Starting: `main` @ `a231ac46691c781f3c0dca47ae7daedc0640718f` (#102, which landed the LAWLESS ribbons, the essentials placeholders, and 4 bundle deals).
+- This lane: branch `claude/dropship-beauty-images-qqlu53` was reset onto `a231ac4`. Its earlier commits were squashed into #102, and no content was lost (verified file by file).
+- Ending code SHA: `665fadf` (live image proof). This receipt update is the commit after it. Not merged.
+
+### Correction to the 2026-09-25 continuation above
+That section says the image lane was "NOT YET VERIFIED" and that `shopifyCatalog.ts` last changed in `0045602`.
+Both were true when it was written, but #102 has since landed. The status below replaces them.
+
+### VERIFIED — production, run 36162535193 (workflow_dispatch on `665fadf`, live SHA `a231ac4`)
+The step `Prove live catalog image authority without payment` (`scripts/catalog-images-live-playwright.mjs`) passed against
+`https://jussbeautifulhair.com`, reporting: "Live catalog image authority proof passed on a231ac46…; no payment submitted."
+It proves, on desktop 1440 and mobile 390:
+- The served `/products/bundle-bodywave.jpg` and `/products/bundle-loosewave.jpg` have exactly the approved LAWLESS sha256s
+  `ba102cb7…67ba` and `59fc1f81…0424`.
+- Every live `/shop` card image loads (`naturalWidth > 0`) from `jussbeautifulhair.com` or `cdn.shopify.com`. Every card
+  without an image shows the JBH placeholder. All card media is square, and all card widths are equal.
+- No supplier identity (Dropship Beauty, Dropship Bundles, DSers, Faire, AZ Hair, APOHAIR, Indique, Jaipur, 5S Hair, LUXE CROWNS) renders on `/shop`.
+- All 4 bundle deals are live and named "… Bundle Deal", so their option titles match live Shopify variants.
+- Body Wave: card → PDP (image `/products/bundle-bodywave.jpg` loaded, alt text = JBH name) → a sellable variant → live price
+  → add to cart → cart row keeps the same name, option, and loaded image.
+- Push-only exact-head steps were skipped on dispatch. The same gate on push for `a231ac4` (run 36160251125) proved the live SHA,
+  a live no-payment Shopify cart (kinky-straight 14", $85.00 USD, no userErrors), and the deployed purchase path to the Shopify handoff.
+- Local: `npm test` 99/99 and `npm run lint` pass on `665fadf`. The new contract test is `tests/catalog-images-live-contract.test.mjs`.
+
+### Files changed this continuation
+- `scripts/catalog-images-live-playwright.mjs` (new): the live proof, no checkout or payment.
+- `.github/workflows/shopify-headless-exact-head.yml`: runs the proof after push (exact head required) and on dispatch;
+  uploads `artifacts/catalog-images-live/`.
+- `tests/catalog-images-live-contract.test.mjs` (new): guards the proof's assertions and wiring.
+- Shopify records changed: none. Price, inventory, checkout, and the allowlist: untouched.
+
+### Still UNKNOWN / BLOCKED
+- Shopify Admin reconciliation of all 24 `dropship-beauty` products (SKUs, inventory, Shopify media, tags). The connector is
+  still unauthorised for `8qp1z2-az`.
+- Screenshots and evidence.json from run 36162535193 are in the artifact `10876730066`. The agent sandbox cannot download it
+  (blob storage egress denied). The founder can open it from the run page.
+- Bundle deals and Kinky Curly show the placeholder. That is customer-safe, but a deal card does not yet *show* three bundles.
+- Founder calls still open: loose-wave texture accuracy; bone-straight "LUXE Hair Collection" card; U-part "…CROWNED" box;
+  "Lawless" prefix on deal names; one public handle per overlapping manual / Dropship Beauty pair.
+- Founder Funnel Exact-Head Gate is red on `a231ac4` and also on `338eda4` before it, so it is not caused by this lane.
+
+### Rollback
+`git revert 665fadf` removes the live proof and its workflow step. The storefront itself is not affected.
+
+### Next gate
+1. Founder: approve merging `claude/dropship-beauty-images-qqlu53`, so every future push to main re-proves live image authority.
+2. Founder: approved real imagery for the 4 bundle deals (a three-bundle hero) and Kinky Curly, plus the open calls above.
+3. Separate lane: customer acquisition. Image repair is launch quality, not conversion proof (5 sessions / 30 days, $0 sales per the start of this receipt).

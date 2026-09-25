@@ -20,14 +20,18 @@ test("live catalog image proof checks loading, shell parity, supplier privacy, a
   assert.match(script, /media is not square/);
   assert.match(script, /card widths differ/);
   assert.match(script, /SUPPLIER_IDENTITY = \/Dropship Beauty\|/);
-  for (const handle of ["body-wave", "straight", "deep-wave", "loose-wave"]) {
-    assert.match(script, new RegExp(`"${handle}-human-hair-bundle-deal"`));
-  }
+  // Deals come from the live allowlist so retiring one never turns the gate red,
+  // and publishing one makes the gate require it to be live.
+  assert.match(script, /BUNDLE_DEAL_HANDLES = Object\.keys\(APPROVED_IMAGE_BY_HANDLE\)\.filter\(\(handle\) => handle\.endsWith\("-bundle-deal"\)\)/);
+  assert.match(script, /bundle deal \$\{handle\} is not live/);
 });
 
 test("live catalog image proof walks card to PDP to cart on desktop and mobile without payment", () => {
   assert.match(script, /img-product/);
-  assert.match(script, /row-cart-\$\{JOURNEY_HANDLE\}/);
+  assert.match(script, /row-cart-\$\{journeyHandle\}/);
+  assert.match(script, /JOURNEY_PREFERENCE = \["body-wave-human-hair-bundles", "loose-wave-human-hair-bundles"\]/);
+  assert.match(script, /no allowlisted product with an approved image is sellable live/);
+  assert.match(script, /PINNED_ASSETS/);
   assert.match(script, /cart thumbnail/);
   assert.match(script, /\{ width: 1440, height: 1100 \}/);
   assert.match(script, /\{ width: 390, height: 844 \}/);

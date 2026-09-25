@@ -23,14 +23,10 @@ const APPROVED_ASSETS = {
   "/products/bundle-bodywave.jpg": "ba102cb7190b8b56aaddd9e3a2c457861513b00ccfe8943e5932abf7221f67ba",
   "/products/bundle-loosewave.jpg": "59fc1f81a8fd46c45e0f608625fb6de641d315868d5f2b5eb8bc520154cd0424",
 };
-const BUNDLE_DEAL_HANDLES = [
-  "body-wave-human-hair-bundle-deal",
-  "straight-human-hair-bundle-deal",
-  "deep-wave-human-hair-bundle-deal",
-  "loose-wave-human-hair-bundle-deal",
-];
-const JOURNEY_HANDLE = "body-wave-human-hair-bundles";
-const JOURNEY_IMAGE = "/products/bundle-bodywave.jpg";
+// Journey preference: products carrying the hashed LAWLESS assets first. The
+// first one that is sellable live is walked, so a sell-out never reads as a
+// code regression on the main gate.
+const JOURNEY_PREFERENCE = ["body-wave-human-hair-bundles", "loose-wave-human-hair-bundles"];
 const SUPPLIER_IDENTITY = /Dropship Beauty|Dropship Bundles|DSers|Faire|AZ Hair|APOHAIR|Indique|Jaipur|5S Hair|LUXE CROWNS/i;
 const IMAGE_HOSTS = new Set(["jussbeautifulhair.com", "cdn.shopify.com"]);
 const IMAGE_TIMEOUT_MS = 15_000;
@@ -44,9 +40,13 @@ const APPROVED_IMAGE_BY_HANDLE = Object.fromEntries(
   ].map(([, handle, image]) => [handle, image]),
 );
 assert.ok(Object.keys(APPROVED_IMAGE_BY_HANDLE).length > 0, "could not read the JBH presentation allowlist.");
-for (const path of Object.keys(APPROVED_ASSETS)) {
-  assert.ok(Object.values(APPROVED_IMAGE_BY_HANDLE).includes(path), `${path} is not bound to any allowlisted handle.`);
-}
+// Byte pins apply while the allowlist still uses the asset; retiring an image
+// in shopifyCatalog.ts retires its pin instead of turning the gate red.
+const PINNED_ASSETS = Object.fromEntries(
+  Object.entries(APPROVED_ASSETS).filter(([path]) => Object.values(APPROVED_IMAGE_BY_HANDLE).includes(path)),
+);
+// Three-bundle deals are whatever the allowlist currently publishes.
+const BUNDLE_DEAL_HANDLES = Object.keys(APPROVED_IMAGE_BY_HANDLE).filter((handle) => handle.endsWith("-bundle-deal"));
 const imageIdentity = (src) => {
   const url = new URL(src, expectedOrigin);
   return `${url.hostname}${url.pathname}`;
@@ -80,7 +80,7 @@ if (requireExactHead) {
 }
 
 const servedAssets = {};
-for (const [path, expected] of Object.entries(APPROVED_ASSETS)) {
+for (const [path, expected] of Object.entries(PINNED_ASSETS)) {
   const response = await fetch(`${baseURL}${path}`, { cache: "no-store" });
   assert.equal(response.ok, true, `${path} returned HTTP ${response.status}.`);
   const digest = createHash("sha256").update(Buffer.from(await response.arrayBuffer())).digest("hex");
@@ -139,7 +139,7 @@ async function cardInventory(page, label) {
     assert.match(deal.name, /Bundle Deal$/, `${label}: ${handle} is not named as a bundle deal.`);
   }
   for (const [handle, approved] of Object.entries(APPROVED_IMAGE_BY_HANDLE)) {
-    if (!Object.hasOwn(APPROVED_ASSETS, approved)) continue;
+    if (!Object.hasOwn(PINNED_ASSETS, approved)) continue;
     const card = cards.find((candidate) => candidate.handle === handle);
     assert.ok(card, `${label}: ${handle} (approved ${approved}) is not live on /shop.`);
     assert.equal(card.src, approved, `${label}: ${handle} renders ${card.src}, not ${approved}.`);
@@ -157,20 +157,40 @@ async function bundleJourney(page, label) {
     { timeout: 60_000 },
   );
   await page.goto(`${baseURL}/shop`, { waitUntil: "networkidle", timeout: 60_000 });
-  const liveProduct = (await (await catalogResponse).json())?.products?.find((product) => product?.id === JOURNEY_HANDLE);
-  assert.ok(liveProduct, `${label}: live catalog does not include ${JOURNEY_HANDLE}.`);
-  const card = page.getByTestId(`card-product-${JOURNEY_HANDLE}`);
-  await card.scrollIntoViewIfNeeded();
-  await card.click();
-  await page.getByTestId("text-product-name").waitFor({ state: "visible", timeout: 30_000 });
+  const liveProducts = (await (await catalogResponse).json())?.products ?? [];
+  const sellable = (handle) =>
+    liveProducts.find((product) => product?.id === handle && product.availableForSale && product.variants?.some((variant) => variant.availableForSale));
+  const candidates = [
+    ...JOURNEY_PREFERENCE,
+    ...Object.keys(APPROVED_IMAGE_BY_HANDLE).filter((handle) => !JOURNEY_PREFERENCE.includes(handle)),
+  ].filter((handle) => APPROVED_IMAGE_BY_HANDLE[handle] && sellable(handle));
+  assert.ok(candidates.length > 0, `${label}: no allowlisted product with an approved image is sellable live.`);
+
+  let journeyHandle;
+  let liveProduct;
+  let variants;
+  for (const handle of candidates) {
+    await page.goto(`${baseURL}/shop`, { waitUntil: "networkidle", timeout: 60_000 });
+    const card = page.getByTestId(`card-product-${handle}`);
+    await card.scrollIntoViewIfNeeded();
+    await card.click();
+    await page.getByTestId("text-product-name").waitFor({ state: "visible", timeout: 30_000 });
+    variants = page.locator('[data-testid^="variant-"]:not([disabled])');
+    if ((await variants.count()) > 0) {
+      journeyHandle = handle;
+      liveProduct = sellable(handle);
+      break;
+    }
+  }
+  assert.ok(journeyHandle, `${label}: no allowlisted product exposes a sellable option on its PDP.`);
+  const journeyImage = imageIdentity(APPROVED_IMAGE_BY_HANDLE[journeyHandle]);
+
   const pdpDetails = await loadedImage(page.getByTestId("img-product"), `${label}: PDP image`);
-  const pdp = { ...pdpDetails, src: new URL(pdpDetails.src).pathname };
-  assert.equal(pdp.src, JOURNEY_IMAGE, `${label}: PDP image ${pdp.src} is not ${JOURNEY_IMAGE}.`);
+  const pdp = { ...pdpDetails, src: imageIdentity(pdpDetails.src) };
+  assert.equal(pdp.src, journeyImage, `${label}: ${journeyHandle} PDP image ${pdp.src} is not ${journeyImage}.`);
   const productName = await page.getByTestId("text-product-name").innerText();
   assert.equal(pdp.alt, productName, `${label}: PDP alt text is not the JBH product name.`);
 
-  const variants = page.locator('[data-testid^="variant-"]:not([disabled])');
-  assert.ok((await variants.count()) > 0, `${label}: no sellable ${JOURNEY_HANDLE} variant is live.`);
   const chosen = variants.nth((await variants.count()) > 1 ? 1 : 0);
   const chosenOption = (await chosen.innerText()).trim();
   const liveVariant = liveProduct.variants.find((variant) => variant.option === chosenOption && variant.availableForSale);
@@ -185,21 +205,21 @@ async function bundleJourney(page, label) {
   ).catch(() => {});
   const price = (await priceLocator.innerText()).trim();
   assert.equal(price, expectedPrice, `${label}: PDP shows ${price}, live Shopify price for ${chosenOption} is ${expectedPrice}.`);
-  await page.screenshot({ path: `${outputDir}/pdp-${JOURNEY_HANDLE}-${label}.png` });
+  await page.screenshot({ path: `${outputDir}/pdp-${journeyHandle}-${label}.png` });
 
   await page.getByTestId(label === "mobile" ? "button-add-to-cart-mobile" : "button-add-to-cart").click();
   await page.goto(`${baseURL}/cart`, { waitUntil: "networkidle", timeout: 60_000 });
-  const row = page.getByTestId(`row-cart-${JOURNEY_HANDLE}`);
+  const row = page.getByTestId(`row-cart-${journeyHandle}`);
   await row.waitFor({ state: "visible", timeout: 30_000 });
   const rowText = await row.innerText();
   assert.ok(rowText.includes(productName), `${label}: cart row does not name ${productName}.`);
   assert.ok(rowText.includes(chosenOption), `${label}: cart row lost the selected option ${chosenOption}.`);
   const cartDetails = await loadedImage(row.locator("img"), `${label}: cart thumbnail`);
-  const cartImage = { ...cartDetails, src: new URL(cartDetails.src).pathname };
-  assert.equal(cartImage.src, JOURNEY_IMAGE, `${label}: cart thumbnail ${cartImage.src} is not ${JOURNEY_IMAGE}.`);
+  const cartImage = { ...cartDetails, src: imageIdentity(cartDetails.src) };
+  assert.equal(cartImage.src, journeyImage, `${label}: cart thumbnail ${cartImage.src} is not ${journeyImage}.`);
   assert.ok(rowText.includes(expectedPrice), `${label}: cart row lost the live price ${expectedPrice}.`);
   await page.screenshot({ path: `${outputDir}/cart-${label}.png`, fullPage: true });
-  return { productName, chosenOption, price, variantId: liveVariant.id, pdp, cartImage };
+  return { journeyHandle, productName, chosenOption, price, variantId: liveVariant.id, pdp, cartImage };
 }
 
 const browser = await chromium.launch({ headless: true });

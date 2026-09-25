@@ -289,3 +289,60 @@ Revert the PR #103 merge commit, or `git revert --no-edit 665fadf^..<PR head>` b
 1. Founder: approve merging `claude/dropship-beauty-images-qqlu53`, so every future push to main re-proves live image authority.
 2. Founder: approved real imagery for the 4 bundle deals (a three-bundle hero) and Kinky Curly, plus the open calls above.
 3. Separate lane: customer acquisition. Image repair is launch quality, not conversion proof (5 sessions / 30 days, $0 sales per the start of this receipt).
+
+---
+
+## Continuation — Shopify product-image mismatch pass (2026-09-25, session 013zvvpW2dxmJ5UxNJyLdK3r)
+
+### Fingerprint
+- Storefront repo `main` @ `3b3b5ecbe3cc2245265e514536eb3f5578298cc6` (PR #103 squash; head `82f4c8c`). Founder merge approval
+  was "conditional on the PR and its commits being fixed and green". At merge, all 15 PR checks on `82f4c8c` were green
+  (SonarQube skipped by config), the 5 review threads were answered and resolved, and the production dispatch passed.
+- Live: `https://jussbeautifulhair.com/version` = `3b3b5ec`, proven by push run 36166873659 ("Prove exact live SHA").
+- Shopify: `8qp1z2-az.myshopify.com`. Read-only via the tokenless Storefront API from CI. **Admin connector: signed out**
+  (switched off `pd0vqx-eg` with founder approval, never re-authorised), so there are no Shopify writes.
+- The Cloudflare "Deployment successful" bot comments on PR heads are preview/version builds. Production stayed on
+  `a231ac4` until the merge (live SHA read by the proof on each dispatch).
+
+### Ledger (dispatch run 36166311462, head `82f4c8c`, live `a231ac4`, 33 JBH-vendor products)
+Comparison is visual: a 64-bit dHash for "same photo", then a pixel-detail share at 400×600 (threshold 0.0003, calibrated:
+LUXE→LAWLESS relabel = 0.0011–0.0012; JPEG re-encode down to q40 = 0).
+
+| Handle | Live card/PDP (JBH authority) | Shopify featured | Status | Action |
+|---|---|---|---|---|
+| body-wave-human-hair-bundles | /products/bundle-bodywave.jpg (LAWLESS) | jbh-lawless-body-wave-bundles.jpg `v=1788570364` | **MISMATCH: stale**, 0.18% pixels differ (pre-relabel LUXE CROWNS ribbons) | replace Shopify featured with approved bytes `ba102cb7…` |
+| loose-wave-human-hair-bundles | /products/bundle-loosewave.jpg (LAWLESS) | jbh-lawless-loose-wave-bundles.jpg `v=1788570378` | **MISMATCH: stale**, 0.15% | replace with approved bytes `59fc1f81…` |
+| lawless-edge-control-4-oz / lace-melt-spray / hair-oil-rosemary-mint | JBH placeholder (withheld) | original "Luxe/LUXÉLUNE" label images | **MISMATCH: held** | no approved exact image; Shopify media still reaches Shopify checkout; founder: remove or replace |
+| deep-wave-human-hair-bundles | /products/bundle-deepwave.jpg | jbh-lawless-deep-wave-bundles.jpg | MATCH (detail 0); alt text differs | alt → "Lawless Deep Wave Bundles" |
+| kinky-straight-human-hair-bundles | /products/bundle-kinkystraight.jpg | jbh-flawless-kinky-straight-bundles.jpg | MATCH (detail 0); alt text differs | alt → "Flawless Kinky Straight Bundles" |
+| lawless-bone-straight-bundle-raw-vietnamese | CDN bundle-bonestraight | same file | MATCH; alt lacks "—" | alt → JBH name |
+| flawless-13-4-lace-frontal-wig-straight, flawless-glueless-4-4-closure-wig-body-wave | CDN same file | same file | MATCH; alt lacks "—" | alt → JBH name |
+| royal-raw-indian-temple-bundle, lawless-4-4 / 5-5 closure, lawless-13-4 frontal, flawless-13-6 bob, flawless-deep-wave-u-part | CDN same file | same file | MATCH | none |
+| 4 bundle deals, kinky-curly | JBH placeholder | none | MATCH: held | supply approved exact image |
+| 12 unlisted (afro kinky ×2, blonde body wave, spanish wave, straight bundles, 4×4/13×4 transparent closures/frontals ×6) + Hair Match | not public on JBH | none (Hair Match has its own 160×160) | NOT PUBLIC | none on jussbeautifulhair.com |
+
+No product shows the wrong texture, a wig/bundle/closure cross-assignment, or another product's image.
+Every public card and PDP renders exactly its allowlisted JBH image, as proven on each push by `scripts/catalog-images-live-playwright.mjs`.
+
+### Products fixed this pass
+None in Shopify: writes are BLOCKED on the Admin connector. On jussbeautifulhair.com the presentation was already correct
+at `a231ac4`, and it is now machine-guarded on every push to main.
+
+### BLOCKED
+- Replace the Shopify featured media for body-wave and loose-wave with the approved LAWLESS bytes, and set 7 alt texts.
+  Needs the Shopify connector authorised for `8qp1z2-az` (claude.ai/customize/connectors, then a new session).
+- The 3 essentials' Shopify media: founder decision (remove from Shopify, or supply approved photos).
+- Canva was not needed. No image required normalisation, and none may be fabricated.
+
+### Rollback
+Revert `3b3b5ec` to remove the live proof and ledger. No storefront or Shopify state changed in this pass.
+
+### Next gate
+Reconnect Shopify Admin to `8qp1z2-az`. Then, per product: upload the approved `/products/bundle-{bodywave,loosewave}.jpg`
+bytes as the Shopify featured image (keep the old media until the new one is verified), set the alt texts, and re-dispatch the gate.
+The ledger must report detail 0 / MATCH for both before this pass counts as complete.
+
+### Re-fingerprint 2026-09-25 19:46 UTC
+- Dispatch run 36181407942 on `main` @ `3b3b5ec` (live `3b3b5ec`): live image proof passed, and the ledger was **unchanged**:
+  11 MATCH, 5 MATCH (alt text), 5 MISMATCH (body-wave stale 0.18%, loose-wave stale 0.15%, 3 essentials held), 12 NOT PUBLIC.
+- The Shopify Admin connector is still unauthorised in this session, so no Shopify media was changed. The write step remains BLOCKED.

@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
 
 permissions:
@@ -18,6 +19,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  base-freshness:
+    name: "Base Freshness"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require exact head to contain current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+          git fetch --no-tags origin refs/heads/main:refs/remotes/origin/main
+          current_main="$(git rev-parse refs/remotes/origin/main)"
+          printf 'head=%s\ncurrent_main=%s\n' "$actual" "$current_main"
+          git merge-base --is-ancestor "$current_main" "$actual"
+
   typecheck:
     name: "Typecheck"
     runs-on: ubuntu-latest
@@ -115,6 +136,33 @@ jobs:
           node-version: "24"
       - run: npm run verify:ai-skills
 
+  deployment-boundary:
+    name: "Deployment Boundary"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Verify source and configuration boundary
+        run: npm run security:deploy-boundary
+      - name: Build production storefront
+        run: npm run build
+      - name: Verify public build boundary
+        run: npm run security:deploy-boundary
+
   sonarqube:
     name: "SonarQube – Storefront Standard"
     if: github.event_name == 'workflow_dispatch'
@@ -157,24 +205,30 @@ jobs:
     name: "Required Gate"
     if: always()
     needs:
+      - base-freshness
       - typecheck
       - lint
       - unit-tests
       - ai-skill-contract
+      - deployment-boundary
     runs-on: ubuntu-latest
     env:
+      BASE_FRESHNESS_RESULT: ${{ needs.base-freshness.result }}
       TYPECHECK_RESULT: ${{ needs.typecheck.result }}
       LINT_RESULT: ${{ needs.lint.result }}
       UNIT_TEST_RESULT: ${{ needs.unit-tests.result }}
       AI_SKILL_RESULT: ${{ needs.ai-skill-contract.result }}
+      DEPLOYMENT_BOUNDARY_RESULT: ${{ needs.deployment-boundary.result }}
     steps:
       - name: Require mandatory exact-head proof lanes
         shell: bash
         run: |
           set -euo pipefail
-          printf 'typecheck=%s\nlint=%s\nunit_tests=%s\nai_skill=%s\n' \
-            "$TYPECHECK_RESULT" "$LINT_RESULT" "$UNIT_TEST_RESULT" "$AI_SKILL_RESULT"
+          printf 'base_freshness=%s\ntypecheck=%s\nlint=%s\nunit_tests=%s\nai_skill=%s\ndeployment_boundary=%s\n' \
+            "$BASE_FRESHNESS_RESULT" "$TYPECHECK_RESULT" "$LINT_RESULT" "$UNIT_TEST_RESULT" "$AI_SKILL_RESULT" "$DEPLOYMENT_BOUNDARY_RESULT"
+          test "$BASE_FRESHNESS_RESULT" = "success"
           test "$TYPECHECK_RESULT" = "success"
           test "$LINT_RESULT" = "success"
           test "$UNIT_TEST_RESULT" = "success"
           test "$AI_SKILL_RESULT" = "success"
+          test "$DEPLOYMENT_BOUNDARY_RESULT" = "success"

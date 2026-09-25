@@ -8,9 +8,9 @@ Public storefront for Juss Beautiful Hair.
 
 **Stack:** React + Vite + Tailwind CSS + Cloudflare Worker
 
-**Active physical-commerce handoff:** Shopify Storefront Cart + Shopify-hosted checkout. Shopify owns sellable catalog state, cart creation, final availability, discounts, shipping, taxes, payment, and order creation. The Cloudflare storefront remains the branded delivery layer.
+**Implemented physical-commerce handoff:** Shopify Storefront Cart + Shopify-hosted checkout. In source, Shopify owns sellable catalog state, cart creation, final availability, discounts, shipping, taxes, payment, and order creation; the Cloudflare storefront is the branded delivery layer. Current production activation and customer-path truth require separate Cloudflare, Shopify, and live-browser evidence.
 
-The older Stripe checkout surface remains server-side only as a reversible rollback path while the Shopify physical-product flow earns production proof. It is not the active physical-product customer handoff.
+The older Stripe checkout surface remains server-side only as a reversible rollback path while the Shopify physical-product flow earns production proof. It is not the intended physical-product customer handoff.
 
 See [`docs/SHOPIFY_HEADLESS_BRIDGE.md`](docs/SHOPIFY_HEADLESS_BRIDGE.md) for the current commerce contract.
 
@@ -28,19 +28,21 @@ Do not add:
 
 The private owner/admin, order-processing backend, webhook processing, and vendor control source belongs only in `jussray/jbh-private`.
 
-## Current commerce flow
+## Implemented commerce flow
 
-For physical products:
+For physical products, the checked-in customer path is designed to run as follows when the required runtime/provider bindings are active:
 
 1. The browser renders the existing JBH React/Vite storefront.
 2. `GET /api/shopify/catalog` reaches the Cloudflare Worker.
-3. The Worker reads live public Shopify Storefront data only inside the approved `JBH` vendor boundary.
+3. The Worker queries public Shopify Storefront data only inside the approved `JBH` vendor boundary.
 4. The browser keeps selected Shopify variant GIDs in a session-scoped cart.
 5. Checkout sends only `merchandiseId` and `quantity` to `POST /api/shopify/cart`.
 6. The Worker revalidates submitted variants against Shopify before cart creation.
-7. Shopify `cartCreate` returns the checkout URL and Shopify-computed cart totals.
-8. If Shopify returns a branded `jussbeautifulhair.com/cart/...` checkout URL, the client preserves the exact cart path and key while switching only the colliding hostname to the canonical `.myshopify.com` shop host.
+7. Shopify `cartCreate` supplies the checkout URL and Shopify-computed cart totals.
+8. If Shopify supplies a branded `jussbeautifulhair.com/cart/...` checkout URL, the client preserves the exact cart path and key while switching only the colliding hostname to the canonical `.myshopify.com` shop host.
 9. The browser redirects to Shopify for checkout and payment.
+
+Those steps describe the implemented path, not a permanent claim that the live production route, catalog, cart, or checkout is healthy at this moment.
 
 The browser does not send product prices as authority, and the Worker does not accept arbitrary variants outside the approved public catalog boundary.
 
@@ -93,7 +95,7 @@ pattern = "jussbeautifulhair.com/*"
 zone_name = "jussbeautifulhair.com"
 ```
 
-That front-door configuration is an explicit activation surface, not the ordinary branch/default deploy path. Shopify remains the commerce source of truth behind the branded Cloudflare experience.
+That front-door configuration is an explicit activation surface, not the ordinary branch/default deploy path. Repository configuration alone does not prove that Cloudflare currently has the route attached or that Shopify checkout is reachable.
 
 The Worker rejects unapproved storefront hostnames. A mistakenly exposed `workers.dev` or preview hostname must not become an alternate production storefront.
 
@@ -107,7 +109,7 @@ Do not prefix secrets with `VITE_`. Vite variables are browser-readable.
 
 ## Checkout protections
 
-The active physical-product path:
+The implemented physical-product path:
 
 - accepts only Shopify variant GIDs and quantities as cart input;
 - re-reads submitted variants from Shopify before cart creation;
@@ -137,7 +139,7 @@ Do not use temporary deployments, Preview URLs, preview aliases, Vercel, or a `w
 
 ## Documentation rule
 
-Current `main` implementation and exact evidence outrank stale prose. Historical Stripe documentation may remain historical, but current-state docs must not present Stripe as the active physical-product checkout while the Shopify Cart path is the implemented customer handoff.
+Current `main` implementation and exact evidence outrank stale prose. Historical Stripe documentation may remain historical, but current-state docs must not present Stripe as the intended physical-product checkout while the Shopify Cart path is the implemented customer handoff. Do not promote the implemented Shopify path into live-production truth without current provider and browser evidence.
 
 ## License
 

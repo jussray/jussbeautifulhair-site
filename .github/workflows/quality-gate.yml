@@ -1,6 +1,9 @@
 name: Quality Gate
 
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -8,9 +11,10 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
-  group: quality-gate-${{ github.ref }}
+  group: quality-gate-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -19,6 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -31,6 +45,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -43,6 +67,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -66,6 +100,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -80,7 +124,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
           fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
       - name: Record optional scanner status
         if: ${{ env.SONAR_TOKEN == '' || env.SONAR_HOST_URL == '' }}
         run: echo "SonarQube is not configured for this repository; required local quality gates still run separately."
@@ -98,3 +151,29 @@ jobs:
           args: >
             -Dsonar.projectKey=jussbeautifulhair-site
             -Dsonar.qualitygate.wait=true
+
+  required-gate:
+    name: "Required Gate"
+    if: always()
+    needs:
+      - typecheck
+      - lint
+      - unit-tests
+      - ai-skill-contract
+    runs-on: ubuntu-latest
+    env:
+      TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+      LINT_RESULT: ${{ needs.lint.result }}
+      UNIT_TEST_RESULT: ${{ needs.unit-tests.result }}
+      AI_SKILL_RESULT: ${{ needs.ai-skill-contract.result }}
+    steps:
+      - name: Require mandatory exact-head proof lanes
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'typecheck=%s\nlint=%s\nunit_tests=%s\nai_skill=%s\n' \
+            "$TYPECHECK_RESULT" "$LINT_RESULT" "$UNIT_TEST_RESULT" "$AI_SKILL_RESULT"
+          test "$TYPECHECK_RESULT" = "success"
+          test "$LINT_RESULT" = "success"
+          test "$UNIT_TEST_RESULT" = "success"
+          test "$AI_SKILL_RESULT" = "success"

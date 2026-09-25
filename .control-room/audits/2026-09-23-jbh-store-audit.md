@@ -341,3 +341,8 @@ Revert `3b3b5ec` to remove the live proof and ledger. No storefront or Shopify s
 Reconnect Shopify Admin to `8qp1z2-az`. Then, per product: upload the approved `/products/bundle-{bodywave,loosewave}.jpg`
 bytes as the Shopify featured image (keep the old media until the new one is verified), set the alt texts, and re-dispatch the gate.
 The ledger must report detail 0 / MATCH for both before this pass counts as complete.
+
+### Re-fingerprint 2026-09-25 19:46 UTC
+- Dispatch run 36181407942 on `main` @ `3b3b5ec` (live `3b3b5ec`): live image proof passed, and the ledger was **unchanged**:
+  11 MATCH, 5 MATCH (alt text), 5 MISMATCH (body-wave stale 0.18%, loose-wave stale 0.15%, 3 essentials held), 12 NOT PUBLIC.
+- The Shopify Admin connector is still unauthorised in this session, so no Shopify media was changed. The write step remains BLOCKED.

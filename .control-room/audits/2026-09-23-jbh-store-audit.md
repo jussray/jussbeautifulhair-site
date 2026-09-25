@@ -77,3 +77,69 @@ Audit the current JBH store with emphasis on Dropship Beauty product imagery, br
 
 ## Next Gate
 Repair the Dropship Beauty image set at the actual public presentation authority, then run production Playwright on `jussbeautifulhair.com` before calling the store image issue fixed.
+
+---
+
+## Continuation — 2026-09-25
+
+### Fresh authority
+- Current `main`: `ae267b43bd6166cfc52689305993c54135bab89b`.
+- `main` remains unprotected; this is tracked separately under governance issue #75.
+- The Sept. 25 Cloudflare Workers build for this exact SHA succeeded and produced Worker version `9fe4847c-738d-4553-89a6-8a428143c5cf`.
+- Current Worker deployment `6d715927-95c2-46b1-b594-bcb048298bf7` serves that version at 100% traffic and was created at `2026-09-25T09:06:00Z`.
+
+### Exact-head browser/commerce proof
+The `Shopify Checkout Bridge Exact-Head Gate` for `ae267b43bd6166cfc52689305993c54135bab89b` completed successfully. Its successful steps include:
+- exact-head verification;
+- TypeScript and production build;
+- pinned browser verifier + Chromium installation;
+- rendered Hair Match permalink flow;
+- rendered physical Shopify flow;
+- live Shopify catalog + no-payment cart;
+- wait for exact Cloudflare Worker build;
+- exact live SHA + branded front-door proof;
+- deployed Shopify purchase path without payment;
+- canonical production receipt upload.
+
+This clears the prior UNKNOWN around the real browser money path for the current exact head. It does **not** by itself prove the visual correctness of every Dropship Beauty image.
+
+### Cloudflare provider readback
+Fresh read-only provider evidence now proves:
+- zone `jussbeautifulhair.com` is `active` and not paused;
+- apex `AAAA 100::` is proxied and Cloudflare-managed with `origin_worker_id=bc4f0b0d45db883e67f21770c5594bef710481d6`;
+- Workers Custom Domain `jussbeautifulhair.com` is enabled in production on service `jussbeautifulhair-site`;
+- Workers Custom Domain `www.jussbeautifulhair.com` is enabled in production on service `jussbeautifulhair-site`;
+- wildcard Worker Route `*.jussbeautifulhair.com/*` points to `jussbeautifulhair-site`;
+- `app.jussbeautifulhair.com` points to `jussbeautifulhair-site`;
+- `api.jussbeautifulhair.com` points to `jbh-private`.
+
+### Provider conflict still requiring review
+Fresh route readback also shows a route pattern `www.jussbeautifulhair.com` assigned to `jbh-private` while `www.jussbeautifulhair.com` is simultaneously an enabled Custom Domain for `jussbeautifulhair-site`.
+
+Cloudflare documents that a Worker Route can run before a Custom Domain Worker on the same hostname. Therefore this is a real authority smell, not a cosmetic duplicate. No mutation was made because deleting or replacing that route requires explicit founder approval under the project's no-delete rule.
+
+Issue #53 should remain open until the `www` route is either proven intentionally required or removed/replaced under explicit authority, followed by exact-head browser proof.
+
+### Dropship Beauty image lane status
+The latest commit touching `client/src/lib/shopifyCatalog.ts` remains `004560239d17f1a2571f482c89ca511a6084bc27` (`fix(catalog): use placeholder for kinky curly vendor media`, 2026-09-22).
+
+Therefore:
+- today’s green exact-head deployment does not prove that the broader Dropship Beauty image cleanup landed;
+- Kinky Curly remains the known intentionally-withheld image case until a verified exact product asset is approved;
+- the image-repair lane remains open independently of front-door/runtime health.
+
+### Updated status
+- current-main source/build: VERIFIED
+- exact current-main Cloudflare build/deployment: VERIFIED
+- live branded front door + exact SHA: VERIFIED by exact-head gate
+- rendered Hair Match path: VERIFIED
+- rendered physical Shopify path: VERIFIED
+- live no-payment Shopify cart/checkout handoff: VERIFIED
+- Cloudflare apex Custom Domain ownership: VERIFIED
+- Cloudflare apex proxied DNS: VERIFIED
+- `www` routing authority: CONFLICT / needs founder decision
+- broad Dropship Beauty image normalization: NOT YET VERIFIED / remains open
+
+### Next gate
+1. Founder decision: remove/replace the stale `www.jussbeautifulhair.com -> jbh-private` Worker Route, or document why it is intentionally required.
+2. Independently, continue the Dropship Beauty image repair at the JBH presentation layer; do not treat today’s general storefront green as image-proof.

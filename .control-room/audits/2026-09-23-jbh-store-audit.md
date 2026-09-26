@@ -346,3 +346,45 @@ The ledger must report detail 0 / MATCH for both before this pass counts as comp
 - Dispatch run 36181407942 on `main` @ `3b3b5ec` (live `3b3b5ec`): live image proof passed, and the ledger was **unchanged**:
   11 MATCH, 5 MATCH (alt text), 5 MISMATCH (body-wave stale 0.18%, loose-wave stale 0.15%, 3 essentials held), 12 NOT PUBLIC.
 - The Shopify Admin connector is still unauthorised in this session, so no Shopify media was changed. The write step remains BLOCKED.
+
+---
+
+## Continuation — Shopify media fix applied (2026-09-26, session 013zvvpW2dxmJ5UxNJyLdK3r)
+
+### Fingerprint before edits
+- Shopify Admin connector authorised: shop "JBH", `myshopifyDomain` = `8qp1z2-az.myshopify.com` (primary domain jussbeautifulhair.com).
+- `main` @ `cd26612` (a parallel lane added the Facebook image-routing receipt; no storefront change).
+- Admin snapshot showed out-of-band changes since the 2026-09-25 ledger:
+  - body-wave and loose-wave had **new featured images** (`bundle-bodywave_9b659471…` v=1789968394, `bundle-loosewave_d560f89b…`).
+  - Deep-wave and kinky-straight had extra gallery images.
+  - Bone straight and the 13×4 straight and glueless wigs are now **DRAFT**.
+- Re-fingerprint ledger, run 36257629879: the new body/loose images are **still stale** (detail 0.18% / 0.15%, i.e. pre-relabel LUXE CROWNS).
+  The public catalog shrank to 9 allowlisted products: the wigs, closures, frontal, bone straight, Royal Indian and 3 essentials are no longer served. That is an out-of-band unpublish, not by this lane.
+
+### Changes (Shopify Admin, product by product)
+| Product | Change | Media ID |
+|---|---|---|
+| body-wave-human-hair-bundles (`Product/9719789060339`) | `fileCreate` from `https://jussbeautifulhair.com/products/bundle-bodywave.jpg` (served bytes = approved `ba102cb7…`), attach, move to position 0, alt "Lawless Body Wave Bundles" | new `MediaImage/46204197765363` |
+| | detached stale images (files kept) | `41609895346419`, `39740543336691` |
+| loose-wave-human-hair-bundles (`Product/9719788667123`) | same from `/products/bundle-loosewave.jpg` (approved `59fc1f81…`), alt "Lawless Loose Wave Bundles" | new `MediaImage/46204200452339` |
+| | detached stale images (files kept) | `41609896034547`, `39740543959283` |
+| deep-wave-human-hair-bundles | alt → "Lawless Deep Wave Bundles" (pixels already matched) | `39740543893747` |
+| kinky-straight-human-hair-bundles | alt → "Flawless Kinky Straight Bundles" (pixels already matched) | `39740544352499` |
+
+No product, variant, price, inventory, status or checkout mutation was issued. Only `fileCreate`, `fileUpdate` and `productReorderMedia` were used.
+
+### Proof
+- Ledger, run 36258008709 (`main` / live `cd26612`): body-wave and loose-wave Shopify featured images now show **dHash 0, detail 0.0000** against the approved JBH assets. Deep-wave and kinky-straight are MATCH with the JBH alt text. The live catalog image proof passed in the same run.
+- Admin readback after detaching: body-wave and loose-wave each hold exactly one image (the approved LAWLESS asset), and all four products are ACTIVE.
+
+### Still held (no approved exact image — not faked)
+- 4 bundle deals and kinky-curly: JBH placeholder, no Shopify media.
+- 3 essentials: no longer public. Their Shopify media is still the withheld label images (founder decision).
+
+### Rollback
+- Re-attach the old media: `fileUpdate { id, referencesToAdd: [productId] }` for `41609895346419` and `39740543336691` (body) and `41609896034547` and `39740543959283` (loose), then `productReorderMedia` to position 0.
+- Revert alt text by `fileUpdate` alt to the previous values: "Juss Beautiful Hair Lawless Deep Wave Bundles" and "Juss Beautiful Hair Flawless Kinky Straight Bundles".
+
+### Next gate
+- Founder: confirm the 11-product unpublish was intended, and decide on the essentials' Shopify media.
+- Supply approved exact images for the bundle deals and kinky-curly.

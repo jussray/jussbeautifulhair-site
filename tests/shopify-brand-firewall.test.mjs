@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+// Exact-head contract: approved live catalog media comes from current Shopify truth.
 const source = readFileSync(
   new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url),
   "utf8",

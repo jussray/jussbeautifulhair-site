@@ -7,12 +7,15 @@ async function read(relativePath) {
   return readFile(path.join(process.cwd(), ...relativePath.split("/")), "utf8");
 }
 
-test("all Cloudflare deploy configs route through the legacy Stripe default-off entry gate", async () => {
+test("all Cloudflare deploy configs route through the provider gate and preserve legacy Stripe default-off", async () => {
   for (const configPath of ["wrangler.toml", "wrangler.frontdoor.toml"]) {
     const config = await read(configPath);
-    assert.match(config, /^main\s*=\s*"worker\/entry\.ts"\s*$/m);
+    assert.match(config, /^main\s*=\s*"worker\/provider-entry\.ts"\s*$/m);
     assert.match(config, /^ENABLE_LEGACY_STRIPE_CHECKOUT\s*=\s*"false"\s*$/m);
   }
+  const providerEntry = await read("worker/provider-entry.ts");
+  assert.match(providerEntry, /import storefrontWorker from ['"]\.\/entry['"]/);
+  assert.match(providerEntry, /return storefrontWorker\.fetch\(request, env\)/);
 });
 
 test("legacy Stripe checkout and verification routes return 404 unless explicitly enabled", async () => {

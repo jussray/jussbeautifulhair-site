@@ -7,6 +7,7 @@ on:
     paths:
       - "control-room.manifest.json"
       - ".control-room/repository.manifest.json"
+      - ".control-room/council-residency.contract.json"
       - ".github/workflows/control-room-current-main-exact-head.yml"
       - ".github/workflows/quality-gate.yml"
       - ".github/workflows/deployment-boundary.yml"
@@ -28,6 +29,7 @@ on:
       - "scripts/verify-deployment-boundary.mjs"
       - "scripts/verify-control-room-manifest.mjs"
       - "scripts/verify-control-room-tests.mjs"
+      - "scripts/verify-protected-intelligence-contract.mjs"
       - "docs/CONTROL_ROOM_FUTUREYOU.md"
   push:
     branches:
@@ -121,6 +123,9 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci
+
+      - name: Verify protected intelligence and live-proof contract
+        run: node scripts/verify-protected-intelligence-contract.mjs
 
       - name: Run TypeScript
         run: npm run check

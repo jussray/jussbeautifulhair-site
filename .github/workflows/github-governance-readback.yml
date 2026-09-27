@@ -1,0 +1,57 @@
+name: GitHub Governance Readback
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-governance-readback
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.sha }}
+  TARGET_BRANCH: main
+
+jobs:
+  readback:
+    name: Verify GitHub provider membrane read-only
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact requested head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+          persist-credentials: false
+
+      - name: Verify exact head
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Verify source contract
+        run: node --test tests/github-governance-readback-contract.test.mjs
+
+      - name: Read GitHub provider governance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
+          TARGET_BRANCH: ${{ env.TARGET_BRANCH }}
+        run: node scripts/verify-github-governance-readback.mjs
+
+      - name: Upload governance readback receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-governance-readback-${{ env.EXPECTED_HEAD_SHA }}
+          path: artifacts/github-governance-readback/
+          if-no-files-found: warn
+          retention-days: 30

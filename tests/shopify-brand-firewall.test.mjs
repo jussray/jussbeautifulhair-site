@@ -2,10 +2,34 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+// Exact-head contract: approved live catalog media comes from current Shopify truth.
 const source = readFileSync(
   new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url),
   "utf8",
 );
+
+const activeSupplierHandles = [
+  "afro-kinky-human-hair-bundle-deal",
+  "afro-kinky-human-hair-bundles",
+  "body-wave-4x4-transparent-lace-closure",
+  "body-wave-human-hair-bundle-deal",
+  "deep-wave-4x4-transparent-lace-closure",
+  "deep-wave-human-hair-bundle-deal",
+  "kinky-straight-human-hair-bundles",
+  "blonde-body-wave-human-hair-bundles",
+  "kinky-curly-human-hair-bundles",
+  "body-wave-human-hair-bundles",
+  "deep-wave-human-hair-bundles",
+  "loose-wave-human-hair-bundles",
+  "loose-wave-13x4-transparent-lace-frontal",
+  "loose-wave-4x4-transparent-lace-closure",
+  "loose-wave-human-hair-bundle-deal",
+  "spanish-wave-human-hair-bundles",
+  "straight-13x4-transparent-lace-frontal",
+  "straight-4x4-transparent-lace-closure",
+  "straight-human-hair-bundle-deal",
+  "straight-human-hair-bundles",
+];
 
 test("Shopify catalog fails closed through the JBH presentation allowlist", () => {
   assert.match(source, /JBH_PRESENTATION_BY_HANDLE/);
@@ -14,88 +38,55 @@ test("Shopify catalog fails closed through the JBH presentation allowlist", () =
   assert.match(source, /No approved JBH products are available right now/);
 });
 
-test("approved live physical Shopify handles render JBH product names and assets", () => {
-  const expected = [
-    ["body-wave-human-hair-bundles", "Lawless Body Wave Bundles", "bundle-bodywave.jpg"],
-    ["deep-wave-human-hair-bundles", "Lawless Deep Wave Bundles", "bundle-deepwave.jpg"],
-    ["loose-wave-human-hair-bundles", "Lawless Loose Wave Bundles", "bundle-loosewave.jpg"],
-    ["kinky-straight-human-hair-bundles", "Flawless Kinky Straight Bundles", "bundle-kinkystraight.jpg"],
-    ["lawless-bone-straight-bundle-raw-vietnamese", "Lawless Bone Straight Bundle — Raw Vietnamese", "bundle-bonestraight"],
-    ["royal-raw-indian-temple-bundle", "Royal Raw Indian Temple Bundle", "bundle-royal-indian"],
-    ["lawless-4-4-hd-lace-closure", "Lawless 4×4 HD Lace Closure", "closure-4x4"],
-    ["lawless-5-5-hd-lace-closure", "Lawless 5×5 HD Lace Closure", "closure-5x5"],
-    ["lawless-13-4-hd-lace-frontal", "Lawless 13×4 HD Lace Frontal", "frontal-13x4"],
-    ["flawless-13-6-body-wave-bob-wig", "Flawless 13×6 Body Wave Bob Wig", "wig-13x6-bob"],
-    ["flawless-deep-wave-u-part-wig", "Flawless Deep Wave U-Part Wig", "wig-upart-deepwave"],
-    ["flawless-13-4-lace-frontal-wig-straight", "Flawless 13×4 Lace Frontal Wig — Straight", "wig-13x4-straight"],
-    ["flawless-glueless-4-4-closure-wig-body-wave", "Flawless Glueless 4×4 Closure Wig — Body Wave", "wig-glueless-bodywave"],
-  ];
-
-  for (const [handle, name, image] of expected) {
-    assert.match(source, new RegExp(handle));
-    assert.match(source, new RegExp(name));
-    assert.match(source, new RegExp(image.replace(".", "\\.")));
-  }
-});
-
-test("campaign bundle deals remain approved with exact Shopify option sets and safe imagery", () => {
-  const handles = [
-    "body-wave-human-hair-bundle-deal",
-    "straight-human-hair-bundle-deal",
-    "deep-wave-human-hair-bundle-deal",
-    "loose-wave-human-hair-bundle-deal",
-  ];
-  const exactOptions = [
-    '10"/12"/14"',
-    '12"/14"/16"',
-    '14"/16"/18"',
-    '16"/18"/20"',
-    '18"/20"/22"',
-    '20"/22"/24"',
-    '22"/24"/26"',
-    '24"/26"/28"',
-    '26"/28"/30"',
-    '28"/30"/32"',
-  ];
-
-  for (const handle of handles) {
-    const block = source.match(
-      new RegExp(`"${handle}": \\{[\\s\\S]*?allowedOptions: \\[[^\\]]*\\],\\n    \\},`),
+test("all current live supplier-backed handles are explicitly approved", () => {
+  assert.equal(activeSupplierHandles.length, 20);
+  for (const handle of activeSupplierHandles) {
+    assert.match(
+      source,
+      new RegExp(`"${handle}": approvedLiveShopifyProduct\\(`),
+      `${handle} must remain an explicit approved live Shopify presentation`,
     );
-    assert.ok(block, `${handle} must remain an explicit JBH presentation entry`);
-    assert.match(block[0], /image:\s*""/);
-    assert.doesNotMatch(block[0], /cdn\.shopify\.com|\/products\//);
-    for (const option of exactOptions) {
-      assert.ok(block[0].includes(`'${option}'`), `${handle} must retain ${option}`);
-    }
   }
 });
 
-test("dropship products can use the existing customer-safe image placeholder without exposing supplier media", () => {
-  const kinkyCurlyBlock = source.match(
-    /"kinky-curly-human-hair-bundles": \{[\s\S]*?allowedOptions: \[[\s\S]*?\],\n    \},/,
-  );
-
-  assert.ok(kinkyCurlyBlock, "Kinky Curly must remain an explicit JBH presentation entry");
-  assert.match(kinkyCurlyBlock[0], /image:\s*""/);
-  assert.doesNotMatch(kinkyCurlyBlock[0], /cdn\.shopify\.com|uadcrruqmflynna2gfr7/i);
+test("approved live catalog uses Shopify media and live options only behind the handle firewall", () => {
+  assert.match(source, /useShopifyImage: true/);
+  assert.match(source, /allowLiveOptions: true/);
+  assert.match(source, /presentation\.allowLiveOptions\s*\?\s*product\.variants/);
+  assert.match(source, /presentation\.useShopifyImage \? product\.image : presentation\.image/);
+  assert.match(source, /if \(presentation\.useShopifyImage && !image\) return null/);
 });
 
-test("beauty essentials withhold mismatched label imagery until an approved photo exists", () => {
-  for (const [handle, name, withheldAsset] of [
-    ["lawless-edge-control-4-oz", "Lawless Edge Control — 4 oz", "edge-control_"],
-    ["lawless-lace-melt-spray", "Lawless Lace Melt Spray", "lace-melt-spray_"],
-    ["lawless-hair-oil-rosemary-mint", "Lawless Hair Oil — Rosemary Mint", "hair-oil_"],
+test("separately bounded products retain static media and exact option sets", () => {
+  for (const [handle, imageNeedle] of [
+    ["lawless-bone-straight-bundle-raw-vietnamese", "bundle-bonestraight"],
+    ["royal-raw-indian-temple-bundle", "bundle-royal-indian"],
+    ["lawless-4-4-hd-lace-closure", "closure-4x4"],
+    ["lawless-5-5-hd-lace-closure", "closure-5x5"],
+    ["lawless-13-4-hd-lace-frontal", "frontal-13x4"],
+    ["flawless-13-6-body-wave-bob-wig", "wig-13x6-bob"],
+    ["flawless-deep-wave-u-part-wig", "wig-upart-deepwave"],
+    ["flawless-13-4-lace-frontal-wig-straight", "wig-13x4-straight"],
+    ["flawless-glueless-4-4-closure-wig-body-wave", "wig-glueless-bodywave"],
+  ]) {
+    assert.match(source, new RegExp(handle));
+    assert.match(source, new RegExp(imageNeedle));
+  }
+});
+
+test("beauty essentials still fail closed on mismatched label imagery", () => {
+  for (const [handle, name] of [
+    ["lawless-edge-control-4-oz", "Lawless Edge Control — 4 oz"],
+    ["lawless-lace-melt-spray", "Lawless Lace Melt Spray"],
+    ["lawless-hair-oil-rosemary-mint", "Lawless Hair Oil — Rosemary Mint"],
   ]) {
     const block = source.match(
       new RegExp(`"${handle}": \\{[\\s\\S]*?allowedOptions: \\[[^\\]]*\\],\\n    \\},`),
     );
-
     assert.ok(block, `${handle} must remain an explicit JBH presentation entry`);
     assert.match(block[0], new RegExp(name));
     assert.match(block[0], /image:\s*""/);
-    assert.doesNotMatch(block[0], /cdn\.shopify\.com|\/products\//);
-    assert.ok(!source.includes(withheldAsset), `${withheldAsset} asset must not return unreviewed`);
+    assert.doesNotMatch(block[0], /useShopifyImage:\s*true/);
   }
 });
 

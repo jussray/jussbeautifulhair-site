@@ -30,8 +30,14 @@ const presentationStart = shopifyCatalog.indexOf("export const JBH_PRESENTATION_
 const presentationEnd = shopifyCatalog.indexOf("function isStoreVariant", presentationStart);
 assert.ok(presentationStart >= 0 && presentationEnd > presentationStart, "JBH presentation map bounds are missing.");
 const presentationSection = shopifyCatalog.slice(presentationStart, presentationEnd);
-const productHandles = [...presentationSection.matchAll(/^    "([^"]+)": \{$/gm)].map((match) => match[1]);
-assert.ok(productHandles.length > 0, "No approved JBH product handles were found.");
+
+// Only the current live Shopify-backed helper entries are discoverable. Static
+// bounded entries are future/manual procurement candidates and must stay out of
+// search discovery while Shopify keeps them DRAFT.
+const productHandles = [
+  ...presentationSection.matchAll(/^    "([^"]+)": approvedLiveShopifyProduct\(/gm),
+].map((match) => match[1]);
+assert.equal(productHandles.length, 20, "Expected exactly 20 active approved JBH product handles.");
 
 test("static shell keeps a branded root fallback while app rewrites discovery metadata per route", () => {
   assert.match(indexHtml, /<link rel="canonical" href="https:\/\/jussbeautifulhair\.com\/" \/>/);
@@ -77,7 +83,7 @@ test("robots allows public discovery and keeps transactional or API routes out",
   assert.match(robots, /^Sitemap: https:\/\/jussbeautifulhair\.com\/sitemap\.xml$/m);
 });
 
-test("sitemap advertises real public paths and every approved JBH product handle", () => {
+test("sitemap advertises real public paths and every active approved JBH product handle", () => {
   assert.doesNotMatch(sitemap, /#/);
   assert.doesNotMatch(sitemap, /\/cart|\/checkout|\/success|\/api\//);
 
@@ -88,7 +94,7 @@ test("sitemap advertises real public paths and every approved JBH product handle
 
   for (const handle of productHandles) {
     const url = `${canonicalOrigin}/product/${handle}`;
-    assert.ok(sitemap.includes(`<loc>${url}</loc>`), `sitemap is missing approved product ${handle}`);
+    assert.ok(sitemap.includes(`<loc>${url}</loc>`), `sitemap is missing active approved product ${handle}`);
   }
 
   const productUrls = [...sitemap.matchAll(/<loc>https:\/\/jussbeautifulhair\.com\/product\/([^<]+)<\/loc>/g)].map((match) => match[1]);

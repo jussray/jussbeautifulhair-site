@@ -388,3 +388,39 @@ No product, variant, price, inventory, status or checkout mutation was issued. O
 ### Next gate
 - Founder: confirm the 11-product unpublish was intended, and decide on the essentials' Shopify media.
 - Supply approved exact images for the bundle deals and kinky-curly.
+
+## Continuation — 2026-09-28: reactivate products with verified images
+
+The founder asked for the drafted products that already have the right images to be set back to live.
+
+### Pre-check (Shopify Admin, 8qp1z2-az)
+Twelve vendor:JBH products were DRAFT. For 9 of them the featured media file is exactly the image pinned in the `JBH_PRESENTATION_BY_HANDLE` allowlist on `main` (`9c0700c`), and the 2026-09-25 ledger had marked each one MATCH.
+
+### Changes
+| Product | Change |
+|---|---|
+| `Product/9706823352563` lawless-bone-straight-bundle-raw-vietnamese | DRAFT → ACTIVE; alt → "Lawless Bone Straight Bundle — Raw Vietnamese" (`MediaImage/38934167060723`) |
+| `Product/9706827088115` royal-raw-indian-temple-bundle | DRAFT → ACTIVE |
+| `Product/9706828005619` lawless-4-4-hd-lace-closure | DRAFT → ACTIVE |
+| `Product/9706828955891` lawless-5-5-hd-lace-closure | DRAFT → ACTIVE |
+| `Product/9706829840627` lawless-13-4-hd-lace-frontal | DRAFT → ACTIVE |
+| `Product/9706830463219` flawless-glueless-4-4-closure-wig-body-wave | DRAFT → ACTIVE; alt → "Flawless Glueless 4×4 Closure Wig — Body Wave" (`MediaImage/38934135701747`) |
+| `Product/9706831479027` flawless-13-4-lace-frontal-wig-straight | DRAFT → ACTIVE; alt → "Flawless 13×4 Lace Frontal Wig — Straight" (`MediaImage/38934105391347`) |
+| `Product/9706832265459` flawless-deep-wave-u-part-wig | DRAFT → ACTIVE |
+| `Product/9706833608947` flawless-13-6-body-wave-bob-wig | DRAFT → ACTIVE |
+
+All 9 are published to Online Store. Only product status and image alt text changed: no price, variant, inventory or media-file change.
+
+### Proof
+- Dispatch run 36366045480 (`main` `9c0700c`) was green, and both the live catalog image proof and the ledger passed. For all 9 products, the live card and the product page render the approved image, with **dHash 0 and detail 0** against Shopify featured media. Six were MATCH and three were MATCH (alt text) before the alt fix above.
+
+### Held (still DRAFT, not the right images)
+- lawless-edge-control-4-oz, lawless-lace-melt-spray, lawless-hair-oil-rosemary-mint: their Shopify media is still the withheld label images, and JBH renders a placeholder for them.
+
+### Risk
+- Correction: all 9 reactivated products are **not inventory-tracked** and use inventory policy CONTINUE, so they are purchasable despite `totalInventory` 0. None has a unit cost recorded in Shopify, so neither margin nor fulfillment source is verifiable from Shopify. Inventory was not touched.
+- The ledger on `main` labels the `approvedLiveShopifyProduct` entries (image `""`, `useShopifyImage`) "NOT PUBLIC ON JBH / not in allowlist", even though their live cards render. This is a ledger classification gap left by the 65678da allowlist refactor. It is not a storefront defect.
+
+### Rollback
+- `bulk-update-product-status` DRAFT for the 9 product IDs above.
+- Previous alt text: "Lawless Bone Straight Bundle Raw Vietnamese", "Flawless Glueless 4×4 Closure Wig Body Wave", "Flawless 13×4 Lace Frontal Wig Straight".

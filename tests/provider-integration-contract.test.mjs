@@ -4,15 +4,15 @@ import { readFile } from 'node:fs/promises';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('storefront deploy enters through the bounded provider gate', async () => {
+test('storefront keeps its canonical entry and mounts the bounded provider lane there', async () => {
   for (const path of ['wrangler.toml', 'wrangler.frontdoor.toml']) {
     const config = await read(path);
-    assert.match(config, /^main\s*=\s*"worker\/provider-entry\.ts"\s*$/m);
+    assert.match(config, /^main\s*=\s*"worker\/entry\.ts"\s*$/m);
   }
-  const entry = await read('worker/provider-entry.ts');
+  const entry = await read('worker/entry.ts');
   assert.match(entry, /JBH_AI_OPERATOR_KEY/);
-  assert.match(entry, /return storefrontWorker\.fetch\(request, env\)/);
-  assert.match(entry, /authority: 'none'/);
+  assert.match(entry, /providerResponse\(request, env, pathname\)/);
+  assert.match(entry, /authority: "none"/);
 });
 
 test('provider runtime keeps all provider keys server-side', async () => {

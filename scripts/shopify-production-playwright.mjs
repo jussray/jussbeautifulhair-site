@@ -16,6 +16,38 @@ const parsedBase = new URL(baseURL);
 assert.equal(parsedBase.origin, expectedOrigin, `LIVE_STOREFRONT_URL must be exactly ${expectedOrigin}.`);
 assert.match(expectedHead, /^[0-9a-f]{40}$/i, "EXPECTED_HEAD_SHA must be an exact 40-character commit SHA.");
 
+async function assertRenderedImage(imageLocator, label) {
+  await imageLocator.waitFor({ state: "visible", timeout: 30_000 });
+  const state = await imageLocator.evaluate(async (element) => {
+    if (!(element instanceof HTMLImageElement)) {
+      return { src: "", complete: false, naturalWidth: 0, naturalHeight: 0 };
+    }
+
+    if (!element.complete) {
+      await new Promise((resolve) => {
+        const done = () => resolve();
+        element.addEventListener("load", done, { once: true });
+        element.addEventListener("error", done, { once: true });
+        setTimeout(done, 15_000);
+      });
+    }
+
+    return {
+      src: element.currentSrc || element.src,
+      complete: element.complete,
+      naturalWidth: element.naturalWidth,
+      naturalHeight: element.naturalHeight,
+    };
+  });
+
+  assert.equal(state.complete, true, `${label} did not finish loading.`);
+  assert.ok(
+    state.naturalWidth > 0 && state.naturalHeight > 0,
+    `${label} failed to decode: ${state.src || "missing-src"}.`,
+  );
+  return state;
+}
+
 await mkdir(outputDir, { recursive: true });
 
 const versionResponse = await fetch(`${baseURL}/version`, {
@@ -90,13 +122,27 @@ try {
   assert.equal(catalogPayload?.source, "shopify-storefront", "production catalog did not identify Shopify Storefront as source.");
   assert.ok(Array.isArray(catalogPayload?.products), "production catalog response is missing products.");
 
-  const product = catalogPayload.products.find(
+  const sellable = catalogPayload.products.filter(
     (candidate) =>
       candidate?.availableForSale &&
       Array.isArray(candidate?.variants) &&
       candidate.variants.some((variant) => variant?.availableForSale),
   );
-  assert.ok(product, "production catalog contains no sellable Shopify product.");
+  assert.ok(sellable.length > 0, "production catalog contains no sellable Shopify product.");
+
+  // The Worker returns every JBH-vendor product; the storefront hides unmapped
+  // handles and renders a placeholder for withheld imagery. Prove the first
+  // sellable product the customer actually sees with a real image.
+  await page.locator('[data-testid^="card-product-"]').first().waitFor({ state: "visible", timeout: 30_000 });
+  let product;
+  for (const candidate of sellable) {
+    const card = page.getByTestId(`card-product-${candidate.id}`);
+    if ((await card.count()) > 0 && (await card.locator("img").count()) > 0) {
+      product = candidate;
+      break;
+    }
+  }
+  assert.ok(product, "no sellable storefront product renders a real product image.");
   const variantIndex = product.variants.findIndex((variant) => variant?.availableForSale);
   const variant = product.variants[variantIndex];
   assert.ok(variant, "production catalog contains no sellable Shopify variant.");
@@ -104,10 +150,19 @@ try {
 
   const productCard = page.getByTestId(`card-product-${product.id}`);
   await productCard.waitFor({ state: "visible", timeout: 30_000 });
+  await productCard.scrollIntoViewIfNeeded();
+  const productCardImageState = await assertRenderedImage(
+    productCard.locator("img").first(),
+    "sellable product card image",
+  );
   await page.screenshot({ path: `${outputDir}/shop.png`, fullPage: true });
   await productCard.click();
 
   await page.getByTestId("text-product-name").waitFor({ state: "visible", timeout: 30_000 });
+  const productDetailImageState = await assertRenderedImage(
+    page.getByTestId("img-product"),
+    "sellable product detail image",
+  );
   if (product.variants.length > 1) {
     await page.getByTestId(`variant-${variantIndex}`).click();
   }
@@ -199,6 +254,14 @@ try {
         origin: expectedOrigin,
         productHandle: product.id,
         variantId: variant.id,
+        productCardImage: {
+          width: productCardImageState.naturalWidth,
+          height: productCardImageState.naturalHeight,
+        },
+        productDetailImage: {
+          width: productDetailImageState.naturalWidth,
+          height: productDetailImageState.naturalHeight,
+        },
         catalogStatus: catalogResponse.status(),
         cartStatus: capturedCartStatus,
         checkoutHost: checkout.hostname,
@@ -207,6 +270,8 @@ try {
         assertions: [
           "production /version matched the exact activated main SHA before commerce proof",
           "rendered production Shop consumed the live /api/shopify/catalog boundary",
+          "a live sellable product card image loaded and decoded before navigation",
+          "the selected live product detail image loaded and decoded before cart interaction",
           "a live sellable Shopify variant flowed through Product, Cart, and Checkout",
           "production /api/shopify/cart received only merchandiseId and quantity",
           "production cart creation returned an HTTPS checkout on an exact approved host",

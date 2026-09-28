@@ -133,7 +133,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          for attempt in {1..90}; do
+          # ~10 min: Workers Builds usually reports within 2 min, but a231ac4
+          # reported ~6.5 min after job start and turned a good release red.
+          for attempt in {1..300}; do
             checks="$(curl --fail --silent --show-error \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \

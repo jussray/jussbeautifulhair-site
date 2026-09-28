@@ -183,6 +183,8 @@ test("main commerce gate waits for the exact Worker build and emits verified onl
   assert.match(mainShopifyWorkflow, /^\s*push:\s*\n\s+branches: \[main\]/m);
   assert.match(mainShopifyWorkflow, /checks: read/);
   assert.match(mainShopifyWorkflow, /Workers Builds: jussbeautifulhair-site/);
+  // Worker builds have reported ~6.5 min after job start; keep a ~10 min window.
+  assert.match(mainShopifyWorkflow, /for attempt in \{1\.\.300\}; do/);
   const providerIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
   const frontdoorIndex = mainShopifyWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs", providerIndex);
   const productionIndex = mainShopifyWorkflow.indexOf("node scripts/shopify-production-playwright.mjs", frontdoorIndex);

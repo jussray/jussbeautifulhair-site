@@ -40,7 +40,9 @@ permissions:
   checks: read
 
 concurrency:
-  group: shopify-checkout-bridge-${{ github.event.pull_request.number || github.ref }}
+  # Keyed by event too: a manual ledger dispatch on main must not cancel the
+  # in-flight push release proof (and a push must not cancel a dispatch).
+  group: shopify-checkout-bridge-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 env:

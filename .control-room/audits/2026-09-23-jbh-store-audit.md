@@ -418,7 +418,7 @@ All 9 are published to Online Store. Only product status and image alt text chan
 - lawless-edge-control-4-oz, lawless-lace-melt-spray, lawless-hair-oil-rosemary-mint: their Shopify media is still the withheld label images, and JBH renders a placeholder for them.
 
 ### Risk
-- All 9 reactivated products have `totalInventory` 0, so they will show as sold out unless they are untracked or oversell is allowed. Inventory was not touched.
+- Correction: all 9 reactivated products are **not inventory-tracked** and use inventory policy CONTINUE, so they are purchasable despite `totalInventory` 0. None has a unit cost recorded in Shopify, so neither margin nor fulfillment source is verifiable from Shopify. Inventory was not touched.
 - The ledger on `main` labels the `approvedLiveShopifyProduct` entries (image `""`, `useShopifyImage`) "NOT PUBLIC ON JBH / not in allowlist", even though their live cards render. This is a ledger classification gap left by the 65678da allowlist refactor. It is not a storefront defect.
 
 ### Rollback

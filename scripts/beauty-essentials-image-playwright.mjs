@@ -37,6 +37,13 @@ const essentials = [
   { handle: "lawless-hair-oil-rosemary-mint", name: "Lawless Hair Oil — Rosemary Mint" },
 ];
 
+const BUNDLE_ASSET_BY_HANDLE = {
+  "body-wave-human-hair-bundles": "bundle-bodywave.jpg",
+  "deep-wave-human-hair-bundles": "bundle-deepwave.jpg",
+  "loose-wave-human-hair-bundles": "bundle-loosewave.jpg",
+  "kinky-straight-human-hair-bundles": "bundle-kinkystraight.jpg",
+};
+
 const bundle = (handle, id, option) => ({
   id: handle,
   shopifyProductId: `gid://shopify/Product/${id}`,
@@ -45,7 +52,9 @@ const bundle = (handle, id, option) => ({
   tagline: "",
   description: "Raw Shopify description.",
   variants: [{ id: `gid://shopify/ProductVariant/${id}1`, option, price: 58.99, availableForSale: true }],
-  image: "",
+  // Approved bundles render their Shopify featured image and are hidden without
+  // one; a same-origin asset stands in for Shopify media offline.
+  image: `/products/${BUNDLE_ASSET_BY_HANDLE[handle]}`,
   availableForSale: true,
 });
 

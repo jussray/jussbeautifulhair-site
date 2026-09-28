@@ -148,20 +148,30 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
   assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
 });
 
-test("pull requests execute the candidate production witness against the exact live base", () => {
+test("pull requests execute the candidate production witness against the current live main", () => {
   const liveSmokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
+  const resolverIndex = mainShopifyWorkflow.indexOf(
+    "Resolve current main SHA for candidate production witness",
+  );
   const candidateWitnessIndex = mainShopifyWorkflow.indexOf(
     "Exercise candidate production witness against exact live base without payment",
   );
   const pushProviderIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
 
   assert.ok(liveSmokeIndex >= 0, "Live Shopify smoke is missing from the candidate gate.");
-  assert.ok(candidateWitnessIndex > liveSmokeIndex, "Candidate production witness must follow the live Shopify smoke.");
+  assert.ok(resolverIndex > liveSmokeIndex, "Current-main resolution must follow the live Shopify smoke.");
+  assert.ok(candidateWitnessIndex > resolverIndex, "Candidate production witness must use the freshly resolved current main.");
   assert.ok(pushProviderIndex > candidateWitnessIndex, "Pull-request witness must remain separate from push-only provider proof.");
   assert.match(mainShopifyWorkflow, /if: github\.event_name == 'pull_request'/);
+  assert.match(mainShopifyWorkflow, /id:\s*live-base/);
+  assert.match(mainShopifyWorkflow, /git\/ref\/heads\/main/);
   assert.ok(
-    mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ github.event.pull_request.base.sha }}"),
-    "Pull-request production witness must bind to the exact live base SHA.",
+    mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ steps.live-base.outputs.sha }}"),
+    "Pull-request production witness must bind to the freshly resolved current main SHA.",
+  );
+  assert.ok(
+    !mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ github.event.pull_request.base.sha }}"),
+    "Pull-request production witness must not reuse a stale PR creation-base SHA.",
   );
   assert.match(mainShopifyWorkflow, /run: node scripts\/shopify-production-playwright\.mjs/);
 });

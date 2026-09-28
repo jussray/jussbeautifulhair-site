@@ -165,6 +165,14 @@ async function liveRender(page, handles) {
   return { cards, pdps };
 }
 
+// The row keeps shopifyMedia so classify() judges approved live Shopify
+// products against their Shopify featured image, not a JBH asset.
+export function jbhRowFields(presentation) {
+  if (!presentation) return null;
+  const { name, category, image, shopifyMedia } = presentation;
+  return { name, category, image, shopifyMedia: Boolean(shopifyMedia) };
+}
+
 export function classify(row) {
   const issues = [];
   if (row.jbh?.shopifyMedia) {
@@ -247,7 +255,7 @@ async function main() {
         title: product.title,
         productId: product.id,
         productType: product.productType,
-        jbh: presentation && { name: presentation.name, category: presentation.category, image: presentation.image },
+        jbh: jbhRowFields(presentation),
         shopify: {
           featured,
           featuredAlt: product.featuredImage?.altText ?? null,

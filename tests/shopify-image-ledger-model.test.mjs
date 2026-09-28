@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { classify, parsePresentationMap } from "../scripts/shopify-image-ledger.mjs";
+import { classify, jbhRowFields, parsePresentationMap } from "../scripts/shopify-image-ledger.mjs";
 
 const source = await readFile(new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url), "utf8");
 const allowlist = source.slice(source.indexOf("JBH_PRESENTATION_BY_HANDLE"));
@@ -45,4 +45,22 @@ test("unlisted handles stay NOT PUBLIC and static withheld images stay HOLD", ()
   assert.equal(classify(row(null)).status, "NOT PUBLIC ON JBH");
   const withheld = { name: "Lawless Edge Control — 4 oz", category: "Beauty Essentials", image: "", shopifyMedia: false };
   assert.match(classify(row(withheld, { featured: "https://cdn.shopify.com/e.jpg" })).action, /^HOLD/);
+});
+
+test("ledger rows built from the real allowlist keep Shopify-media classification", () => {
+  const parsed = parsePresentationMap(source);
+  const featured = "https://cdn.shopify.com/s/files/1/x/files/bw.jpg";
+  const liveRow = row(jbhRowFields(parsed["body-wave-human-hair-bundles"]), {
+    featured,
+    alt: "Lawless Body Wave Bundles",
+    card: featured,
+  });
+  assert.equal(liveRow.jbh.shopifyMedia, true);
+  assert.equal(classify(liveRow).status, "MATCH");
+  assert.equal(jbhRowFields(undefined), null);
+});
+
+test("the ledger run builds its rows through jbhRowFields", async () => {
+  const ledger = await readFile(new URL("../scripts/shopify-image-ledger.mjs", import.meta.url), "utf8");
+  assert.match(ledger, /jbh: jbhRowFields\(presentation\),/);
 });

@@ -1,5 +1,6 @@
 import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json";
 import worker from "./index";
+import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
 
 type BaseEnv = Parameters<typeof worker.fetch>[1];
 type AnalyticsPoint = {
@@ -13,6 +14,13 @@ type AnalyticsEngineDatasetBinding = {
 type Env = BaseEnv & {
   ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
   FUNNEL_ANALYTICS?: AnalyticsEngineDatasetBinding;
+  JBH_AI_OPERATOR_KEY?: string;
+  OPENAI_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
+  MODEL_API_KEY?: string;
+  JBH_OPENAI_MODEL?: string;
+  JBH_ANTHROPIC_MODEL?: string;
+  JBH_MUSE_MODEL?: string;
 };
 
 type FunnelEventName =
@@ -36,6 +44,8 @@ const META_AGENT_KNOWLEDGE_PATH = "/.well-known/jbh-meta-agent.json";
 const PUBLIC_BUILD_PROOF_PATH = "/.well-known/jbh-build-proof.json";
 const VERSION_PATH = "/version";
 const FUNNEL_PATH = "/api/funnel";
+const PROVIDER_STATUS_PATH = "/api/internal/providers";
+const PROVIDER_INVOKE_PATH = "/api/internal/providers/invoke";
 const FUNNEL_INDEX = "jbh";
 const MAX_FUNNEL_BODY_BYTES = 2 * 1024;
 const EXACT_SHA = /^[0-9a-f]{40}$/i;
@@ -323,6 +333,45 @@ async function funnelResponse(request: Request, env: Env): Promise<Response> {
   });
 }
 
+function providerAuthorized(request: Request, env: Env): boolean {
+  if (!env.JBH_AI_OPERATOR_KEY) return false;
+  const direct = request.headers.get("x-jbh-ai-key");
+  const bearer = (request.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i)?.[1];
+  return (direct || bearer || "") === env.JBH_AI_OPERATOR_KEY;
+}
+
+function providerJson(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+      "X-Robots-Tag": "noindex, nofollow, noarchive",
+    },
+  });
+}
+
+async function providerResponse(request: Request, env: Env, pathname: string): Promise<Response | null> {
+  if (pathname !== PROVIDER_STATUS_PATH && pathname !== PROVIDER_INVOKE_PATH) return null;
+  if (!env.JBH_AI_OPERATOR_KEY) return providerJson({ error: "AI operator lane is not configured" }, 503);
+  if (!providerAuthorized(request, env)) return providerJson({ error: "Unauthorized" }, 401);
+
+  if (pathname === PROVIDER_STATUS_PATH && request.method === "GET") {
+    return providerJson({ service: "jussbeautifulhair-site", providers: jbhProviderStates(env), authority: "none" });
+  }
+  if (pathname === PROVIDER_INVOKE_PATH && request.method === "POST") {
+    const input = await request.json().catch(() => ({}));
+    try {
+      const result = await invokeJbhProvider(env, input as Record<string, unknown>);
+      return providerJson({ service: "jussbeautifulhair-site", result });
+    } catch (error) {
+      return providerJson({ error: error instanceof Error ? error.message : "Provider invocation failed" }, 503);
+    }
+  }
+  return providerJson({ error: "Method not allowed" }, 405);
+}
+
 function allowCloudflareWebAnalytics(response: Response): Response {
   const contentType = response.headers.get("content-type") || "";
   if (!contentType.toLowerCase().includes("text/html")) return response;
@@ -359,6 +408,9 @@ export default {
     if (pathname === FUNNEL_PATH) {
       return funnelResponse(request, env);
     }
+
+    const provider = await providerResponse(request, env, pathname);
+    if (provider) return provider;
 
     if (isLegacyStripeCheckout(pathname) && !legacyStripeEnabled(env)) {
       return new Response("Not found", {

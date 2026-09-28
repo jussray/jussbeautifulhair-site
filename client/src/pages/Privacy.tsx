@@ -12,7 +12,7 @@ export default function Privacy() {
             Privacy Policy
           </h1>
           <p className="mt-4 text-sm text-primary-foreground/70">
-            Last updated: June 7, 2026
+            Last updated: September 17, 2026
           </p>
         </div>
       </section>
@@ -26,10 +26,10 @@ export default function Privacy() {
 
           <h2 className="font-display text-2xl mt-8 mb-3">Information we collect</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Order information</strong> — your name, email, shipping address, items purchased, and order total.</li>
-            <li><strong>Payment information</strong> — handled entirely by Stripe, our payment processor. We never see or store your full card number, CVC, or bank details. We only receive a confirmation that payment succeeded and the last 4 digits of the card for our records.</li>
+            <li><strong>Order information</strong> — your name, email, shipping address, items purchased, and order total after an order is created through Shopify.</li>
+            <li><strong>Payment information</strong> — collected and processed on Shopify-hosted checkout and the payment providers enabled there. Juss Beautiful Hair does not receive or store your full card number, CVC, or bank credentials in the public storefront.</li>
             <li><strong>Contact / newsletter</strong> — if you sign up or message us, we keep your email and the content of your message.</li>
-            <li><strong>Site usage</strong> — basic technical data (browser type, pages viewed) used only to keep the site running.</li>
+            <li><strong>Site usage</strong> — basic technical and storefront event data, such as browser type and pages or shopping steps viewed, used to operate and improve the Site.</li>
           </ul>
 
           <h2 className="font-display text-2xl mt-8 mb-3">How we use it</h2>
@@ -37,22 +37,24 @@ export default function Privacy() {
             <li>Fulfill and ship your order.</li>
             <li>Send order confirmations, shipping updates, and customer service replies.</li>
             <li>Send marketing emails — only if you opted in. You can unsubscribe any time.</li>
-            <li>Prevent fraud and comply with the law.</li>
+            <li>Prevent fraud, protect the Site, and comply with the law.</li>
+            <li>Understand whether the shopping experience is working as intended.</li>
           </ul>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Who we share it with</h2>
           <p>We share the minimum information needed with:</p>
           <ul className="list-disc pl-6 space-y-1">
-            <li><strong>Stripe</strong> — to process your payment. See <a href="https://stripe.com/privacy" className="underline">stripe.com/privacy</a>.</li>
+            <li><strong>Shopify</strong> — to provide hosted checkout, payment processing, and order creation. See <a href="https://www.shopify.com/legal/privacy" className="underline">Shopify's privacy policy</a>.</li>
             <li><strong>Our shipping partners and suppliers</strong> — to ship your order to you.</li>
-            <li><strong>Hosting providers (Vercel, Neon)</strong> — to keep the site online and store order records.</li>
+            <li><strong>Cloudflare</strong> — to deliver and protect the public storefront and provide basic technical traffic signals.</li>
+            <li><strong>Neon</strong> — to store private order and customer records used for fulfillment and owner operations.</li>
           </ul>
           <p>We do <strong>not</strong> sell or rent your personal information to anyone.</p>
 
-          <h2 className="font-display text-2xl mt-8 mb-3">Cookies</h2>
+          <h2 className="font-display text-2xl mt-8 mb-3">Cookies and browser storage</h2>
           <p>
-            We use a small number of cookies to keep your cart working and to keep you logged in.
-            We do not use third-party advertising cookies. Stripe sets its own cookies on its checkout pages — see their policy linked above.
+            We use browser storage and a small number of cookies needed to keep the Site and shopping experience working.
+            Shopify may set its own cookies when you continue to hosted checkout. We do not use third-party advertising cookies on the public storefront.
           </p>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Your choices</h2>
@@ -67,8 +69,7 @@ export default function Privacy() {
 
           <h2 className="font-display text-2xl mt-8 mb-3">Security</h2>
           <p>
-            All payments are processed by Stripe under their PCI-DSS Level 1 certification.
-            Order data is stored in an encrypted Postgres database (Neon) and transmitted over HTTPS.
+            The public storefront is delivered over HTTPS through Cloudflare. Checkout and payment are completed on Shopify-hosted checkout, and the public storefront does not store full payment credentials. Private order records used for fulfillment are stored in Neon and transmitted over encrypted connections.
           </p>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Changes</h2>

@@ -122,13 +122,27 @@ try {
   assert.equal(catalogPayload?.source, "shopify-storefront", "production catalog did not identify Shopify Storefront as source.");
   assert.ok(Array.isArray(catalogPayload?.products), "production catalog response is missing products.");
 
-  const product = catalogPayload.products.find(
+  const sellable = catalogPayload.products.filter(
     (candidate) =>
       candidate?.availableForSale &&
       Array.isArray(candidate?.variants) &&
       candidate.variants.some((variant) => variant?.availableForSale),
   );
-  assert.ok(product, "production catalog contains no sellable Shopify product.");
+  assert.ok(sellable.length > 0, "production catalog contains no sellable Shopify product.");
+
+  // The Worker returns every JBH-vendor product; the storefront hides unmapped
+  // handles and renders a placeholder for withheld imagery. Prove the first
+  // sellable product the customer actually sees with a real image.
+  await page.locator('[data-testid^="card-product-"]').first().waitFor({ state: "visible", timeout: 30_000 });
+  let product;
+  for (const candidate of sellable) {
+    const card = page.getByTestId(`card-product-${candidate.id}`);
+    if ((await card.count()) > 0 && (await card.locator("img").count()) > 0) {
+      product = candidate;
+      break;
+    }
+  }
+  assert.ok(product, "no sellable storefront product renders a real product image.");
   const variantIndex = product.variants.findIndex((variant) => variant?.availableForSale);
   const variant = product.variants[variantIndex];
   assert.ok(variant, "production catalog contains no sellable Shopify variant.");

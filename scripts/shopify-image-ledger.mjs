@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import process from "node:process";
-import { chromium } from "playwright";
+import { pathToFileURL } from "node:url";
 
 // Read-only product image audit ledger. For every JBH-vendor Shopify product it
 // compares Shopify media (featured + gallery) with the approved JBH presentation
@@ -49,18 +49,28 @@ async function shopifyProducts() {
   throw new Error("Storefront catalog exceeded the ledger page limit.");
 }
 
-async function presentationMap() {
-  const source = await readFile(new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url), "utf8");
+export function parsePresentationMap(source) {
   const entries = {};
-  const pattern = /"([a-z0-9-]+)": \{\s*name: "([^"]+)",\s*category: "([^"]+)",[\s\S]*?image:\s*"([^"]*)",/g;
-  for (const match of source.matchAll(pattern)) {
-    entries[match[1]] = { name: match[2], category: match[3], image: match[4] };
+  const staticPattern = /"([a-z0-9-]+)": \{\s*name: "([^"]+)",\s*category: "([^"]+)",[\s\S]*?image:\s*"([^"]*)",/g;
+  for (const match of source.matchAll(staticPattern)) {
+    entries[match[1]] = { name: match[2], category: match[3], image: match[4], shopifyMedia: false };
+  }
+  // approvedLiveShopifyProduct() entries render the Shopify featured image and
+  // are hidden by the storefront when Shopify has none.
+  const livePattern = /"([a-z0-9-]+)": approvedLiveShopifyProduct\(\{\s*name: "([^"]+)",\s*category: "([^"]+)",/g;
+  for (const match of source.matchAll(livePattern)) {
+    entries[match[1]] = { name: match[2], category: match[3], image: "", shopifyMedia: true };
   }
   return entries;
 }
 
+async function presentationMap() {
+  const source = await readFile(new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url), "utf8");
+  return parsePresentationMap(source);
+}
+
 const absolute = (src) => (src ? new URL(src, liveBase).toString() : "");
-const imageKey = (url) => {
+export const imageKey = (url) => {
   if (!url) return "";
   const parsed = new URL(url);
   return `${parsed.hostname}${parsed.pathname}`;
@@ -155,8 +165,29 @@ async function liveRender(page, handles) {
   return { cards, pdps };
 }
 
-function classify(row) {
+export function classify(row) {
   const issues = [];
+  if (row.jbh?.shopifyMedia) {
+    if (!row.shopify.featured) {
+      return {
+        status: "HIDDEN (no Shopify image)",
+        issues: ["approved for JBH but Shopify has no featured image, so the storefront hides it"],
+        action: "upload the approved exact image in Shopify and make it featured",
+      };
+    }
+    if (!row.live.card) issues.push("not rendered on live /shop");
+    else if (imageKey(row.live.card) !== imageKey(row.shopify.featured)) {
+      issues.push(`live card renders ${row.live.card}, not the Shopify featured image`);
+      return { status: "MISMATCH", issues, action: "investigate storefront image binding" };
+    }
+    if (row.shopify.featuredAlt !== row.jbh.name) issues.push(`alt text "${row.shopify.featuredAlt ?? ""}" is not the JBH name`);
+    const altOnly = issues.length > 0 && issues.every((issue) => issue.startsWith("alt text"));
+    return {
+      status: issues.length === 0 ? "MATCH" : altOnly ? "MATCH (alt text)" : "CHECK",
+      issues,
+      action: issues.length === 0 ? "none" : altOnly ? "set alt text to JBH name" : "confirm the product is active and sellable",
+    };
+  }
   if (!row.jbh) {
     return { status: "NOT PUBLIC ON JBH", issues: ["not in JBH presentation allowlist"], action: "none on jussbeautifulhair.com; Shopify media only reaches Shopify-hosted surfaces" };
   }
@@ -188,75 +219,86 @@ function classify(row) {
   return { status: issues.length ? "MATCH (alt text)" : "MATCH", issues, action: issues.length ? "set alt text to JBH name" : "none" };
 }
 
-await mkdir(outputDir, { recursive: true });
-const [products, jbh] = await Promise.all([shopifyProducts(), presentationMap()]);
-const browser = await chromium.launch({ headless: true });
-const cache = new Map();
-const ledger = [];
-try {
-  const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
-  await page.route(`${new URL(liveBase).origin}/api/funnel`, (route) =>
-    route.continue({ headers: { ...route.request().headers(), "x-jbh-traffic-class": "proof" } }),
-  );
-  const live = await liveRender(page, products.map((product) => product.handle).filter((handle) => jbh[handle]));
-  const hashPage = await browser.newPage();
-  for (const product of products) {
-    const presentation = jbh[product.handle] || null;
-    const jbhUrl = presentation?.image ? absolute(presentation.image) : "";
-    const featured = product.featuredImage?.url || "";
-    const gallery = product.images.nodes.map((image) => image.url);
-    const jbhPrint = await fingerprint(hashPage, jbhUrl, cache);
-    const featuredPrint = await fingerprint(hashPage, featured, cache);
-    const galleryPrints = [];
-    for (const url of gallery) galleryPrints.push(await fingerprint(hashPage, url, cache));
-    const row = {
-      handle: product.handle,
-      title: product.title,
-      productId: product.id,
-      productType: product.productType,
-      jbh: presentation && { name: presentation.name, category: presentation.category, image: presentation.image },
-      shopify: {
-        featured,
-        featuredAlt: product.featuredImage?.altText ?? null,
-        featuredSize: featuredPrint?.width ? `${featuredPrint.width}x${featuredPrint.height}` : null,
-        galleryCount: gallery.length,
-        gallery,
-      },
-      live: { card: live.cards[product.handle] ?? null, pdp: live.pdps[product.handle] ?? null },
-      compare: {
-        featuredVsJbh: distance(featuredPrint, jbhPrint),
-        featuredDetailVsJbh: jbhUrl && featured ? await detailDifference(hashPage, featured, jbhUrl) : null,
-        galleryVsJbh: galleryPrints.map((print) => distance(print, jbhPrint)),
-        liveCardIsJbh: presentation ? (live.cards[product.handle] ?? null) === (presentation.image || "") : null,
-      },
-      decodeErrors: [jbhPrint, featuredPrint, ...galleryPrints].filter((print) => print?.error).map((print) => print.error),
-    };
-    ledger.push({ ...row, ...classify(row) });
+async function main() {
+  await mkdir(outputDir, { recursive: true });
+  const [products, jbh] = await Promise.all([shopifyProducts(), presentationMap()]);
+  const { chromium } = await import("playwright");
+  const browser = await chromium.launch({ headless: true });
+  const cache = new Map();
+  const ledger = [];
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+    await page.route(`${new URL(liveBase).origin}/api/funnel`, (route) =>
+      route.continue({ headers: { ...route.request().headers(), "x-jbh-traffic-class": "proof" } }),
+    );
+    const live = await liveRender(page, products.map((product) => product.handle).filter((handle) => jbh[handle]));
+    const hashPage = await browser.newPage();
+    for (const product of products) {
+      const presentation = jbh[product.handle] || null;
+      const jbhUrl = presentation?.image ? absolute(presentation.image) : "";
+      const featured = product.featuredImage?.url || "";
+      const gallery = product.images.nodes.map((image) => image.url);
+      const jbhPrint = await fingerprint(hashPage, jbhUrl, cache);
+      const featuredPrint = await fingerprint(hashPage, featured, cache);
+      const galleryPrints = [];
+      for (const url of gallery) galleryPrints.push(await fingerprint(hashPage, url, cache));
+      const row = {
+        handle: product.handle,
+        title: product.title,
+        productId: product.id,
+        productType: product.productType,
+        jbh: presentation && { name: presentation.name, category: presentation.category, image: presentation.image },
+        shopify: {
+          featured,
+          featuredAlt: product.featuredImage?.altText ?? null,
+          featuredSize: featuredPrint?.width ? `${featuredPrint.width}x${featuredPrint.height}` : null,
+          galleryCount: gallery.length,
+          gallery,
+        },
+        live: { card: live.cards[product.handle] ?? null, pdp: live.pdps[product.handle] ?? null },
+        compare: {
+          featuredVsJbh: distance(featuredPrint, jbhPrint),
+          featuredDetailVsJbh: jbhUrl && featured ? await detailDifference(hashPage, featured, jbhUrl) : null,
+          galleryVsJbh: galleryPrints.map((print) => distance(print, jbhPrint)),
+          liveCardIsJbh: !presentation
+            ? null
+            : presentation.shopifyMedia
+              ? imageKey(live.cards[product.handle] || "") === imageKey(featured)
+              : (live.cards[product.handle] ?? null) === (presentation.image || ""),
+        },
+        decodeErrors: [jbhPrint, featuredPrint, ...galleryPrints].filter((print) => print?.error).map((print) => print.error),
+      };
+      ledger.push({ ...row, ...classify(row) });
+    }
+  } finally {
+    await browser.close();
   }
-} finally {
-  await browser.close();
+
+  const summary = ledger.reduce((counts, row) => ({ ...counts, [row.status]: (counts[row.status] || 0) + 1 }), {});
+  await writeFile(`${outputDir}/ledger.json`, `${JSON.stringify({ recordedAt: new Date().toISOString(), shopDomain, liveBase, summary, ledger }, null, 2)}\n`);
+  console.log(`LEDGER SUMMARY ${JSON.stringify(summary)}`);
+  for (const row of ledger) {
+    console.log(
+      `LEDGER ${JSON.stringify({
+        handle: row.handle,
+        status: row.status,
+        issues: row.issues,
+        action: row.action,
+        jbhImage: row.jbh?.image ?? null,
+        liveCard: row.live.card,
+        livePdp: row.live.pdp,
+        shopifyFeatured: row.shopify.featured,
+        featuredAlt: row.shopify.featuredAlt,
+        featuredSize: row.shopify.featuredSize,
+        gallery: row.shopify.galleryCount,
+        dFeatured: row.compare.featuredVsJbh,
+        detailShare: row.compare.featuredDetailVsJbh,
+        dGallery: row.compare.galleryVsJbh,
+      })}`,
+    );
+  }
 }
 
-const summary = ledger.reduce((counts, row) => ({ ...counts, [row.status]: (counts[row.status] || 0) + 1 }), {});
-await writeFile(`${outputDir}/ledger.json`, `${JSON.stringify({ recordedAt: new Date().toISOString(), shopDomain, liveBase, summary, ledger }, null, 2)}\n`);
-console.log(`LEDGER SUMMARY ${JSON.stringify(summary)}`);
-for (const row of ledger) {
-  console.log(
-    `LEDGER ${JSON.stringify({
-      handle: row.handle,
-      status: row.status,
-      issues: row.issues,
-      action: row.action,
-      jbhImage: row.jbh?.image ?? null,
-      liveCard: row.live.card,
-      livePdp: row.live.pdp,
-      shopifyFeatured: row.shopify.featured,
-      featuredAlt: row.shopify.featuredAlt,
-      featuredSize: row.shopify.featuredSize,
-      gallery: row.shopify.galleryCount,
-      dFeatured: row.compare.featuredVsJbh,
-      detailShare: row.compare.featuredDetailVsJbh,
-      dGallery: row.compare.galleryVsJbh,
-    })}`,
-  );
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  await main();
 }

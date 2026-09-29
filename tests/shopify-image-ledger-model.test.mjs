@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { classify, jbhRowFields, parsePresentationMap } from "../scripts/shopify-image-ledger.mjs";
+import { altMatchesJbhName, classify, jbhRowFields, parsePresentationMap } from "../scripts/shopify-image-ledger.mjs";
 
 const source = await readFile(new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url), "utf8");
 const allowlist = source.slice(source.indexOf("JBH_PRESENTATION_BY_HANDLE"));
@@ -63,4 +63,27 @@ test("ledger rows built from the real allowlist keep Shopify-media classificatio
 test("the ledger run builds its rows through jbhRowFields", async () => {
   const ledger = await readFile(new URL("../scripts/shopify-image-ledger.mjs", import.meta.url), "utf8");
   assert.match(ledger, /jbh: jbhRowFields\(presentation\),/);
+});
+
+test("approved alt text is the JBH name, optionally brand-prefixed", () => {
+  const name = "Straight 4×4 Transparent Lace Closure";
+  assert.equal(altMatchesJbhName(name, name), true);
+  assert.equal(altMatchesJbhName(`Juss Beautiful Hair — ${name}`, name), true);
+  assert.equal(
+    altMatchesJbhName("Juss Beautiful Hair — Juss Blonde, Blonde Body Wave Human Hair Bundles", "Juss Blonde"),
+    true,
+  );
+  assert.equal(altMatchesJbhName(`Juss Beautiful Hair ${name}`, name), false);
+  assert.equal(altMatchesJbhName("Juss Beautiful Hair — Straight 4x4 Transparent Lace Closure", name), false);
+  assert.equal(altMatchesJbhName(`Juss Beautiful Hair — ${name} Extra`, name), false);
+  assert.equal(altMatchesJbhName(null, name), false);
+
+  const jbh = { name: "Juss Blonde", category: "Bundles", image: "", shopifyMedia: true };
+  const featured = "https://cdn.shopify.com/s/files/1/x/files/blonde.jpg";
+  const brandRow = row(jbh, {
+    featured,
+    alt: "Juss Beautiful Hair — Juss Blonde, Blonde Body Wave Human Hair Bundles",
+    card: featured,
+  });
+  assert.equal(classify(brandRow).status, "MATCH");
 });

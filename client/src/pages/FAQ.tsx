@@ -13,11 +13,11 @@ const FAQS = [
   },
   {
     q: "Is your hair real human hair?",
-    a: "Yes — 100%. We carry raw, virgin, and premium human hair only. No synthetic. No blends. Every bundle can be washed, styled, colored, and reused.",
+    a: "Yes. Every bundle, closure and frontal we sell is listed as human hair on its product page. With proper care it can be washed, styled and reused.",
   },
   {
     q: "Can I dye or bleach the hair?",
-    a: "Yes. Our raw and virgin bundles can be lifted to 613 (platinum blonde). We always recommend a licensed colorist for best results.",
+    a: "Human hair can usually be colored, but results depend on the bundle and lifting to 613 (platinum blonde) is not guaranteed. Have a licensed colorist do a strand test first. Want blonde already done? Juss Blonde bundles come pre-lightened.",
   },
   {
     q: "What's your return policy?",

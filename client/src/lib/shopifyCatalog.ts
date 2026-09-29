@@ -68,14 +68,14 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       category: "Bundles",
       tagline: "Three bundles with tight afro-kinky texture and natural fullness.",
       description:
-        "Three virgin human-hair bundles in a coordinated graduated-length set for a full afro-kinky install.",
+        "Three human-hair bundles in a coordinated graduated-length set for a full afro-kinky install.",
     }),
     "afro-kinky-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Afro Kinky Human Hair Bundles",
       category: "Bundles",
       tagline: "Tight coils made to blend with natural Type 4 texture.",
       description:
-        "Virgin human-hair bundles with dense afro-kinky texture and live Shopify length availability.",
+        "Human-hair bundles with dense afro-kinky texture and live Shopify length availability.",
     }),
     "body-wave-4x4-transparent-lace-closure": approvedLiveShopifyProduct({
       name: "Body Wave 4×4 Transparent Lace Closure",
@@ -89,7 +89,7 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       category: "Bundles",
       tagline: "Three graduated bundles with soft body-wave movement.",
       description:
-        "Three virgin human-hair bundles in one graduated-length set with soft body-wave movement.",
+        "Three human-hair bundles in one graduated-length set with soft body-wave movement.",
     }),
     "deep-wave-4x4-transparent-lace-closure": approvedLiveShopifyProduct({
       name: "Deep Wave 4×4 Transparent Lace Closure",
@@ -103,14 +103,14 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       category: "Bundles",
       tagline: "Three graduated bundles with defined deep-wave texture.",
       description:
-        "Three virgin human-hair bundles in one graduated-length set with rich deep-wave definition.",
+        "Three human-hair bundles in one graduated-length set with rich deep-wave definition.",
     }),
     "kinky-straight-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Flawless Kinky Straight Bundles",
       category: "Bundles",
       tagline: "Full textured-straight hair with a natural blown-out finish.",
       description:
-        "Virgin human-hair bundles with kinky-straight texture and live Shopify length availability.",
+        "Human-hair bundles with kinky-straight texture and live Shopify length availability.",
     }),
     "blonde-body-wave-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Juss Blonde",
@@ -124,28 +124,28 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       category: "Bundles",
       tagline: "Defined kinky-curly texture with full volume.",
       description:
-        "Virgin human-hair bundles with defined kinky-curly texture and live Shopify length availability.",
+        "Human-hair bundles with defined kinky-curly texture and live Shopify length availability.",
     }),
     "body-wave-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Lawless Body Wave Bundles",
       category: "Bundles",
       tagline: "Soft body-wave movement with natural shine.",
       description:
-        "Virgin human-hair bundles with soft body-wave movement and live Shopify length availability.",
+        "Human-hair bundles with soft body-wave movement and live Shopify length availability.",
     }),
     "deep-wave-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Lawless Deep Wave Bundles",
       category: "Bundles",
       tagline: "Defined deep waves with full movement.",
       description:
-        "Virgin human-hair bundles with defined deep-wave texture and live Shopify length availability.",
+        "Human-hair bundles with defined deep-wave texture and live Shopify length availability.",
     }),
     "loose-wave-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Lawless Loose Wave Bundles",
       category: "Bundles",
       tagline: "Soft loose waves with easy movement.",
       description:
-        "Virgin human-hair bundles with soft loose-wave texture and live Shopify length availability.",
+        "Human-hair bundles with soft loose-wave texture and live Shopify length availability.",
     }),
     "loose-wave-13x4-transparent-lace-frontal": approvedLiveShopifyProduct({
       name: "Loose Wave 13×4 Transparent Lace Frontal",
@@ -166,92 +166,92 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       category: "Bundles",
       tagline: "Three graduated bundles with soft loose-wave movement.",
       description:
-        "Three virgin human-hair bundles in one graduated-length set with soft loose-wave movement.",
+        "Three human-hair bundles in one graduated-length set with soft loose-wave movement.",
     }),
     "spanish-wave-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Spanish Wave Human Hair Bundles",
       category: "Bundles",
       tagline: "Flowing Spanish-wave texture with soft body and movement.",
       description:
-        "Virgin human-hair bundles with Spanish-wave texture and live Shopify length availability.",
+        "Human-hair bundles with Spanish-wave texture and live Shopify length availability.",
     }),
     "straight-13x4-transparent-lace-frontal": approvedLiveShopifyProduct({
       name: "Straight 13×4 Transparent Lace Frontal",
       category: "Closures & Frontals",
       tagline: "Ear-to-ear transparent lace with a sleek straight finish.",
       description:
-        "A 13×4 transparent-lace frontal with straight virgin hair and flexible front styling.",
+        "A 13×4 transparent-lace frontal with straight texture and flexible front styling.",
     }),
     "straight-4x4-transparent-lace-closure": approvedLiveShopifyProduct({
       name: "Straight 4×4 Transparent Lace Closure",
       category: "Closures & Frontals",
       tagline: "Sleek straight hair with compact transparent-lace coverage.",
       description:
-        "A 4×4 transparent-lace closure with straight virgin hair for a polished finished install.",
+        "A 4×4 transparent-lace closure with straight texture for a polished finished install.",
     }),
     "straight-human-hair-bundle-deal": approvedLiveShopifyProduct({
       name: "Straight Human Hair Bundle Deal",
       category: "Bundles",
       tagline: "Three graduated bundles for a sleek straight install.",
       description:
-        "Three virgin human-hair bundles in one graduated-length set for a sleek straight finished look.",
+        "Three human-hair bundles in one graduated-length set for a sleek straight finished look.",
     }),
     "straight-human-hair-bundles": approvedLiveShopifyProduct({
       name: "Straight Human Hair Bundles",
       category: "Bundles",
       tagline: "Smooth straight texture with natural shine.",
       description:
-        "Virgin human-hair bundles with a sleek straight finish and live Shopify length availability.",
+        "Human-hair bundles with a sleek straight finish and live Shopify length availability.",
     }),
 
     // These entries remain intentionally bounded to their approved static media
     // and exact option sets until their separate supplier/dispatch gates are proven.
     "lawless-bone-straight-bundle-raw-vietnamese": {
-      name: "Lawless Bone Straight Bundle — Raw Vietnamese",
+      name: "Lawless Bone Straight Bundle",
       category: "Bundles",
-      tagline: "Silky raw Vietnamese hair with a glass-straight finish.",
+      tagline: "Silky human hair with a glass-straight finish.",
       description:
-        "Single-donor raw Vietnamese hair designed to press sleek, hold a curl, and move naturally with proper care.",
+        "Bone-straight human hair designed to press sleek, hold a curl, and move naturally with proper care.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/bundle-bonestraight_c3cba4a7-475e-49ab-85cf-b755cd51811a.jpg?v=1786301922",
       allowedOptions: ['14"', '18"', '22"', '26"'],
     },
     "royal-raw-indian-temple-bundle": {
-      name: "Royal Raw Indian Temple Bundle",
+      name: "Royal Straight Bundle",
       category: "Bundles",
-      tagline: "Single-donor raw Indian hair with natural longevity.",
+      tagline: "Human hair with natural movement and long wear.",
       description:
-        "Cuticle-aligned raw Indian temple hair designed for long wear and flexible styling with proper care.",
+        "Human hair designed for long wear and flexible styling with proper care.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/bundle-royal-indian_71d3c68e-5c90-4ed1-96df-45438bd72023.jpg?v=1786301908",
       allowedOptions: ['14"', '18"', '22"', '26"'],
     },
     "lawless-4-4-hd-lace-closure": {
-      name: "Lawless 4×4 HD Lace Closure",
+      name: "Lawless 4×4 Lace Closure",
       category: "Closures & Frontals",
-      tagline: "Compact HD lace coverage for a polished install.",
+      tagline: "Compact lace coverage for a polished install.",
       description:
-        "Pre-plucked 4×4 HD lace closure with a natural-looking hairline and flexible everyday styling.",
+        "Pre-plucked 4×4 lace closure with a natural-looking hairline and flexible everyday styling.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/closure-4x4_a62fc0d2-fa67-4242-a32f-34063047629d.jpg?v=1786301899",
       allowedOptions: ['16"'],
     },
     "lawless-5-5-hd-lace-closure": {
-      name: "Lawless 5×5 HD Lace Closure",
+      name: "Lawless 5×5 Lace Closure",
       category: "Closures & Frontals",
-      tagline: "More parting space with a seamless HD lace finish.",
+      tagline: "More parting space with a seamless lace finish.",
       description:
-        "5×5 HD lace closure with added parting room for a natural-looking install and versatile styling.",
+        "5×5 lace closure with added parting room for a natural-looking install and versatile styling.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/closure-5x5_4b3b1278-8c14-4402-b946-baf4c15d2246.jpg?v=1786301890",
       allowedOptions: ['16"'],
     },
     "lawless-13-4-hd-lace-frontal": {
-      name: "Lawless 13×4 HD Lace Frontal",
+      name: "Lawless 13×4 Lace Frontal",
       category: "Closures & Frontals",
-      tagline: "Ear-to-ear HD lace with flexible parting.",
+      tagline: "Ear-to-ear lace with flexible parting.",
       description:
-        "13×4 HD lace frontal designed for broad hairline coverage, flexible parting, and a natural-looking finish.",
+        "13×4 lace frontal designed for broad hairline coverage, flexible parting, and a natural-looking finish.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/frontal-13x4_5bfa907a-f1c2-46fe-a494-10f12ac4d548.jpg?v=1786301839",
       allowedOptions: ['18"'],
@@ -261,7 +261,7 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       category: "Wigs",
       tagline: "Glossy body-wave movement in a polished bob.",
       description:
-        "10-inch body-wave bob with 13×6 HD transparent lace and a pre-plucked finish for an easy polished look.",
+        "10-inch body-wave bob with 13×6 transparent lace and a pre-plucked finish for an easy polished look.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/wig-13x6-bob_3499d848-53a9-4172-8617-d91cb1932053.jpg?v=1786301818",
       allowedOptions: ['10" bob'],

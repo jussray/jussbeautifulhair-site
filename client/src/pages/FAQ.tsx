@@ -13,11 +13,11 @@ const FAQS = [
   },
   {
     q: "Is your hair real human hair?",
-    a: "Yes. Every bundle, closure and frontal we sell is listed as human hair on its product page. With proper care it can be washed, styled and reused.",
+    a: "Yes. Our bundles are listed as human hair on their product pages. With proper care they can be washed, styled and reused.",
   },
   {
     q: "Can I dye or bleach the hair?",
-    a: "Human hair can usually be colored, but results depend on the bundle and lifting to 613 (platinum blonde) is not guaranteed. Have a licensed colorist do a strand test first. Want blonde already done? Juss Blonde bundles come pre-lightened.",
+    a: "Human hair can usually be colored, but results vary by bundle, and lifting to 613 (platinum blonde) is not guaranteed. Have a licensed colorist do a strand test first. Want blonde already done? Juss Blonde bundles come pre-lightened.",
   },
   {
     q: "What's your return policy?",

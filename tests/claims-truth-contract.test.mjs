@@ -10,8 +10,9 @@ const [indexHtml, faq, catalog] = await Promise.all([
 
 // Hair claims Juss Beautiful Hair cannot currently prove for the live catalog.
 // Any of these may come back only with supplier documentation for the exact product.
-// Draft (non-live) catalog entries are out of scope until they go live.
-const UNPROVEN_CLAIMS = /\b(raw|virgin|temple|hd\s*lace|single[-\s]donor|cuticle[-\s]aligned)\b|100\s*%/i;
+// Every presentation entry is covered: applyJbhPresentation() serves any handle in the map, and
+// .control-room/audits/2026-09-23-jbh-store-audit.md records the "static" handles set DRAFT -> ACTIVE.
+const UNPROVEN_CLAIMS = /\b(raw|virgin|temple|hd(?:[\s-]+\w+)?[\s-]+lace|single[-\s]donor|cuticle[-\s]aligned)\b|100\s*%/i;
 
 function metaContent(attribute, key) {
   const match = indexHtml.match(new RegExp(`<meta ${attribute}="${key}" content="([^"]*)"`));
@@ -42,18 +43,22 @@ test("FAQ answers make no unproven hair claims", () => {
   }
 });
 
-test("live product presentation copy makes no unproven hair claims", () => {
+test("every product presentation entry makes no unproven hair claims", () => {
   const start = catalog.indexOf("export const JBH_PRESENTATION_BY_HANDLE");
   const end = catalog.indexOf("function isStoreVariant", start);
   assert.ok(start >= 0 && end > start, "JBH presentation map bounds are missing.");
-  const liveEntries = catalog
+  const entries = catalog
     .slice(start, end)
     .split(/\n(?= {4}"[^"]+": )/)
-    .filter((entry) => /^ {4}"[^"]+": approvedLiveShopifyProduct\(/.test(entry));
-  assert.equal(liveEntries.length, 20, "Expected exactly 20 live product entries.");
-  for (const entry of liveEntries) {
+    .filter((entry) => /^ {4}"[^"]+": /.test(entry));
+  const liveCount = entries.filter((entry) => /approvedLiveShopifyProduct\(/.test(entry)).length;
+  assert.equal(liveCount, 20, "Expected exactly 20 live product entries.");
+  assert.ok(entries.length > liveCount, "Expected the static (reactivated) entries to be covered too.");
+  for (const entry of entries) {
     const handle = entry.match(/^ {4}"([^"]+)"/)[1];
-    const copy = [...entry.matchAll(/"([^"]*)"/g)].map((match) => match[1]).filter((text) => text !== handle);
+    const copy = [...entry.matchAll(/"([^"]*)"/g)]
+      .map((match) => match[1])
+      .filter((text) => text !== handle && !text.startsWith("https://"));
     for (const text of copy) {
       assert.doesNotMatch(text, UNPROVEN_CLAIMS, `${handle}: "${text}"`);
     }

@@ -207,51 +207,51 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
     // These entries remain intentionally bounded to their approved static media
     // and exact option sets until their separate supplier/dispatch gates are proven.
     "lawless-bone-straight-bundle-raw-vietnamese": {
-      name: "Lawless Bone Straight Bundle — Raw Vietnamese",
+      name: "Lawless Bone Straight Bundle",
       category: "Bundles",
-      tagline: "Silky raw Vietnamese hair with a glass-straight finish.",
+      tagline: "Silky human hair with a glass-straight finish.",
       description:
-        "Single-donor raw Vietnamese hair designed to press sleek, hold a curl, and move naturally with proper care.",
+        "Bone-straight human hair designed to press sleek, hold a curl, and move naturally with proper care.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/bundle-bonestraight_c3cba4a7-475e-49ab-85cf-b755cd51811a.jpg?v=1786301922",
       allowedOptions: ['14"', '18"', '22"', '26"'],
     },
     "royal-raw-indian-temple-bundle": {
-      name: "Royal Raw Indian Temple Bundle",
+      name: "Royal Straight Bundle",
       category: "Bundles",
-      tagline: "Single-donor raw Indian hair with natural longevity.",
+      tagline: "Human hair with natural movement and long wear.",
       description:
-        "Cuticle-aligned raw Indian temple hair designed for long wear and flexible styling with proper care.",
+        "Human hair designed for long wear and flexible styling with proper care.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/bundle-royal-indian_71d3c68e-5c90-4ed1-96df-45438bd72023.jpg?v=1786301908",
       allowedOptions: ['14"', '18"', '22"', '26"'],
     },
     "lawless-4-4-hd-lace-closure": {
-      name: "Lawless 4×4 HD Lace Closure",
+      name: "Lawless 4×4 Lace Closure",
       category: "Closures & Frontals",
-      tagline: "Compact HD lace coverage for a polished install.",
+      tagline: "Compact lace coverage for a polished install.",
       description:
-        "Pre-plucked 4×4 HD lace closure with a natural-looking hairline and flexible everyday styling.",
+        "Pre-plucked 4×4 lace closure with a natural-looking hairline and flexible everyday styling.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/closure-4x4_a62fc0d2-fa67-4242-a32f-34063047629d.jpg?v=1786301899",
       allowedOptions: ['16"'],
     },
     "lawless-5-5-hd-lace-closure": {
-      name: "Lawless 5×5 HD Lace Closure",
+      name: "Lawless 5×5 Lace Closure",
       category: "Closures & Frontals",
-      tagline: "More parting space with a seamless HD lace finish.",
+      tagline: "More parting space with a seamless lace finish.",
       description:
-        "5×5 HD lace closure with added parting room for a natural-looking install and versatile styling.",
+        "5×5 lace closure with added parting room for a natural-looking install and versatile styling.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/closure-5x5_4b3b1278-8c14-4402-b946-baf4c15d2246.jpg?v=1786301890",
       allowedOptions: ['16"'],
     },
     "lawless-13-4-hd-lace-frontal": {
-      name: "Lawless 13×4 HD Lace Frontal",
+      name: "Lawless 13×4 Lace Frontal",
       category: "Closures & Frontals",
-      tagline: "Ear-to-ear HD lace with flexible parting.",
+      tagline: "Ear-to-ear lace with flexible parting.",
       description:
-        "13×4 HD lace frontal designed for broad hairline coverage, flexible parting, and a natural-looking finish.",
+        "13×4 lace frontal designed for broad hairline coverage, flexible parting, and a natural-looking finish.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/frontal-13x4_5bfa907a-f1c2-46fe-a494-10f12ac4d548.jpg?v=1786301839",
       allowedOptions: ['18"'],
@@ -261,7 +261,7 @@ export const JBH_PRESENTATION_BY_HANDLE: Readonly<Record<string, JbhPresentation
       category: "Wigs",
       tagline: "Glossy body-wave movement in a polished bob.",
       description:
-        "10-inch body-wave bob with 13×6 HD transparent lace and a pre-plucked finish for an easy polished look.",
+        "10-inch body-wave bob with 13×6 transparent lace and a pre-plucked finish for an easy polished look.",
       image:
         "https://cdn.shopify.com/s/files/1/0845/7604/3251/files/wig-13x6-bob_3499d848-53a9-4172-8617-d91cb1932053.jpg?v=1786301818",
       allowedOptions: ['10" bob'],

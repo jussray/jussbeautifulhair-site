@@ -165,6 +165,17 @@ async function liveRender(page, handles) {
   return { cards, pdps };
 }
 
+// Approved alt text is the JBH name, optionally brand-prefixed
+// ("Juss Beautiful Hair — <name>") with an optional ", <description>" tail.
+const ALT_BRAND_PREFIX = "Juss Beautiful Hair — ";
+export function altMatchesJbhName(alt, name) {
+  if (typeof alt !== "string" || !name) return false;
+  if (alt === name) return true;
+  if (!alt.startsWith(ALT_BRAND_PREFIX)) return false;
+  const rest = alt.slice(ALT_BRAND_PREFIX.length);
+  return rest === name || rest.startsWith(`${name}, `);
+}
+
 // The row keeps shopifyMedia so classify() judges approved live Shopify
 // products against their Shopify featured image, not a JBH asset.
 export function jbhRowFields(presentation) {
@@ -188,7 +199,7 @@ export function classify(row) {
       issues.push(`live card renders ${row.live.card}, not the Shopify featured image`);
       return { status: "MISMATCH", issues, action: "investigate storefront image binding" };
     }
-    if (row.shopify.featuredAlt !== row.jbh.name) issues.push(`alt text "${row.shopify.featuredAlt ?? ""}" is not the JBH name`);
+    if (!altMatchesJbhName(row.shopify.featuredAlt, row.jbh.name)) issues.push(`alt text "${row.shopify.featuredAlt ?? ""}" is not the JBH name`);
     const altOnly = issues.length > 0 && issues.every((issue) => issue.startsWith("alt text"));
     return {
       status: issues.length === 0 ? "MATCH" : altOnly ? "MATCH (alt text)" : "CHECK",
@@ -223,7 +234,7 @@ export function classify(row) {
     const inGallery = row.compare.galleryVsJbh.some((value) => value !== null && value <= MATCH_DISTANCE);
     return { status: "MISMATCH", issues: inGallery ? [...issues, "approved image is in gallery but not featured"] : issues, action: inGallery ? "reorder: make approved image featured" : "upload approved JBH image and make it featured" };
   }
-  if (row.shopify.featuredAlt !== row.jbh.name) issues.push(`alt text "${row.shopify.featuredAlt ?? ""}" is not the JBH name`);
+  if (!altMatchesJbhName(row.shopify.featuredAlt, row.jbh.name)) issues.push(`alt text "${row.shopify.featuredAlt ?? ""}" is not the JBH name`);
   return { status: issues.length ? "MATCH (alt text)" : "MATCH", issues, action: issues.length ? "set alt text to JBH name" : "none" };
 }
 

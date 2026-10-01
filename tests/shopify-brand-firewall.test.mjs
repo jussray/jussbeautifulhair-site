@@ -57,6 +57,12 @@ test("approved live catalog uses Shopify media and live options only behind the 
   assert.match(source, /if \(presentation\.useShopifyImage && !image\) return null/);
 });
 
+test("staged background Shopify media fails closed before public presentation", () => {
+  assert.match(source, /REJECTED_SHOPIFY_IMAGE_PATTERN/);
+  assert.match(source, /approved-4x5/);
+  assert.match(source, /!REJECTED_SHOPIFY_IMAGE_PATTERN\.test\(product\.image\)/);
+});
+
 test("separately bounded products retain static media and exact option sets", () => {
   for (const [handle, imageNeedle] of [
     ["lawless-bone-straight-bundle-raw-vietnamese", "bundle-bonestraight"],

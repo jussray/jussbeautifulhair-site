@@ -42,6 +42,8 @@ export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
   checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 
+const REJECTED_SHOPIFY_IMAGE_PATTERN = /-approved-4x5\.(?:png|jpe?g)(?:\?|$)/i;
+
 function approvedLiveShopifyProduct(input: {
   name: string;
   category: StoreProduct["category"];
@@ -351,6 +353,7 @@ function isStoreProduct(value: unknown): value is StoreProduct {
     typeof product.tagline === "string" &&
     typeof product.description === "string" &&
     typeof product.image === "string" &&
+    !REJECTED_SHOPIFY_IMAGE_PATTERN.test(product.image) &&
     typeof product.availableForSale === "boolean" &&
     Array.isArray(product.variants) &&
     product.variants.length > 0 &&

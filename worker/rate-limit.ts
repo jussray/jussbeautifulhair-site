@@ -15,15 +15,12 @@ export function isJbhDynamicPath(pathname: string): boolean {
 }
 
 function rateLimitKey(request: Request): string {
+  // CF-Connecting-IP is supplied by Cloudflare at the trusted Worker edge.
+  // Do not trust X-Forwarded-For here: a caller can choose that header and
+  // otherwise rotate limiter buckets. If the edge identity is unavailable,
+  // collapse into one conservative bucket rather than weakening the limit.
   const connectingIp = request.headers.get("CF-Connecting-IP")?.trim();
-  if (connectingIp) return `ip:${connectingIp}`;
-
-  const forwardedIp = (request.headers.get("X-Forwarded-For") || "")
-    .split(",")[0]
-    .trim();
-  if (forwardedIp) return `ip:${forwardedIp}`;
-
-  return "ip:unknown";
+  return connectingIp ? `ip:${connectingIp}` : "ip:unknown";
 }
 
 function json(status: number, body: Record<string, unknown>, headers: HeadersInit = {}): Response {

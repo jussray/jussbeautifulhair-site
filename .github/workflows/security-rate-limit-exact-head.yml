@@ -1,0 +1,69 @@
+name: Security Rate Limit Exact-Head Gate
+
+on:
+  push:
+    branches:
+      - 'security/**'
+    paths:
+      - 'worker/rate-limit.ts'
+      - 'worker/entry.ts'
+      - 'wrangler.toml'
+      - 'wrangler.frontdoor.toml'
+      - 'tests/rate-limit-contract.test.mjs'
+      - 'scripts/rate-limit-playwright.mjs'
+      - '.github/workflows/security-rate-limit-exact-head.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-rate-limit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_HEAD_SHA: ${{ github.sha }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_HEAD_SHA }}
+
+      - name: Verify immutable head
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          printf 'expected=%s\nactual=%s\n' "$EXPECTED_HEAD_SHA" "$actual"
+          test "$actual" = "$EXPECTED_HEAD_SHA"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run check
+
+      - name: Verify focused rate-limit contract
+        run: node --test tests/rate-limit-contract.test.mjs
+
+      - name: Build production storefront
+        run: npm run build
+
+      - name: Install pinned browser verifier
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+
+      - name: Install Chromium
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Run JBH API rate-limit browser proof
+        run: node scripts/rate-limit-playwright.mjs

@@ -1,96 +1,68 @@
+/* global process, fetch */
+
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
 import { chromium } from "playwright";
-import { enforceJbhRateLimit } from "../worker/rate-limit.ts";
 
-function startServer() {
-  const counts = new Map();
-  const env = {
-    JBH_RATE_LIMITER: {
-      async limit({ key }) {
-        const next = (counts.get(key) ?? 0) + 1;
-        counts.set(key, next);
-        return { success: next <= 2 };
-      },
-    },
-  };
+const baseURL = process.env.JBH_EDGE_BASE_URL;
+if (!baseURL) throw new Error("JBH_EDGE_BASE_URL is required");
 
-  const server = createServer(async (req, res) => {
-    try {
-      const request = new Request(`http://127.0.0.1${req.url}`, {
-        method: req.method,
-        headers: {
-          ...req.headers,
-          "CF-Connecting-IP": "203.0.113.44",
-        },
-      });
-
-      const limited = await enforceJbhRateLimit(request, env);
-      const response = limited ?? new Response(
-        req.url === "/index.html"
-          ? "<!doctype html><title>JBH rate-limit proof</title>"
-          : JSON.stringify({ ok: true }),
-        {
-          status: 200,
-          headers: {
-            "content-type": req.url === "/index.html"
-              ? "text/html; charset=utf-8"
-              : "application/json; charset=utf-8",
-          },
-        },
-      );
-
-      res.statusCode = response.status;
-      for (const [name, value] of response.headers) res.setHeader(name, value);
-      res.end(Buffer.from(await response.arrayBuffer()));
-    } catch (error) {
-      res.statusCode = 500;
-      res.end(String(error));
-    }
-  });
-
-  return new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      resolve({ server, baseURL: `http://127.0.0.1:${address.port}` });
-    });
-  });
-}
-
-const { server, baseURL } = await startServer();
 const browser = await chromium.launch({ headless: true });
 
 try {
   const page = await browser.newPage();
 
-  const staticResponse = await page.goto(`${baseURL}/index.html`);
-  assert.equal(staticResponse?.status(), 200, "static storefront request must bypass API limiter");
+  // Exercise the real Worker + asset path first. Storefront traffic is routed
+  // through worker/entry.ts for headers, but it is outside the dynamic limiter.
+  const staticResponse = await page.goto(`${baseURL}/`);
+  assert.equal(staticResponse?.status(), 200, "storefront request must remain available");
 
   const result = await page.evaluate(async () => {
-    const first = await fetch("/version");
-    const second = await fetch("/api/shopify/catalog");
-    const third = await fetch("/api/internal/providers");
+    const statuses = [];
+    let retryAfter = null;
+    let denialBody = null;
+
+    // Cloudflare's Worker Rate Limiting binding is intentionally permissive
+    // around enforcement timing. Prove eventual rejection rather than assuming
+    // the exact request that crosses the threshold.
+    for (let i = 0; i < 160; i += 1) {
+      const response = await fetch("/version", { cache: "no-store" });
+      statuses.push(response.status);
+      if (response.status === 429) {
+        retryAfter = response.headers.get("retry-after");
+        denialBody = await response.json();
+        break;
+      }
+    }
+
+    // Exact /api must share the exhausted dynamic ingress boundary. A static
+    // storefront route must remain available after the API bucket is exhausted.
+    const exactApi = await fetch("/api", { cache: "no-store" });
+    const staticAfterExhaustion = await fetch("/", { cache: "no-store" });
+
     return {
-      statuses: [first.status, second.status, third.status],
-      retryAfter: third.headers.get("retry-after"),
-      thirdBody: await third.json(),
+      statuses,
+      retryAfter,
+      denialBody,
+      exactApiStatus: exactApi.status,
+      staticStatus: staticAfterExhaustion.status,
     };
   });
 
-  assert.deepEqual(result.statuses, [200, 200, 429]);
+  assert.ok(result.statuses.includes(429), "real Worker limiter must eventually reject dynamic traffic");
   assert.equal(result.retryAfter, "60");
-  assert.deepEqual(result.thirdBody, { error: "rate_limit_exceeded" });
+  assert.deepEqual(result.denialBody, { error: "rate_limit_exceeded" });
+  assert.equal(result.exactApiStatus, 429, "exact /api must not bypass the exhausted dynamic bucket");
+  assert.equal(result.staticStatus, 200, "storefront assets must not consume the API limiter");
 
   console.log(JSON.stringify({
-    contract: "jbh/api-rate-limit-browser-proof@v1",
-    engine: "playwright",
+    contract: "jbh/api-rate-limit-browser-proof@v2",
+    engine: "playwright+wrangler",
     staticBypass: true,
-    dynamicStatuses: result.statuses,
+    observedDynamicStatuses: result.statuses,
+    exactApiStatus: result.exactApiStatus,
     retryAfter: result.retryAfter,
     verifiedOutcome: true,
   }));
 } finally {
   await browser.close();
-  await new Promise((resolve) => server.close(resolve));
 }

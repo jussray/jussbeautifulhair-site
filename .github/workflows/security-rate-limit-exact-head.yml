@@ -3,6 +3,7 @@ name: Security Rate Limit Exact-Head Gate
 on:
   push:
     branches:
+      - main
       - 'security/**'
     paths:
       - 'worker/rate-limit.ts'
@@ -27,7 +28,7 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Check out exact head
         uses: actions/checkout@v4
@@ -59,11 +60,39 @@ jobs:
       - name: Build production storefront
         run: npm run build
 
-      - name: Install pinned browser verifier
-        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+      - name: Install pinned runtime and browser verifiers
+        run: npm install --no-save --package-lock=false --ignore-scripts wrangler@4.118.0 playwright@1.61.1
 
       - name: Install Chromium
         run: npm exec -- playwright install --with-deps chromium
 
-      - name: Run JBH API rate-limit browser proof
+      - name: Start exact-head JBH Worker locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --config wrangler.frontdoor.toml --ip 127.0.0.1 --port 8792 > "$RUNNER_TEMP/jbh-wrangler.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/jbh-wrangler.pid"
+          for attempt in {1..60}; do
+            if curl --fail --silent --show-error http://127.0.0.1:8792/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/jbh-wrangler.log" >&2
+          exit 1
+
+      - name: Run JBH API rate-limit browser proof through Wrangler
+        env:
+          JBH_EDGE_BASE_URL: http://127.0.0.1:8792
         run: node scripts/rate-limit-playwright.mjs
+
+      - name: Stop local JBH Worker
+        if: always()
+        shell: bash
+        run: |
+          if [ -f "$RUNNER_TEMP/jbh-wrangler.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/jbh-wrangler.pid")" 2>/dev/null || true
+          fi
+          if [ -f "$RUNNER_TEMP/jbh-wrangler.log" ]; then
+            cat "$RUNNER_TEMP/jbh-wrangler.log"
+          fi

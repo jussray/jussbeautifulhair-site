@@ -1,6 +1,7 @@
 import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json";
 import worker from "./index";
 import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
+import { enforceJbhRateLimit, type RateLimitBinding } from "./rate-limit";
 
 type BaseEnv = Parameters<typeof worker.fetch>[1];
 type AnalyticsPoint = {
@@ -15,6 +16,7 @@ type Env = BaseEnv & {
   ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
   FUNNEL_ANALYTICS?: AnalyticsEngineDatasetBinding;
   JBH_AI_OPERATOR_KEY?: string;
+  JBH_RATE_LIMITER?: RateLimitBinding;
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
   MODEL_API_KEY?: string;
@@ -395,6 +397,9 @@ function allowCloudflareWebAnalytics(response: Response): Response {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const limited = await enforceJbhRateLimit(request, env);
+    if (limited) return limited;
+
     const pathname = new URL(request.url).pathname;
 
     if (pathname === VERSION_PATH) {

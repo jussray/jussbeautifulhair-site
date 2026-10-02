@@ -30,6 +30,12 @@ test("missing rate-limit binding fails closed and denial returns retry guidance"
   assert.doesNotMatch(limiter, /if \(!limiter\) return null/);
 });
 
+test("limiter identity trusts Cloudflare edge IP and never X-Forwarded-For", () => {
+  assert.match(limiter, /CF-Connecting-IP/);
+  assert.doesNotMatch(limiter, /get\("X-Forwarded-For"\)/);
+  assert.match(limiter, /"ip:unknown"/);
+});
+
 test("both JBH deploy configs bind the same first-class Cloudflare limiter", () => {
   for (const config of [defaultConfig, frontdoorConfig]) {
     assert.match(config, /\[\[ratelimits\]\]/);

@@ -19,6 +19,12 @@ ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
 binding = "FUNNEL_ANALYTICS"
 dataset = "jbh_funnel_v1"
 
+# Broad API baseline. Static storefront assets bypass this binding in worker/entry.ts.
+[[ratelimits]]
+name = "JBH_RATE_LIMITER"
+namespace_id = "1003"
+simple = { limit = 120, period = 60 }
+
 [assets]
 directory = "dist/public"
 binding = "ASSETS"

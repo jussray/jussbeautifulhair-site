@@ -19,6 +19,13 @@ zone_name = "jussbeautifulhair.com"
 STORE_ORIGIN = "https://jussbeautifulhair.com"
 ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
 
+# Same production API limiter as the default build config. The frontdoor config
+# must not create an unthrottled alternate deployment path.
+[[ratelimits]]
+name = "JBH_RATE_LIMITER"
+namespace_id = "1003"
+simple = { limit = 120, period = 60 }
+
 [assets]
 directory = "dist/public"
 binding = "ASSETS"

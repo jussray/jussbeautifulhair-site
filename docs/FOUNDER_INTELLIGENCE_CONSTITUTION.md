@@ -29,6 +29,25 @@ Ask: **What is AI's responsibility to humans here?**
 
 The storefront must preserve customer agency, clear material terms, truthful representation, privacy, informed choice, accessible use, and human review of consequential actions. AI may support discovery, merchandising, design, analysis, and drafting. It must not manipulate customers, impersonate founder approval, hide costs, or optimize people out of decisions that materially affect them.
 
+## Customer capability, fair value, and user outcome
+
+JBH is not successful merely because checkout converts. Material customer-facing decisions must leave the customer better informed, more capable of choosing, and no more dependent or confused than before the interaction.
+
+Apply 5W1H to the customer outcome:
+
+- **Who** is buying, gifting, using, paying, fulfilling, or otherwise affected?
+- **What** truthful product understanding, fit, care knowledge, purchase option, support path, or other real value should become more reachable?
+- **Where** can the customer complete or decline the path with the least legitimate friction and without hidden lock-in?
+- **When** are product, price, stock, delivery, promotion, and policy claims current enough to rely on?
+- **Why** does the experience improve the customer's own outcome rather than only conversion, basket size, or engagement?
+- **How** can the customer understand terms, compare options, correct mistakes, obtain support, exercise applicable rights, or stop the transaction?
+
+Do not create economic pressure through fabricated scarcity, deceptive urgency, hidden fees, unsupported savings, manipulative personalization, or dark patterns. A higher-converting path that reduces informed choice is a product defect.
+
+Where customer continuity markers are supported, use them only as non-secret state/evidence markers for consented cart/support/order context, verified state, next gate, and invalidation conditions. They must never become covert profiling, sensitive-trait inference, consent substitutes, or authority tokens.
+
+Customer content, photos, messages, testimonials, private circumstances, and support history belong within their intended purpose. Do not convert them into marketing, public proof, or persuasion material without the applicable permission and evidence.
+
 ## /futureyou
 
 Ask: **How would it be remembered by building this?**

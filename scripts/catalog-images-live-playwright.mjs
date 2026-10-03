@@ -82,7 +82,9 @@ if (requireExactHead) {
 }
 
 // Resolve approved-live media from the same production catalog bridge the
-// customer receives. This is the authoritative current Shopify image mapping.
+// customer receives. Shopify handles without current media remain eligible
+// source entries but are held out of public presentation by shopifyCatalog.ts.
+// They are not image-authorized until Shopify returns a real approved image.
 const authorityResponse = await fetch(`${baseURL}/api/shopify/catalog`, {
   headers: { accept: "application/json" },
   cache: "no-store",
@@ -93,11 +95,16 @@ const authorityProducts = Array.isArray(authorityPayload?.products) ? authorityP
 const authorityByHandle = new Map(authorityProducts.map((product) => [product?.id, product]));
 
 const APPROVED_IMAGE_BY_HANDLE = { ...STATIC_IMAGE_BY_HANDLE };
+const HELD_LIVE_SHOPIFY_HANDLES = new Set();
 for (const handle of LIVE_SHOPIFY_HANDLES) {
   const product = authorityByHandle.get(handle);
   assert.ok(product, `approved live Shopify handle ${handle} is missing from the production catalog bridge.`);
   assert.equal(typeof product.image, "string", `${handle} production catalog image is not a string.`);
-  assert.ok(product.image.trim(), `${handle} has no live Shopify image.`);
+  if (!product.image.trim()) {
+    HELD_LIVE_SHOPIFY_HANDLES.add(handle);
+    APPROVED_IMAGE_BY_HANDLE[handle] = "";
+    continue;
+  }
   assert.ok(IMAGE_HOSTS.has(new URL(product.image, expectedOrigin).hostname), `${handle} Shopify image host is not approved.`);
   APPROVED_IMAGE_BY_HANDLE[handle] = product.image;
 }
@@ -109,7 +116,7 @@ const PINNED_ASSETS = Object.fromEntries(
     Object.values(STATIC_IMAGE_BY_HANDLE).includes(path)),
 );
 const BUNDLE_DEAL_HANDLES = LIVE_SHOPIFY_HANDLES.filter((handle) =>
-  handle.endsWith("-bundle-deal"),
+  handle.endsWith("-bundle-deal") && !HELD_LIVE_SHOPIFY_HANDLES.has(handle),
 );
 
 const servedAssets = {};
@@ -212,6 +219,14 @@ async function cardInventory(page, label) {
       naturalWidth,
       ...geometry,
     });
+  }
+
+  for (const handle of HELD_LIVE_SHOPIFY_HANDLES) {
+    assert.equal(
+      cards.some((card) => card.handle === handle),
+      false,
+      `${label}: ${handle} has no approved Shopify image but rendered publicly.`,
+    );
   }
 
   const widths = new Set(cards.map((card) => card.cardWidth));
@@ -389,6 +404,7 @@ await writeFile(
       recordedAt: new Date().toISOString(),
       liveSha: version?.sha,
       liveShopifyHandles: LIVE_SHOPIFY_HANDLES,
+      heldLiveShopifyHandles: [...HELD_LIVE_SHOPIFY_HANDLES],
       servedAssets,
       results,
     },

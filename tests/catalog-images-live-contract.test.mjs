@@ -20,22 +20,26 @@ test("live catalog image proof retains byte pins for any still-static approved a
   assert.match(script, /expectedOrigin = "https:\/\/jussbeautifulhair\.com"/);
 });
 
-test("approved live Shopify handles resolve image authority from the production catalog bridge", () => {
+test("approved live Shopify handles separate image authority from held missing-media state", () => {
   assert.match(script, /LIVE_SHOPIFY_HANDLES/);
   assert.match(script, /approvedLiveShopifyProduct\\\(/);
   assert.match(script, /fetch\(`\$\{baseURL\}\/api\/shopify\/catalog`/);
   assert.match(script, /authorityByHandle/);
   assert.match(script, /product\.image/);
-  assert.match(script, /has no live Shopify image/);
+  assert.match(script, /HELD_LIVE_SHOPIFY_HANDLES/);
+  assert.match(script, /if \(!product\.image\.trim\(\)\)/);
+  assert.match(script, /APPROVED_IMAGE_BY_HANDLE\[handle\] = ""/);
   assert.match(script, /APPROVED_IMAGE_BY_HANDLE\[handle\] = product\.image/);
+  assert.match(script, /has no approved Shopify image but rendered publicly/);
 });
 
-test("live catalog image proof checks loading, shell parity, supplier privacy, and active bundle deals", () => {
+test("live catalog image proof checks loading, shell parity, supplier privacy, and image-authorized bundle deals", () => {
   assert.match(script, /naturalWidth > 0/);
   assert.match(script, /media is not square/);
   assert.match(script, /card widths differ/);
   assert.match(script, /SUPPLIER_IDENTITY = \/Dropship Beauty\|/);
   assert.match(script, /BUNDLE_DEAL_HANDLES = LIVE_SHOPIFY_HANDLES\.filter/);
+  assert.match(script, /!HELD_LIVE_SHOPIFY_HANDLES\.has\(handle\)/);
   assert.match(script, /bundle deal \$\{handle\} is not live/);
 });
 
@@ -59,6 +63,10 @@ test("every rendered card must match the exact approved static or current Shopif
   assert.match(script, /held on the placeholder but rendered an image/);
   assert.match(script, /addEventListener\("error"/);
   assert.match(script, /IMAGE_TIMEOUT_MS/);
+});
+
+test("live catalog image proof records held Shopify handles in retained evidence", () => {
+  assert.match(script, /heldLiveShopifyHandles: \[\.\.\.HELD_LIVE_SHOPIFY_HANDLES\]/);
 });
 
 test("live catalog image proof requires the displayed price to equal the selected live Shopify variant", () => {

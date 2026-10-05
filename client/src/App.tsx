@@ -10,6 +10,7 @@ import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
 import Product from "@/pages/Product";
 import Cart from "@/pages/Cart";
+import ShopifyCartHandoff from "@/pages/ShopifyCartHandoff";
 import Checkout from "@/pages/Checkout";
 import HairMatch from "@/pages/HairMatch";
 import SuccessPage from "@/pages/success";
@@ -23,6 +24,10 @@ import Terms from "@/pages/Terms";
 
 const CANONICAL_ORIGIN = "https://jussbeautifulhair.com";
 const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/success"]);
+
+function isNonIndexableRoute(pathname: string): boolean {
+  return NON_INDEXABLE_ROUTES.has(pathname) || pathname.startsWith("/cart/c/");
+}
 
 function RouteDiscoveryMetadata() {
   const [location] = useLocation();
@@ -52,7 +57,7 @@ function RouteDiscoveryMetadata() {
     ogUrl.content = canonicalHref;
 
     const existingRobots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"][data-jbh-dynamic="true"]');
-    if (NON_INDEXABLE_ROUTES.has(canonicalUrl.pathname)) {
+    if (isNonIndexableRoute(canonicalUrl.pathname)) {
       const robots = existingRobots || document.createElement("meta");
       robots.name = "robots";
       robots.content = "noindex, nofollow";
@@ -72,6 +77,7 @@ function AppRouter() {
       <Route path="/" component={Home} />
       <Route path="/shop" component={Shop} />
       <Route path="/product/:id" component={Product} />
+      <Route path="/cart/c/:cartId" component={ShopifyCartHandoff} />
       <Route path="/cart" component={Cart} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/hair-match" component={HairMatch} />

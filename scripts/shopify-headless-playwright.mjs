@@ -67,6 +67,37 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
+async function verifyBrandedCartHandoff(browser, viewport, label) {
+  const page = await browser.newPage({ viewport });
+  let navigation = null;
+
+  await page.route("https://8qp1z2-az.myshopify.com/cart/c/**", async (route) => {
+    navigation = route.request().url();
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "<!doctype html><title>Mock Shopify Checkout</title><h1>Shopify Checkout</h1>",
+    });
+  });
+
+  const cartToken = `inbound-${label}`;
+  const expectedUrl = `https://8qp1z2-az.myshopify.com/cart/c/${cartToken}?key=handoff-secret`;
+  await page.goto(`${baseURL}/cart/c/${cartToken}?key=handoff-secret`, {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForURL(expectedUrl);
+
+  assert(navigation === expectedUrl, `${label} branded cart handoff did not preserve path and key.`);
+  assert(
+    (await page.locator("body").innerText()).includes("Shopify Checkout"),
+    `${label} branded cart handoff did not reach Shopify checkout.`,
+  );
+  await page.screenshot({ path: `${outputDir}/cart-handoff-${label}.png`, fullPage: true });
+  await page.close();
+
+  return navigation;
+}
+
 async function configureShopifyBridgeMock(page, evidence) {
   await page.route("**/api/shopify/cart", async (route) => {
     const request = route.request();
@@ -114,12 +145,25 @@ const evidence = {
   checkoutPath: null,
   checkoutKey: null,
   accessTokenPresent: false,
+  handoffDesktopNavigation: null,
+  handoffMobileNavigation: null,
 };
 
 try {
   await mkdir(outputDir, { recursive: true });
   await waitForServer();
   browser = await chromium.launch({ headless: true });
+
+  evidence.handoffDesktopNavigation = await verifyBrandedCartHandoff(
+    browser,
+    { width: 1440, height: 1100 },
+    "desktop",
+  );
+  evidence.handoffMobileNavigation = await verifyBrandedCartHandoff(
+    browser,
+    { width: 390, height: 844 },
+    "mobile",
+  );
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   desktop.on("console", (message) => {
@@ -215,6 +259,8 @@ try {
         viewports: ["1440x1100", "390x844"],
         evidence,
         assertions: [
+          "direct branded /cart/c/* URLs hand off to canonical Shopify checkout on desktop and mobile",
+          "direct branded cart handoff preserves the Shopify cart path and identity key",
           "truthful consultation and future-credit disclosure rendered",
           "four bounded non-sensitive preferences sent to the guarded Shopify bridge",
           "approved numeric Shopify variant and quantity sent without client pricing authority",

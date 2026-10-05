@@ -44,11 +44,11 @@ export default function ShopifyCartHandoff() {
           Redirecting securely
         </div>
 
-        <a href={checkoutUrl} className="mt-8 inline-block" data-testid="link-shopify-cart-handoff">
-          <Button size="lg" className="font-semibold">
+        <Button asChild size="lg" className="mt-8 font-semibold">
+          <a href={checkoutUrl} data-testid="link-shopify-cart-handoff">
             Continue to secure checkout <ExternalLink className="ml-2 h-4 w-4" />
-          </Button>
-        </a>
+          </a>
+        </Button>
       </section>
     </Layout>
   );

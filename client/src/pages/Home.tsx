@@ -83,8 +83,17 @@ export default function Home() {
               Shop Now <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
+          <Link href="/hair-match">
+            <Button
+              size="lg"
+              data-testid="button-hair-match-hero"
+              className="border border-white/80 bg-primary/75 text-white hover:bg-primary/90 font-semibold px-8 shadow-xl"
+            >
+              Hair Match · $25
+            </Button>
+          </Link>
         </div>
-        <div className="md:hidden px-6 py-6 bg-primary">
+        <div className="md:hidden px-6 py-6 bg-primary space-y-3">
           <Link href="/shop">
             <Button
               size="lg"
@@ -92,6 +101,15 @@ export default function Home() {
               className="w-full bg-white text-primary hover:bg-white/90 font-semibold"
             >
               Shop Now <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/hair-match">
+            <Button
+              size="lg"
+              data-testid="button-hair-match-hero-mobile"
+              className="w-full border border-white/80 bg-primary/75 text-white hover:bg-primary/90 font-semibold"
+            >
+              Hair Match · $25
             </Button>
           </Link>
         </div>
@@ -112,6 +130,24 @@ export default function Home() {
       </section>
 
       <BrandMoatSection />
+
+      <section className="mx-auto max-w-7xl px-6 pt-12" data-testid="hair-match-home-offer">
+        <div className="rounded-2xl border border-gold/30 bg-secondary/20 p-6 sm:p-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">Need help choosing?</p>
+            <h2 className="font-display text-2xl sm:text-3xl text-foreground">Start with a $25 Hair Match</h2>
+            <p className="mt-2 text-sm sm:text-base text-muted-foreground leading-relaxed">
+              Get a personal recommendation for texture, length, lace, bundles, or wigs. The full $25 becomes
+              purchase credit toward an eligible future JBH order.
+            </p>
+          </div>
+          <Link href="/hair-match" className="shrink-0">
+            <Button size="lg" data-testid="button-start-hair-match-home" className="font-semibold">
+              Start My Hair Match <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </section>
 
       <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
         <div className="flex items-end justify-between mb-8">

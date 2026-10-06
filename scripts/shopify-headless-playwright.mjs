@@ -10,6 +10,28 @@ const baseURL = `http://${host}:${port}`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-headless";
 const variantGid = "gid://shopify/ProductVariant/50196622344435";
+const shopifyCatalogFixture = {
+  products: [
+    {
+      id: "body-wave-human-hair-bundles",
+      shopifyProductId: "gid://shopify/Product/9719789060339",
+      name: "Body Wave Human Hair Bundles",
+      category: "Bundles",
+      tagline: "Live Shopify inventory",
+      description: "Supplier-backed body wave bundles fulfilled through the connected Shopify catalog.",
+      variants: [
+        {
+          id: "gid://shopify/ProductVariant/50273899900001",
+          option: '14"',
+          price: 75,
+          availableForSale: true,
+        },
+      ],
+      image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%23f3ede8'/%3E%3C/svg%3E",
+      availableForSale: true,
+    },
+  ],
+};
 const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", import.meta.url));
 let serverOutput = "";
 
@@ -98,6 +120,17 @@ async function verifyBrandedCartHandoff(browser, viewport, label) {
   return navigation;
 }
 
+
+async function configureShopifyCatalogMock(page) {
+  await page.route("**/api/shopify/catalog", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(shopifyCatalogFixture),
+    });
+  });
+}
+
 async function configureShopifyBridgeMock(page, evidence) {
   await page.route("**/api/shopify/cart", async (route) => {
     const request = route.request();
@@ -171,8 +204,18 @@ try {
   });
   desktop.on("pageerror", (error) => consoleErrors.push(error.message));
   await configureShopifyBridgeMock(desktop, evidence);
+  await configureShopifyCatalogMock(desktop);
 
-  await desktop.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
+  await desktop.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
+  await desktop.getByTestId("button-hair-match-hero").waitFor({ state: "visible" });
+  assert(
+    await desktop.getByTestId("hair-match-home-offer").isVisible(),
+    "Homepage Hair Match decision-help offer is missing.",
+  );
+  await desktop.getByTestId("button-hair-match-hero").click();
+  await desktop.waitForURL("**/hair-match");
+
+  await desktop.goto(`${baseURL}/hair-match`, { waitUntil: "domcontentloaded" });
   const bodyText = await desktop.locator("body").innerText();
   const normalizedText = bodyText.toLowerCase();
   assert(normalizedText.includes("juss hair match session"), "Hair Match title is missing.");
@@ -235,7 +278,17 @@ try {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
   mobile.on("pageerror", (error) => consoleErrors.push(error.message));
-  await mobile.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
+  await configureShopifyCatalogMock(mobile);
+  await mobile.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
+  await mobile.getByTestId("button-hair-match-hero-mobile").waitFor({ state: "visible" });
+  assert(
+    await mobile.getByTestId("hair-match-home-offer").isVisible(),
+    "Mobile homepage Hair Match decision-help offer is missing.",
+  );
+  await mobile.getByTestId("button-hair-match-hero-mobile").click();
+  await mobile.waitForURL("**/hair-match");
+
+  await mobile.goto(`${baseURL}/hair-match`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("select-hair-goal").waitFor({ state: "visible" });
   assert(
     await mobile.getByTestId("button-hair-match-checkout").isEnabled(),
@@ -268,6 +321,8 @@ try {
           "Shopify cart path and identity key were preserved",
           "no Storefront access token exposed",
           "unsupported launch and fulfillment claims absent",
+          "homepage exposes Hair Match conversion CTA on desktop and mobile",
+          "homepage Hair Match CTA routes into the bounded Shopify offer",
           "Hair Match navigation visible on desktop and mobile",
           "desktop and mobile layouts have no horizontal overflow",
           "browser console remained clean",

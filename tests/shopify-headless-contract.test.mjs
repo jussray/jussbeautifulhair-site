@@ -10,6 +10,10 @@ const hairMatch = await readFile(
   new URL("../client/src/pages/HairMatch.tsx", import.meta.url),
   "utf8",
 );
+const home = await readFile(
+  new URL("../client/src/pages/Home.tsx", import.meta.url),
+  "utf8",
+);
 const catalogClient = await readFile(
   new URL("../client/src/lib/shopifyCatalog.ts", import.meta.url),
   "utf8",
@@ -94,4 +98,16 @@ test("shared storefront chrome does not overstate launch or fulfillment status",
   assert.doesNotMatch(layout, /Now Open/i);
   assert.doesNotMatch(layout, /shipped from the US/i);
   assert.doesNotMatch(layout, /shipping nationwide/i);
+});
+
+
+test("homepage exposes the bounded Hair Match revenue path without changing product authority", () => {
+  assert.match(home, /href="\/hair-match"/);
+  assert.match(home, /data-testid="button-hair-match-hero"/);
+  assert.match(home, /data-testid="button-hair-match-hero-mobile"/);
+  assert.match(home, /data-testid="hair-match-home-offer"/);
+  assert.match(home, /data-testid="button-start-hair-match-home"/);
+  assert.match(home, /Hair Match · \$25/);
+  assert.match(home, /The full \$25 becomes\s+purchase credit toward an eligible future JBH order\./s);
+  assert.doesNotMatch(home, /limited time|today only|selling out|last chance/i);
 });

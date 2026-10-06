@@ -80,6 +80,19 @@ try {
     versionPayload.sha === expectedHead,
     `version SHA mismatch: expected ${expectedHead}, received ${versionPayload.sha}.`,
   );
+  assert(
+    versionPayload.identitySource === "runtime-binding"
+      || versionPayload.identitySource === "asset-build-proof",
+    `version identity source is not evidence-bound: ${versionPayload.identitySource || "missing"}.`,
+  );
+  assert(
+    versionPayload.evidenceRole === "identity-observation",
+    "version route must label its SHA as identity observation evidence.",
+  );
+  assert(
+    versionPayload.authority === "none",
+    "version route must not claim authority from an identity observation.",
+  );
 
   const knowledgePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const knowledgeResponse = await knowledgePage.request.get(
@@ -214,11 +227,14 @@ try {
         expectedHead,
         verifiedAt: new Date().toISOString(),
         origin: expectedOrigin,
+        versionIdentitySource: versionPayload.identitySource,
+        versionEvidenceRole: versionPayload.evidenceRole,
+        versionAuthority: versionPayload.authority,
         assertions: [
           "root responds successfully on desktop and mobile",
           "legacy hash entry URLs migrate to canonical browser paths before customer interaction",
           "Cloudflare Worker security headers prove the Worker served the root response",
-          "version route serves application/json for the exact approved main SHA",
+          "version route serves application/json for the exact approved main SHA and labels whether the SHA came from a runtime binding or asset build proof",
           "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
           "Meta Business Agent knowledge endpoint returns application/json rather than the SPA fallback",
           "Meta Business Agent keeps shipping-address and payment credential collection out of chat",

@@ -123,9 +123,24 @@ async function buildProofReleaseSha(request: Request, env: Env): Promise<string 
 }
 
 async function versionResponse(request: Request, env: Env): Promise<Response> {
-  const sha = explicitReleaseSha(env) || await buildProofReleaseSha(request, env) || "unknown";
+  const explicitSha = explicitReleaseSha(env);
+  const assetBuildSha = explicitSha ? null : await buildProofReleaseSha(request, env);
+  const sha = explicitSha || assetBuildSha || "unknown";
+  const identitySource = explicitSha
+    ? "runtime-binding"
+    : assetBuildSha
+      ? "asset-build-proof"
+      : "unknown";
   return new Response(
-    request.method === "HEAD" ? null : JSON.stringify({ ok: true, sha }),
+    request.method === "HEAD"
+      ? null
+      : JSON.stringify({
+          ok: true,
+          sha,
+          identitySource,
+          evidenceRole: "identity-observation",
+          authority: "none",
+        }),
     {
       status: 200,
       headers: {

@@ -179,9 +179,9 @@ try {
     "Homepage Hair Match decision-help offer is missing.",
   );
   await desktop.getByTestId("button-hair-match-hero").click();
-  await desktop.waitForURL("**/#/hair-match");
+  await desktop.waitForURL("**/hair-match");
 
-  await desktop.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
+  await desktop.goto(`${baseURL}/hair-match`, { waitUntil: "domcontentloaded" });
   const bodyText = await desktop.locator("body").innerText();
   const normalizedText = bodyText.toLowerCase();
   assert(normalizedText.includes("juss hair match session"), "Hair Match title is missing.");
@@ -251,9 +251,9 @@ try {
     "Mobile homepage Hair Match decision-help offer is missing.",
   );
   await mobile.getByTestId("button-hair-match-hero-mobile").click();
-  await mobile.waitForURL("**/#/hair-match");
+  await mobile.waitForURL("**/hair-match");
 
-  await mobile.goto(`${baseURL}/#/hair-match`, { waitUntil: "domcontentloaded" });
+  await mobile.goto(`${baseURL}/hair-match`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("select-hair-goal").waitFor({ state: "visible" });
   assert(
     await mobile.getByTestId("button-hair-match-checkout").isEnabled(),

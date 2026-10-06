@@ -108,6 +108,11 @@ test("live Playwright proof binds to the branded origin and rejects Shopify pass
   assert.match(livePlaywright, /https:\/\/jussbeautifulhair\.com/);
   assert.match(livePlaywright, /\/version/);
   assert.match(livePlaywright, /versionPayload\.sha === expectedHead/);
+  assert.match(livePlaywright, /versionPayload\.identitySource === "runtime-binding"/);
+  assert.match(livePlaywright, /versionPayload\.identitySource === "asset-build-proof"/);
+  assert.match(livePlaywright, /versionPayload\.evidenceRole === "identity-observation"/);
+  assert.match(livePlaywright, /versionPayload\.authority === "none"/);
+  assert.match(livePlaywright, /versionIdentitySource: versionPayload\.identitySource/);
   assert.match(livePlaywright, /x-frame-options/);
   assert.match(livePlaywright, /content-signal/);
   assert.match(livePlaywright, /enter store using password/);

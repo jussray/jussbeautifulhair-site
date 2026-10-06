@@ -217,16 +217,69 @@ jobs:
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
-          import {mkdir, writeFile} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          import {mkdir, readFile, writeFile} from 'node:fs/promises';
 
           const sha = process.env.EXPECTED_HEAD_SHA || '';
           if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('Expected a full 40-character release SHA.');
           const url = new URL(process.env.RECEIPT_URL);
           if (url.protocol !== 'https:') throw new Error('Receipt URL must use HTTPS.');
+          const repo = process.env.GITHUB_REPOSITORY || '';
+          const runId = process.env.GITHUB_RUN_ID || '';
+          const runAttempt = process.env.GITHUB_RUN_ATTEMPT || '';
+          if (!repo || !runId) throw new Error('GitHub workflow identity is required.');
+          const lockfileSha256 = createHash('sha256')
+            .update(await readFile('package-lock.json'))
+            .digest('hex');
+          const runUrl = `https://github.com/${repo}/actions/runs/${runId}`;
           const receipt = {
-            repo: process.env.GITHUB_REPOSITORY,
-            sha,
+            schema: 'juss/jbh-production-evidence-receipt@v2',
+            id: `JBH-PRODUCTION-${sha.slice(0, 12).toUpperCase()}`,
+            finding_id: 'JBH-PRODUCTION-RUNTIME',
+            state: 'VERIFIED',
             live_state: 'verified',
+            authority: 'none',
+            self_authorizing: false,
+            evidence_role: 'observation',
+            observed_at: new Date().toISOString(),
+            identity: {
+              source: {
+                canonical_remote: `https://github.com/${repo}.git`,
+                repository: repo,
+                branch: 'main',
+                commit_sha: sha,
+              },
+              dependency: {
+                lockfile_path: 'package-lock.json',
+                lockfile_sha256: lockfileSha256,
+                package_manager: 'npm',
+              },
+              runtime: {
+                environment: 'production',
+                deployment_url: url.origin,
+              },
+            },
+            workflow: {
+              run_id: runId,
+              run_attempt: runAttempt,
+              run_url: runUrl,
+            },
+            provider: {
+              check_name: 'Workers Builds: jussbeautifulhair-site',
+            },
+            proof_scope: [
+              'exact-provider-build',
+              'branded-frontdoor-browser',
+              'shopify-no-payment-production-path',
+            ],
+            evidence_refs: [
+              'artifact://frontdoor-live/manifest.json',
+              'artifact://shopify-production/',
+              `runtime://${url.host}/version`,
+              `github-actions://${repo}/runs/${runId}`,
+            ],
+            invalidated_by: [],
+            non_authoritative_markers: ['receipt'],
             url: url.toString(),
           };
           await mkdir('artifacts/production-proof', {recursive: true});

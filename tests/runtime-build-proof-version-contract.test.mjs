@@ -17,5 +17,10 @@ test("automatic Cloudflare build identity is available to the runtime version ro
   assert.match(entry, /proof\.publicSafe !== true/);
   assert.match(entry, /proof\.sourceCommitSha/);
   assert.match(entry, /pathname === VERSION_PATH/);
-  assert.match(entry, /explicitReleaseSha\(env\) \|\| await buildProofReleaseSha\(request, env\) \|\| "unknown"/);
+  assert.match(entry, /const explicitSha = explicitReleaseSha\(env\)/);
+  assert.match(entry, /const assetBuildSha = explicitSha \? null : await buildProofReleaseSha\(request, env\)/);
+  assert.match(entry, /"runtime-binding"/);
+  assert.match(entry, /"asset-build-proof"/);
+  assert.match(entry, /evidenceRole: "identity-observation"/);
+  assert.match(entry, /authority: "none"/);
 });

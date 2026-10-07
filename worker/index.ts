@@ -30,7 +30,7 @@ const SHOPIFY_STOREFRONT = Object.freeze({
   vendor: "JBH",
   catalogPageSize: 25,
   catalogMaxPages: 20,
-  checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
+  checkoutHosts: ["jussbeautifulhair.com", "checkout.jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 const SHOPIFY_STOREFRONT_ENDPOINT = `https://${SHOPIFY_STOREFRONT.shopDomain}/api/${SHOPIFY_STOREFRONT.apiVersion}/graphql.json`;
 

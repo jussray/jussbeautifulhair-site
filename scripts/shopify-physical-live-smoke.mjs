@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import process from "node:process";
 
 const shopDomain = "8qp1z2-az.myshopify.com";
-const checkoutHosts = new Set(["jussbeautifulhair.com", shopDomain]);
+const checkoutHosts = new Set(["jussbeautifulhair.com", "checkout.jussbeautifulhair.com", shopDomain]);
 const apiVersion = "2026-07";
 const endpoint = `https://${shopDomain}/api/${apiVersion}/graphql.json`;
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";

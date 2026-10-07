@@ -39,7 +39,7 @@ export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
   shopDomain: "8qp1z2-az.myshopify.com",
   apiVersion: "2026-07",
   vendor: "JBH",
-  checkoutHosts: ["jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
+  checkoutHosts: ["jussbeautifulhair.com", "checkout.jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 
 const REJECTED_SHOPIFY_IMAGE_PATTERN = /-approved-4x5\.(?:png|jpe?g)(?:\?|$)/i;

@@ -50,3 +50,13 @@ test("lookalike and unapproved hosts stay blocked", async () => {
     assert.throws(() => assertApprovedShopifyCheckoutRedirect(bad), /not approved/, bad);
   }
 });
+
+test("production Playwright proof approves the checkout subdomain", async () => {
+  const proof = await readFile(
+    path.join(process.cwd(), "scripts", "shopify-production-playwright.mjs"),
+    "utf8",
+  );
+  const hostSet = proof.match(/const approvedCheckoutHosts = new Set\(\[([\s\S]*?)\]\)/);
+  assert.ok(hostSet, "approvedCheckoutHosts set not found in production proof");
+  assert.match(hostSet[1], /"checkout\.jussbeautifulhair\.com"/);
+});

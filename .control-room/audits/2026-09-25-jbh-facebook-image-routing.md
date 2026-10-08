@@ -74,3 +74,11 @@ Each pending Metricool post retains the same UUID. Media can be changed again wi
 - Result: VERIFIED for the remaining scheduled Facebook queue.
 - Published historical Facebook posts: NOT MODIFIED.
 - TikTok and Instagram scheduled media: OUT OF SCOPE for this repair and intentionally left unchanged.
+
+## 2026-10-08 founder identity correction (non-destructive addendum)
+
+- Juss&Co is the separate parent-company Facebook identity shown in a founder-provided Facebook screenshot. That screenshot confirms the display name, not a direct canonical URL, numeric Page ID, or posting permission.
+- The earlier Facebook share link `https://www.facebook.com/share/1cH3mxVRpi/` was identified by the founder as belonging to **Juss Beautiful Hair**, not Juss&Co. Its destination has not been independently re-verified, so it must not be supplied as a verified parent-company GitHub social URL.
+- The September Metricool observation of JBH Facebook Page ID `235882889600658` remains valid as **historical JBH-only provider identity evidence** and is not transferable to Juss&Co.
+- Canonical cross-portfolio identity source is FCR `config/social-account-identities.json`, currently staged on `fix/facebook-identity-split-20261008`; re-read reviewed FCR main before future provider or social-profile mutations.
+- This addendum changes no Facebook post, scheduling, connector binding, store product, Shopify data, or deployed runtime. Existing media-routing proof remains historical.

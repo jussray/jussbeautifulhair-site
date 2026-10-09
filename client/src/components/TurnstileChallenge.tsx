@@ -41,6 +41,8 @@ export function TurnstileChallenge({
 
   useEffect(() => {
     let cancelled = false;
+    let script: HTMLScriptElement | null = null;
+    let onScriptError: (() => void) | null = null;
 
     const render = () => {
       if (
@@ -67,21 +69,27 @@ export function TurnstileChallenge({
 
     if (window.turnstile) {
       render();
-    } else if (existing) {
-      existing.addEventListener("load", render, { once: true });
     } else {
-      const script = document.createElement("script");
+      // A failed or incomplete shared script must not strand subsequent mounts.
+      if (existing && !window.turnstile) existing.remove();
+      script = document.createElement("script");
       script.id = TURNSTILE_SCRIPT_ID;
       script.src = TURNSTILE_SCRIPT_URL;
       script.async = true;
       script.defer = true;
       script.addEventListener("load", render, { once: true });
+      onScriptError = () => {
+        onToken("");
+        script?.remove();
+      };
+      script.addEventListener("error", onScriptError, { once: true });
       document.head.appendChild(script);
     }
 
     return () => {
       cancelled = true;
-      existing?.removeEventListener("load", render);
+      script?.removeEventListener("load", render);
+      if (onScriptError) script?.removeEventListener("error", onScriptError);
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;

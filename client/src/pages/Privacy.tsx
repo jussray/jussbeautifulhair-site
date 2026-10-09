@@ -28,7 +28,7 @@ export default function Privacy() {
           <ul className="list-disc pl-6 space-y-1">
             <li><strong>Order information</strong> — your name, email, shipping address, items purchased, and order total after an order is created through Shopify.</li>
             <li><strong>Payment information</strong> — collected and processed on Shopify-hosted checkout and the payment providers enabled there. Juss Beautiful Hair does not receive or store your full card number, CVC, or bank credentials in the public storefront.</li>
-            <li><strong>Contact / newsletter</strong> — if you sign up or message us, we keep your email and the content of your message.</li>
+            <li><strong>Contact / newsletter</strong> — if you message us, we keep your email and message so we can review and reply. If you explicitly opt in to marketing updates, we keep your email and consent record for that purpose until you unsubscribe.</li>
             <li><strong>Site usage</strong> — basic technical and storefront event data, such as browser type and pages or shopping steps viewed, used to operate and improve the Site.</li>
           </ul>
 

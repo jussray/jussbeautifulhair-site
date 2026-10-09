@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "wouter";
-import { Truck, Heart, MessageCircle, ArrowRight, Check } from "lucide-react";
+import { Truck, Heart, MessageCircle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
 import { BrandMoatSection } from "@/components/BrandMoatSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { BRAND } from "@/lib/catalog";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
+import { TurnstileChallenge } from "@/components/TurnstileChallenge";
+import { getNewsletterEndpoint } from "@/lib/privateIngress";
 
 const VALUES = [
   {
@@ -48,19 +49,87 @@ export default function Home() {
     featured[0];
   const categoryPreview = availableProducts.slice(4, 8);
   const { toast } = useToast();
+  const newsletterEndpoint = useMemo(getNewsletterEndpoint, []);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY?.trim() || "";
+  const newsletterConfigured = Boolean(newsletterEndpoint && turnstileSiteKey);
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
 
   const subscribe = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!email.trim()) return;
+    if (subscribing || !email.trim()) return;
+
+    if (!newsletterConfigured || !newsletterEndpoint) {
+      toast({
+        title: "Email signup is temporarily unavailable",
+        description: "Please check back soon.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!newsletterConsent) {
+      toast({
+        title: "Consent required",
+        description: "Please confirm that you want to receive JBH marketing updates.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!turnstileToken) {
+      toast({
+        title: "Verification required",
+        description: "Complete the security check before joining the list.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubscribing(true);
     try {
-      await apiRequest("POST", "/api/newsletter", { email });
+      const response = await fetch(newsletterEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          consent: newsletterConsent,
+          turnstileToken,
+          companyWebsite,
+        }),
+      });
+      const result = (await response.json().catch(() => ({}))) as {
+        subscribed?: boolean;
+        receipt?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !result.subscribed) {
+        throw new Error(result.error || "Newsletter signup failed");
+      }
+
       setSubscribed(true);
       setEmail("");
-      toast({ title: "You're on the list 💜", description: "Welcome to the Lawless inner circle." });
+      setNewsletterConsent(false);
+      setTurnstileToken("");
+      toast({
+        title: "You're on the list 💜",
+        description: "Your signup was saved securely.",
+      });
     } catch {
-      toast({ title: "Something went wrong", description: "Please try again.", variant: "destructive" });
+      setTurnstileToken("");
+      window.turnstile?.reset();
+      toast({
+        title: "We couldn't save your signup",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -260,7 +329,7 @@ export default function Home() {
           <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">Join the inner circle</p>
           <h2 className="font-display text-3xl text-foreground">Lawless Energy, In Your Inbox</h2>
           <p className="mt-3 text-muted-foreground">
-            Restock alerts, early access, product updates, and new drops from {BRAND.name}.
+            Opt in for future restock alerts, early access, product updates, and new drops from {BRAND.name}.
           </p>
           {subscribed ? (
             <p
@@ -272,20 +341,82 @@ export default function Home() {
           ) : (
             <form
               onSubmit={subscribe}
-              className="mt-6 flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
+              className="mt-6 max-w-md mx-auto space-y-4 text-left"
+              data-testid="newsletter-form"
             >
-              <Input
-                type="email"
-                required
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="your@email.com"
-                data-testid="input-newsletter"
-                className="bg-card"
-              />
-              <Button type="submit" data-testid="button-subscribe" className="font-semibold">
-                Subscribe
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Input
+                  type="email"
+                  required
+                  maxLength={254}
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="your@email.com"
+                  data-testid="input-newsletter"
+                  className="bg-card"
+                />
+                <Button
+                  type="submit"
+                  disabled={subscribing || !newsletterConfigured}
+                  data-testid="button-subscribe"
+                  className="font-semibold sm:min-w-32"
+                >
+                  {subscribing ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                      Saving…
+                    </span>
+                  ) : (
+                    "Subscribe"
+                  )}
+                </Button>
+              </div>
+
+              <div className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                <label htmlFor="newsletter-company-website">Company website</label>
+                <Input
+                  id="newsletter-company-website"
+                  name="companyWebsite"
+                  value={companyWebsite}
+                  onChange={(event) => setCompanyWebsite(event.target.value)}
+                  autoComplete="off"
+                  tabIndex={-1}
+                />
+              </div>
+
+              <label className="flex items-start gap-3 text-xs leading-relaxed text-muted-foreground">
+                <input
+                  type="checkbox"
+                  required
+                  checked={newsletterConsent}
+                  onChange={(event) => setNewsletterConsent(event.target.checked)}
+                  data-testid="checkbox-newsletter-consent"
+                  className="mt-0.5 h-4 w-4 accent-primary"
+                />
+                <span>
+                  I agree to receive Juss Beautiful Hair marketing updates by email. I can unsubscribe later. See the{" "}
+                  <Link href="/privacy" className="font-medium text-primary underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+
+              {turnstileSiteKey ? (
+                <TurnstileChallenge
+                  siteKey={turnstileSiteKey}
+                  action="newsletter"
+                  onToken={setTurnstileToken}
+                  testId="newsletter-turnstile"
+                />
+              ) : null}
+
+              {!newsletterConfigured ? (
+                <p className="text-xs text-destructive" role="alert" data-testid="newsletter-unavailable">
+                  Email signup is temporarily unavailable. No signup will be claimed until the private ingress is configured.
+                </p>
+              ) : null}
             </form>
           )}
         </div>

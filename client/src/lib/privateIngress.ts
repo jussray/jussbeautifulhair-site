@@ -17,8 +17,8 @@ export function getContactEndpoint(): string | null {
 }
 
 export function getNewsletterEndpoint(): string | null {
-  const configured = parseHttpsEndpoint(import.meta.env.VITE_CONTACT_API_URL);
-  if (!configured) return null;
+  const configured = parseHttpsEndpoint(import.meta.env.VITE_NEWSLETTER_API_URL);
+  if (!configured || configured.pathname !== "/newsletter") return null;
 
   configured.pathname = "/newsletter";
   configured.search = "";

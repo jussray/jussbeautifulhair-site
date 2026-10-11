@@ -134,7 +134,7 @@ test("public privacy copy matches the active Cloudflare, Shopify, and Neon autho
   assert.match(privacy, /<strong>Shopify<\/strong>/);
   assert.match(privacy, /<strong>Cloudflare<\/strong>/);
   assert.match(privacy, /<strong>Neon<\/strong>/);
-  assert.match(privacy, /Last updated: September 17, 2026/);
+  assert.match(privacy, /Last updated: October 11, 2026/);
 
   assert.doesNotMatch(privacy, /handled entirely by Stripe/i);
   assert.doesNotMatch(privacy, /<strong>Stripe<\/strong>/);

@@ -40,6 +40,7 @@ const server = spawn(process.execPath, [vitePath, "--host", host, "--port", Stri
   env: {
     ...process.env,
     VITE_CONTACT_API_URL: `${privateIngressOrigin}/contact`,
+    VITE_NEWSLETTER_API_URL: `${privateIngressOrigin}/newsletter`,
     VITE_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
   },
   stdio: ["ignore", "pipe", "pipe"],
@@ -94,8 +95,16 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
+function captureBrowserErrors(page) {
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
+}
+
 async function verifyBrandedCartHandoff(browser, viewport, label) {
   const page = await browser.newPage({ viewport });
+  captureBrowserErrors(page);
   let navigation = null;
 
   await page.route("https://8qp1z2-az.myshopify.com/cart/c/**", async (route) => {
@@ -186,6 +195,7 @@ async function configureNewsletterMocks(page, evidence, label) {
 
 async function verifyNewsletterSignup(browser, viewport, label, evidence) {
   const page = await browser.newPage({ viewport });
+  captureBrowserErrors(page);
   await configureShopifyCatalogMock(page);
   await configureNewsletterMocks(page, evidence, label);
   await page.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
@@ -214,6 +224,13 @@ async function verifyNewsletterSignup(browser, viewport, label, evidence) {
 
   await assertNoHorizontalOverflow(page, `${label} newsletter signup`);
   await page.screenshot({ path: `${outputDir}/newsletter-${label}.png`, fullPage: true });
+  await page.goto(`${baseURL}/privacy`, { waitUntil: "domcontentloaded" });
+  assert(
+    (await page.locator("body").innerText()).includes("Last updated: October 11, 2026"),
+    `${label} privacy policy revision date is stale.`,
+  );
+  await assertNoHorizontalOverflow(page, `${label} privacy policy`);
+  await page.screenshot({ path: `${outputDir}/privacy-${label}.png`, fullPage: true });
   await page.close();
 
   return submission.payload;
@@ -303,10 +320,7 @@ try {
   );
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
-  desktop.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  desktop.on("pageerror", (error) => consoleErrors.push(error.message));
+  captureBrowserErrors(desktop);
   await configureShopifyBridgeMock(desktop, evidence);
   await configureShopifyCatalogMock(desktop);
 
@@ -378,10 +392,7 @@ try {
   );
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  mobile.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  mobile.on("pageerror", (error) => consoleErrors.push(error.message));
+  captureBrowserErrors(mobile);
   await configureShopifyCatalogMock(mobile);
   await mobile.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("button-hair-match-hero-mobile").waitFor({ state: "visible" });
@@ -418,6 +429,7 @@ try {
         assertions: [
           "newsletter signup uses explicit consent, Turnstile, honeypot, and private ingress on desktop and mobile",
           "newsletter signup renders without horizontal overflow on desktop and mobile",
+          "privacy policy shows its current revision date without desktop or mobile overflow",
           "direct branded /cart/c/* URLs hand off to canonical Shopify checkout on desktop and mobile",
           "direct branded cart handoff preserves the Shopify cart path and identity key",
           "truthful consultation and future-credit disclosure rendered",

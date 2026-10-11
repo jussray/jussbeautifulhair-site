@@ -12,7 +12,7 @@ export default function Privacy() {
             Privacy Policy
           </h1>
           <p className="mt-4 text-sm text-primary-foreground/70">
-            Last updated: September 17, 2026
+            Last updated: October 11, 2026
           </p>
         </div>
       </section>

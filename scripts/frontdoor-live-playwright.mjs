@@ -11,7 +11,8 @@ function assert(condition, message) {
 }
 
 async function parseJsonResponse(response, label) {
-  const contentType = response.headers.get("content-type") || "";
+  const headers = await response.allHeaders();
+  const contentType = headers["content-type"] || "";
   const body = await response.text();
   assert(
     contentType.toLowerCase().includes("application/json"),
@@ -67,12 +68,15 @@ function watchForbiddenRuntimeRequests(page, label) {
 }
 
 try {
-  const versionResponse = await fetch(`${baseURL}/version`, {
-    headers: { accept: "application/json" },
+  const versionPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
   });
+  assert(versionResponse, "version route navigation returned no response.");
   assert(
-    versionResponse.ok,
-    `version route returned HTTP ${versionResponse.status}.`,
+    versionResponse.ok(),
+    `version route returned HTTP ${versionResponse.status()}.`,
   );
   const versionPayload = await parseJsonResponse(versionResponse, "version route");
   assert(versionPayload.ok === true, "version route did not report ok=true.");
@@ -93,6 +97,7 @@ try {
     versionPayload.authority === "none",
     "version route must not claim authority from an identity observation.",
   );
+  await versionPage.close();
 
   const knowledgePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const knowledgeResponse = await knowledgePage.request.get(
@@ -230,11 +235,12 @@ try {
         versionIdentitySource: versionPayload.identitySource,
         versionEvidenceRole: versionPayload.evidenceRole,
         versionAuthority: versionPayload.authority,
+        versionTransport: "chromium-navigation",
         assertions: [
           "root responds successfully on desktop and mobile",
           "legacy hash entry URLs migrate to canonical browser paths before customer interaction",
           "Cloudflare Worker security headers prove the Worker served the root response",
-          "version route serves application/json for the exact approved main SHA and labels whether the SHA came from a runtime binding or asset build proof",
+          "version route is observed through Chromium navigation, serves application/json for the exact approved main SHA, and labels whether the SHA came from a runtime binding or asset build proof",
           "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
           "Meta Business Agent knowledge endpoint returns application/json rather than the SPA fallback",
           "Meta Business Agent keeps shipping-address and payment credential collection out of chat",

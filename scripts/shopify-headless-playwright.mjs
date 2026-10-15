@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 const host = "127.0.0.1";
 const port = Number(process.env.PLAYWRIGHT_PORT || 4174);
 const baseURL = `http://${host}:${port}`;
+const privateIngressOrigin = "https://ingress.jbh.invalid";
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "local-unpinned";
 const outputDir = "artifacts/shopify-headless";
 const variantGid = "gid://shopify/ProductVariant/50196622344435";
@@ -36,7 +37,12 @@ const vitePath = fileURLToPath(new URL("../node_modules/vite/bin/vite.js", impor
 let serverOutput = "";
 
 const server = spawn(process.execPath, [vitePath, "--host", host, "--port", String(port)], {
-  env: process.env,
+  env: {
+    ...process.env,
+    VITE_CONTACT_API_URL: `${privateIngressOrigin}/contact`,
+    VITE_NEWSLETTER_API_URL: `${privateIngressOrigin}/newsletter`,
+    VITE_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+  },
   stdio: ["ignore", "pipe", "pipe"],
 });
 
@@ -89,8 +95,16 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
+function captureBrowserErrors(page) {
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => consoleErrors.push(error.message));
+}
+
 async function verifyBrandedCartHandoff(browser, viewport, label) {
   const page = await browser.newPage({ viewport });
+  captureBrowserErrors(page);
   let navigation = null;
 
   await page.route("https://8qp1z2-az.myshopify.com/cart/c/**", async (route) => {
@@ -129,6 +143,97 @@ async function configureShopifyCatalogMock(page) {
       body: JSON.stringify(shopifyCatalogFixture),
     });
   });
+}
+
+async function configureNewsletterMocks(page, evidence, label) {
+  await page.route(
+    "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit",
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/javascript",
+        body: `
+          window.turnstile = {
+            render: function (_container, options) {
+              setTimeout(function () { options.callback("playwright-newsletter-token"); }, 0);
+              return "newsletter-widget";
+            },
+            reset: function () {},
+            remove: function () {}
+          };
+        `,
+      });
+    },
+  );
+
+  await page.route(`${privateIngressOrigin}/newsletter`, async (route) => {
+    const request = route.request();
+    const headers = {
+      "Access-Control-Allow-Origin": baseURL,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Content-Type": "application/json",
+    };
+
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers, body: "" });
+      return;
+    }
+
+    const payload = request.postDataJSON();
+    evidence.newsletterSubmissions.push({ label, payload });
+    await route.fulfill({
+      status: 201,
+      headers,
+      body: JSON.stringify({
+        subscribed: true,
+        receipt: `newsletter-${label}-receipt`,
+      }),
+    });
+  });
+}
+
+async function verifyNewsletterSignup(browser, viewport, label, evidence) {
+  const page = await browser.newPage({ viewport });
+  captureBrowserErrors(page);
+  await configureShopifyCatalogMock(page);
+  await configureNewsletterMocks(page, evidence, label);
+  await page.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
+
+  await page.getByTestId("input-newsletter").fill(`proof-${label}@example.com`);
+  await page.getByTestId("checkbox-newsletter-consent").check();
+  await page.waitForTimeout(50);
+  await page.getByTestId("button-subscribe").click();
+  await page.getByTestId("text-subscribed").waitFor({ state: "visible" });
+
+  const submission = evidence.newsletterSubmissions.find((entry) => entry.label === label);
+  assert(submission, `${label} newsletter submission was not sent.`);
+  assert(
+    submission.payload?.email === `proof-${label}@example.com`,
+    `${label} newsletter email changed before private ingress.`,
+  );
+  assert(submission.payload?.consent === true, `${label} newsletter consent was not explicit.`);
+  assert(
+    submission.payload?.turnstileToken === "playwright-newsletter-token",
+    `${label} newsletter Turnstile token was not forwarded.`,
+  );
+  assert(
+    submission.payload?.companyWebsite === "",
+    `${label} newsletter honeypot was not empty.`,
+  );
+
+  await assertNoHorizontalOverflow(page, `${label} newsletter signup`);
+  await page.screenshot({ path: `${outputDir}/newsletter-${label}.png`, fullPage: true });
+  await page.goto(`${baseURL}/privacy`, { waitUntil: "domcontentloaded" });
+  assert(
+    (await page.locator("body").innerText()).includes("Last updated: October 11, 2026"),
+    `${label} privacy policy revision date is stale.`,
+  );
+  await assertNoHorizontalOverflow(page, `${label} privacy policy`);
+  await page.screenshot({ path: `${outputDir}/privacy-${label}.png`, fullPage: true });
+  await page.close();
+
+  return submission.payload;
 }
 
 async function configureShopifyBridgeMock(page, evidence) {
@@ -180,12 +285,28 @@ const evidence = {
   accessTokenPresent: false,
   handoffDesktopNavigation: null,
   handoffMobileNavigation: null,
+  newsletterSubmissions: [],
+  newsletterDesktopPayload: null,
+  newsletterMobilePayload: null,
 };
 
 try {
   await mkdir(outputDir, { recursive: true });
   await waitForServer();
   browser = await chromium.launch({ headless: true });
+
+  evidence.newsletterDesktopPayload = await verifyNewsletterSignup(
+    browser,
+    { width: 1440, height: 1100 },
+    "desktop",
+    evidence,
+  );
+  evidence.newsletterMobilePayload = await verifyNewsletterSignup(
+    browser,
+    { width: 390, height: 844 },
+    "mobile",
+    evidence,
+  );
 
   evidence.handoffDesktopNavigation = await verifyBrandedCartHandoff(
     browser,
@@ -199,10 +320,7 @@ try {
   );
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
-  desktop.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  desktop.on("pageerror", (error) => consoleErrors.push(error.message));
+  captureBrowserErrors(desktop);
   await configureShopifyBridgeMock(desktop, evidence);
   await configureShopifyCatalogMock(desktop);
 
@@ -274,10 +392,7 @@ try {
   );
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  mobile.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
-  });
-  mobile.on("pageerror", (error) => consoleErrors.push(error.message));
+  captureBrowserErrors(mobile);
   await configureShopifyCatalogMock(mobile);
   await mobile.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("button-hair-match-hero-mobile").waitFor({ state: "visible" });
@@ -312,6 +427,9 @@ try {
         viewports: ["1440x1100", "390x844"],
         evidence,
         assertions: [
+          "newsletter signup uses explicit consent, Turnstile, honeypot, and private ingress on desktop and mobile",
+          "newsletter signup renders without horizontal overflow on desktop and mobile",
+          "privacy policy shows its current revision date without desktop or mobile overflow",
           "direct branded /cart/c/* URLs hand off to canonical Shopify checkout on desktop and mobile",
           "direct branded cart handoff preserves the Shopify cart path and identity key",
           "truthful consultation and future-credit disclosure rendered",

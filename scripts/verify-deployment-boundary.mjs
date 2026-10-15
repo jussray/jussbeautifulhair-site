@@ -250,22 +250,31 @@ forbidMatch(
   "The public router must not restore an order-by-numeric-id confirmation route.",
 );
 
+// Source checks must work before Vite builds; built-asset checks must not be skipped
+// once the public output directory exists. npm run build reuses this verifier
+// after build:app, so the release artifact is also required byte-for-byte.
+const sourceDisclosureAsset = "client/public/.well-known/security.txt";
+const disclosureSource = await read(sourceDisclosureAsset);
+const contact = disclosureSource.match(/^Contact: mailto:([^\r\n]+)$/m);
+const expires = disclosureSource.match(/^Expires: ([^\r\n]+)$/m);
+if (!contact || contact[1] !== "founder@jussco.company") {
+  failures.push("Source security.txt has no verified Juss & Co. reporting contact.");
+}
+if (!expires || !Number.isFinite(Date.parse(expires[1])) || Date.parse(expires[1]) <= Date.now()) {
+  failures.push("Source security.txt is expired or has an invalid Expires field.");
+}
+if (!disclosureSource.includes("Canonical: https://jussbeautifulhair.com/.well-known/security.txt")) {
+  failures.push("Source security.txt must identify the intended public storefront domain.");
+}
+
+const distExists = await exists("dist/public");
 const distFiles = await collectFiles("dist/public");
-const disclosureAsset = "dist/public/.well-known/security.txt";
-if (!distFiles.some((file) => file.replaceAll("\\", "/") === disclosureAsset)) {
-  failures.push("RFC 9116 security.txt is missing from the exact built storefront assets.");
-} else {
-  const disclosure = await read(disclosureAsset);
-  const contact = disclosure.match(/^Contact: mailto:([^\r\n]+)$/m);
-  const expires = disclosure.match(/^Expires: ([^\r\n]+)$/m);
-  if (!contact || contact[1] !== "founder@jussco.company") {
-    failures.push("Built security.txt has no verified Juss & Co. reporting contact.");
-  }
-  if (!expires || !Number.isFinite(Date.parse(expires[1])) || Date.parse(expires[1]) <= Date.now()) {
-    failures.push("Built security.txt is expired or has an invalid Expires field.");
-  }
-  if (!disclosure.includes("Canonical: https://jussbeautifulhair.com/.well-known/security.txt")) {
-    failures.push("Built security.txt must identify the intended public storefront domain.");
+if (distExists) {
+  const disclosureAsset = "dist/public/.well-known/security.txt";
+  if (!distFiles.some((file) => file.replaceAll("\\", "/") === disclosureAsset)) {
+    failures.push("RFC 9116 security.txt is missing from the exact built storefront assets.");
+  } else if ((await read(disclosureAsset)) !== disclosureSource) {
+    failures.push("Built storefront security.txt differs from the approved source.");
   }
 }
 const textExtensions = new Set([".html", ".js", ".css", ".json", ".map", ".txt"]);

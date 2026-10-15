@@ -107,6 +107,10 @@ test("post-deploy route identity is exact and failed proof removes only that rou
 test("live Playwright proof binds to the branded origin and rejects Shopify password wall", () => {
   assert.match(livePlaywright, /https:\/\/jussbeautifulhair\.com/);
   assert.match(livePlaywright, /\/version/);
+  assert.match(livePlaywright, /const versionPage = await browser\.newPage/);
+  assert.match(livePlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
+  assert.doesNotMatch(livePlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
+  assert.match(livePlaywright, /versionTransport: "chromium-navigation"/);
   assert.match(livePlaywright, /versionPayload\.sha === expectedHead/);
   assert.match(livePlaywright, /versionPayload\.identitySource === "runtime-binding"/);
   assert.match(livePlaywright, /versionPayload\.identitySource === "asset-build-proof"/);

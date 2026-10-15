@@ -42,8 +42,10 @@ test('builds sanitized exact-SHA evidence', () => {
   assert.equal(JSON.stringify(ledger).includes('token'), false);
 });
 
-test('keeps the always-on ledger on one GitHub runner', () => {
-  assert.equal((workflow.match(/\bruns-on:/g) ?? []).length, 1);
+test('runs the fail-closed runtime-state proof before the exact-head ledger observer', () => {
+  assert.equal((workflow.match(/\bruns-on:/g) ?? []).length, 2);
+  assert.match(workflow, /runtime-state-contract:[\s\S]*?runs-on: ubuntu-22\.04/);
+  assert.match(workflow, /ledger:\s*\n\s*needs: runtime-state-contract/);
   assert.match(workflow, /CONTROL_ROOM_LEDGER_SELF_CHECK: Verify test-ledger contract/);
   assert.match(workflow, /name: Verify test-ledger contract/);
   assert.doesNotMatch(workflow, /publish-ledger:/);

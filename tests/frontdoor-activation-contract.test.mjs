@@ -142,6 +142,10 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
 
   assert.match(shopifyProductionPlaywright, /EXPECTED_HEAD_SHA/);
   assert.match(shopifyProductionPlaywright, /\/version/);
+  assert.match(shopifyProductionPlaywright, /const versionPage = await browser\.newPage/);
+  assert.match(shopifyProductionPlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
+  assert.doesNotMatch(shopifyProductionPlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
+  assert.match(shopifyProductionPlaywright, /versionTransport: "chromium-navigation"/);
   assert.match(shopifyProductionPlaywright, /versionPayload\?\.sha,\s*expectedHead/);
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/catalog/);
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/cart/);

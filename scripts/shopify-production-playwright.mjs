@@ -51,21 +51,46 @@ async function assertRenderedImage(imageLocator, label) {
 
 await mkdir(outputDir, { recursive: true });
 
-const versionResponse = await fetch(`${baseURL}/version`, {
-  headers: { accept: "application/json" },
-});
-assert.equal(versionResponse.ok, true, `version route returned HTTP ${versionResponse.status}.`);
-const versionPayload = await versionResponse.json();
-assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
-assert.equal(
-  versionPayload?.sha,
-  expectedHead,
-  `version SHA mismatch: expected ${expectedHead}, received ${versionPayload?.sha ?? "missing"}.`,
-);
-
 const browser = await chromium.launch({ headless: true });
 
 try {
+  const versionPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
+  assert.ok(versionResponse, "version route navigation returned no response.");
+  assert.equal(versionResponse.ok(), true, `version route returned HTTP ${versionResponse.status()}.`);
+  const versionHeaders = await versionResponse.allHeaders();
+  assert.match(
+    versionHeaders["content-type"] || "",
+    /application\/json/i,
+    "version route must return application/json.",
+  );
+  const versionPayload = JSON.parse(await versionResponse.text());
+  assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
+  assert.equal(
+    versionPayload?.sha,
+    expectedHead,
+    `version SHA mismatch: expected ${expectedHead}, received ${versionPayload?.sha ?? "missing"}.`,
+  );
+  assert.ok(
+    versionPayload?.identitySource === "runtime-binding"
+      || versionPayload?.identitySource === "asset-build-proof",
+    `version identity source is not evidence-bound: ${versionPayload?.identitySource ?? "missing"}.`,
+  );
+  assert.equal(
+    versionPayload?.evidenceRole,
+    "identity-observation",
+    "version route must label its SHA as identity observation evidence.",
+  );
+  assert.equal(
+    versionPayload?.authority,
+    "none",
+    "version route must not claim authority from an identity observation.",
+  );
+  await versionPage.close();
+
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   const observedFunnelEvents = [];
 
@@ -251,6 +276,10 @@ try {
       {
         expectedHead,
         observedHead: versionPayload.sha,
+        versionIdentitySource: versionPayload.identitySource,
+        versionEvidenceRole: versionPayload.evidenceRole,
+        versionAuthority: versionPayload.authority,
+        versionTransport: "chromium-navigation",
         verifiedAt: new Date().toISOString(),
         origin: expectedOrigin,
         productHandle: product.id,
@@ -269,7 +298,7 @@ try {
         renderedHandoffHost: observedCheckout.hostname,
         proofFunnelEvents: observedFunnelEvents,
         assertions: [
-          "production /version matched the exact activated main SHA before commerce proof",
+          "production /version was observed through Chromium and matched the exact activated main SHA before commerce proof",
           "rendered production Shop consumed the live /api/shopify/catalog boundary",
           "a live sellable product card image loaded and decoded before navigation",
           "the selected live product detail image loaded and decoded before cart interaction",

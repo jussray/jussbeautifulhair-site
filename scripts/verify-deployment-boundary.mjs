@@ -251,6 +251,23 @@ forbidMatch(
 );
 
 const distFiles = await collectFiles("dist/public");
+const disclosureAsset = "dist/public/.well-known/security.txt";
+if (!distFiles.some((file) => file.replaceAll("\\", "/") === disclosureAsset)) {
+  failures.push("RFC 9116 security.txt is missing from the exact built storefront assets.");
+} else {
+  const disclosure = await read(disclosureAsset);
+  const contact = disclosure.match(/^Contact: mailto:([^\r\n]+)$/m);
+  const expires = disclosure.match(/^Expires: ([^\r\n]+)$/m);
+  if (!contact || contact[1] !== "founder@jussco.company") {
+    failures.push("Built security.txt has no verified Juss & Co. reporting contact.");
+  }
+  if (!expires || !Number.isFinite(Date.parse(expires[1])) || Date.parse(expires[1]) <= Date.now()) {
+    failures.push("Built security.txt is expired or has an invalid Expires field.");
+  }
+  if (!disclosure.includes("Canonical: https://jussbeautifulhair.com/.well-known/security.txt")) {
+    failures.push("Built security.txt must identify the intended public storefront domain.");
+  }
+}
 const textExtensions = new Set([".html", ".js", ".css", ".json", ".map", ".txt"]);
 const forbiddenBuildMarkers = [
   /JBH_ADMIN_PASSWORD/i,

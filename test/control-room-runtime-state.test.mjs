@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { buildRuntimeStateReceipt, trackedConfigFingerprint } from '../scripts/control-room-runtime-state.mjs';
+import { buildRuntimeStateReceipt, trackedConfigFingerprint, writeRuntimeStateReceipt } from '../scripts/control-room-runtime-state.mjs';
 import { buildTestLedger } from '../scripts/control-room-test-ledger.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -24,6 +24,19 @@ test('tracked configuration movement changes the receipt fingerprint', () => {
   const after = trackedConfigFingerprint(root);
   assert.notEqual(before.sha256, after.sha256);
   assert.deepEqual(before.files, ['.github/workflows/ci.yml', 'package.json']);
+});
+
+test('round-trips the persisted JSON receipt with a real line ending', () => {
+  const root = fixture();
+  const outputPath = path.join(root, 'receipt.json');
+  const receipt = writeRuntimeStateReceipt(env({CONTROL_ROOM_RUNTIME_STATE_PATH: outputPath}), root);
+  const onDisk = fs.readFileSync(outputPath, 'utf8');
+  assert.ok(onDisk.endsWith('\n'));
+  assert.ok(!onDisk.endsWith('\\n'), 'must not emit a literal escaped newline after JSON');
+  const parsed = JSON.parse(onDisk);
+  assert.equal(parsed.sourceSha, SHA);
+  assert.equal(parsed.repository, receipt.repository);
+  assert.deepEqual(parsed.trackedConfig, receipt.trackedConfig);
 });
 
 test('ordinary source events stay source-bound and do not pretend to prove provider state', () => {

@@ -863,6 +863,25 @@ export default {
       return json({ error: "Not found" }, 404);
     }
 
+    // RFC 9116 must never silently resolve to the storefront SPA fallback.
+    if (url.pathname === "/.well-known/security.txt") {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return secureAssetResponse(new Response("Method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        }), env);
+      }
+      const disclosureAsset = await env.ASSETS.fetch(request);
+      const disclosureType = disclosureAsset.headers.get("content-type")?.toLowerCase() || "";
+      if (!disclosureAsset.ok || !disclosureType.startsWith("text/plain")) {
+        return secureAssetResponse(new Response("Security disclosure unavailable", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+        }), env);
+      }
+      return secureAssetResponse(disclosureAsset, env);
+    }
+
     return secureAssetResponse(await env.ASSETS.fetch(request), env);
   },
 };

@@ -18,8 +18,7 @@
     "verify:ai-skills": "node scripts/verify-ai-skills.mjs",
     "verify:commerce-seam": "node scripts/verify-commerce-seam.mjs",
     "verify:deploy": "npm run build && npm run verify:commerce-seam && npm run security:deploy-boundary",
-    "verify:mcp": "node scripts/verify-mcp-config.mjs",
-    "db:push": "drizzle-kit push"
+    "verify:mcp": "node scripts/verify-mcp-config.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -57,8 +56,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
-    "drizzle-orm": "^0.45.2",
-    "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^11.13.1",
     "input-otp": "^1.4.2",
@@ -88,7 +85,6 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.31.8",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",
     "typescript": "5.6.3",

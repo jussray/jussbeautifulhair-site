@@ -143,7 +143,7 @@ jobs:
           set -euo pipefail
           node scripts/cloudflare-free-candidate-proof.mjs
           branded="$(node -p 'JSON.parse(require("node:fs").readFileSync("artifacts/free-plan-runtime/manifest.json", "utf8")).brandedVersionVerified ? "true" : "false"')"
-          printf 'brand_verified=%s\\n' "$branded" >> "$GITHUB_OUTPUT"
+          printf 'brand_verified=%s\n' "$branded" >> "$GITHUB_OUTPUT"
 
       - name: Exercise candidate production witness against exact live base without payment
         if: github.event_name == 'pull_request' && steps.free-plan.outputs.brand_verified == 'true'

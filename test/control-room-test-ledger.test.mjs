@@ -42,8 +42,15 @@ test('builds sanitized exact-SHA evidence', () => {
   assert.equal(JSON.stringify(ledger).includes('token'), false);
 });
 
-test('keeps the always-on ledger on one GitHub runner', () => {
-  assert.equal((workflow.match(/\bruns-on:/g) ?? []).length, 1);
+test('gates the always-on ledger on independent exact-head runtime proof', () => {
+  assert.equal((workflow.match(/\bruns-on:/g) ?? []).length, 2);
+  const runtimeJob = workflow.match(/  runtime-state-contract:\n([\s\S]*?)(?=\n  ledger:)/)?.[1];
+  assert.ok(runtimeJob, 'stable runtime-state proof job must remain available');
+  assert.match(runtimeJob, /name: Runtime-state proof contract/);
+  assert.match(runtimeJob, /ref: \$\{\{ env\.EXPECTED_HEAD_SHA \}\}/);
+  assert.match(runtimeJob, /persist-credentials: false/);
+  assert.match(runtimeJob, /run: node --test test\/control-room-runtime-state\.test\.mjs/);
+  assert.match(workflow, /  ledger:\n    needs: runtime-state-contract/);
   assert.match(workflow, /CONTROL_ROOM_LEDGER_SELF_CHECK: Verify test-ledger contract/);
   assert.match(workflow, /name: Verify test-ledger contract/);
   assert.doesNotMatch(workflow, /publish-ledger:/);

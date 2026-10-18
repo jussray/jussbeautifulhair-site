@@ -13,6 +13,8 @@ on:
       - "client/src/lib/shopifyCatalog.ts"
       - "client/src/lib/shopifyStorefront.ts"
       - "client/src/pages/Home.tsx"
+      - "client/src/pages/Contact.tsx"
+      - "client/src/pages/Privacy.tsx"
       - "client/src/pages/Shop.tsx"
       - "client/src/pages/Product.tsx"
       - "client/src/pages/Cart.tsx"

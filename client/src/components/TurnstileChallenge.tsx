@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type TurnstileApi = {
   render: (
@@ -38,29 +38,61 @@ export function TurnstileChallenge({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     let script: HTMLScriptElement | null = null;
-    let onScriptError: (() => void) | null = null;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    setFailed(false);
+    setReady(false);
+    onToken("");
+
+    const fail = () => {
+      if (cancelled) return;
+      clearTimeout(timeout);
+      if (script && !window.turnstile) script.dataset.loadFailed = "true";
+      onToken("");
+      setReady(false);
+      setFailed(true);
+    };
 
     const render = () => {
       if (
         cancelled ||
         widgetIdRef.current ||
-        !containerRef.current ||
-        !window.turnstile
+        !containerRef.current
       ) {
         return;
       }
+      if (!window.turnstile) {
+        fail();
+        return;
+      }
+      clearTimeout(timeout);
 
-      widgetIdRef.current = window.turnstile.render(containerRef.current, {
-        sitekey: siteKey,
-        action,
-        callback: onToken,
-        "expired-callback": () => onToken(""),
-        "error-callback": () => onToken(""),
-      });
+      try {
+        widgetIdRef.current = window.turnstile.render(containerRef.current, {
+          sitekey: siteKey,
+          action,
+          callback: (token) => {
+            if (cancelled) return;
+            onToken(token);
+            setReady(Boolean(token));
+            setFailed(false);
+          },
+          "expired-callback": () => {
+            if (cancelled) return;
+            onToken("");
+            setReady(false);
+          },
+          "error-callback": fail,
+        });
+      } catch {
+        fail();
+      }
     };
 
     const existing = document.getElementById(TURNSTILE_SCRIPT_ID) as
@@ -70,37 +102,47 @@ export function TurnstileChallenge({
     if (window.turnstile) {
       render();
     } else {
-      // A failed or incomplete shared script must not strand subsequent mounts.
-      if (existing && !window.turnstile) existing.remove();
-      script = document.createElement("script");
+      // Reuse an in-flight shared load; replace only a known failed attempt.
+      if (existing?.dataset.loadFailed === "true") existing.remove();
+      script = existing?.dataset.loadFailed !== "true" && existing
+        ? existing : document.createElement("script");
       script.id = TURNSTILE_SCRIPT_ID;
       script.src = TURNSTILE_SCRIPT_URL;
       script.async = true;
       script.defer = true;
       script.addEventListener("load", render, { once: true });
-      onScriptError = () => {
-        onToken("");
-        script?.remove();
-      };
-      script.addEventListener("error", onScriptError, { once: true });
-      document.head.appendChild(script);
+      script.addEventListener("error", fail, { once: true });
+      timeout = setTimeout(fail, 15_000);
+      if (!script.isConnected) document.head.appendChild(script);
     }
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
       script?.removeEventListener("load", render);
-      if (onScriptError) script?.removeEventListener("error", onScriptError);
+      script?.removeEventListener("error", fail);
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;
       }
     };
-  }, [action, onToken, siteKey]);
+  }, [action, onToken, siteKey, attempt]);
 
   return (
-    <div
-      ref={containerRef}
-      data-testid={testId || `turnstile-${action}`}
-    />
+    <div>
+      <div
+        ref={containerRef}
+        data-testid={testId || `turnstile-${action}`}
+        data-verification-state={ready ? "ready" : "pending"}
+      />
+      {failed && (
+        <div role="alert" className="text-sm text-destructive">
+          <p>The security check couldn't load. Please try again.</p>
+          <button type="button" className="underline" onClick={() => setAttempt((value) => value + 1)}>
+            Retry security check
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -95,9 +95,19 @@ async function assertNoHorizontalOverflow(page, label) {
   );
 }
 
-function captureBrowserErrors(page) {
+function captureBrowserErrors(page, expectedSecurityScriptFailure = false) {
+  let expectedFailuresRemaining = expectedSecurityScriptFailure ? 1 : 0;
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() !== "error") return;
+    if (
+      expectedFailuresRemaining > 0 &&
+      message.location().url === "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" &&
+      message.text() === "Failed to load resource: net::ERR_FAILED"
+    ) {
+      expectedFailuresRemaining -= 1;
+      return;
+    }
+    consoleErrors.push(`${message.text()} (${message.location().url})`);
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 }
@@ -145,17 +155,23 @@ async function configureShopifyCatalogMock(page) {
   });
 }
 
-async function configureNewsletterMocks(page, evidence, label) {
+async function configureNewsletterMocks(page, evidence, label, failFirstLoad = false) {
+  let scriptRequests = 0;
   await page.route(
     "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit",
     async (route) => {
+      scriptRequests += 1;
+      if (failFirstLoad && scriptRequests === 1) {
+        await route.abort("failed");
+        return;
+      }
       await route.fulfill({
         status: 200,
         contentType: "application/javascript",
         body: `
           window.turnstile = {
             render: function (_container, options) {
-              setTimeout(function () { options.callback("playwright-newsletter-token"); }, 0);
+              setTimeout(function () { options.callback("playwright-newsletter-token"); }, 250);
               return "newsletter-widget";
             },
             reset: function () {},
@@ -195,14 +211,16 @@ async function configureNewsletterMocks(page, evidence, label) {
 
 async function verifyNewsletterSignup(browser, viewport, label, evidence) {
   const page = await browser.newPage({ viewport });
-  captureBrowserErrors(page);
+  captureBrowserErrors(page, true);
   await configureShopifyCatalogMock(page);
-  await configureNewsletterMocks(page, evidence, label);
+  await configureNewsletterMocks(page, evidence, label, true);
   await page.goto(`${baseURL}/`, { waitUntil: "domcontentloaded" });
 
   await page.getByTestId("input-newsletter").fill(`proof-${label}@example.com`);
   await page.getByTestId("checkbox-newsletter-consent").check();
-  await page.waitForTimeout(50);
+  // Recover the current form, preserving the entered email and consent.
+  await page.getByRole("button", { name: "Retry security check" }).click();
+  await page.locator('[data-testid="newsletter-turnstile"][data-verification-state="ready"]').waitFor({ state: "attached" });
   await page.getByTestId("button-subscribe").click();
   await page.getByTestId("text-subscribed").waitFor({ state: "visible" });
 
@@ -272,6 +290,42 @@ async function configureShopifyBridgeMock(page, evidence) {
   });
 }
 
+async function verifyContactRecovery(browser, viewport, label) {
+  const page = await browser.newPage({ viewport });
+  captureBrowserErrors(page, true);
+  await configureNewsletterMocks(page, { newsletterSubmissions: [] }, label, true);
+  let submission;
+  await page.route(`${privateIngressOrigin}/contact`, async (route) => {
+    const headers = {
+      "Access-Control-Allow-Origin": baseURL,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    };
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers, body: "" });
+      return;
+    }
+    submission = route.request().postDataJSON();
+    await route.fulfill({ status: 201, headers, contentType: "application/json",
+      body: JSON.stringify({ received: true, receipt: "contact-recovery-proof" }) });
+  });
+  await page.goto(`${baseURL}/contact`, { waitUntil: "domcontentloaded" });
+  await page.getByTestId("input-contact-name").fill("Browser Proof");
+  await page.getByTestId("input-contact-email").fill("proof@example.com");
+  await page.getByTestId("input-contact-message").fill("Please help me choose a product.");
+  await page.getByTestId("checkbox-contact-consent").check();
+  await page.getByRole("button", { name: "Retry security check" }).click();
+  await page.locator('[data-testid="contact-turnstile"][data-verification-state="ready"]').waitFor({ state: "attached" });
+  await page.getByTestId("button-send-contact").click();
+  await page.getByTestId("text-contact-received").waitFor();
+  assert(submission?.message === "Please help me choose a product.", `${label} contact retry lost the message.`);
+  assert(submission?.consent === true, `${label} contact retry lost consent.`);
+  assert(submission?.turnstileToken === "playwright-newsletter-token", `${label} contact retry lost verification.`);
+  await assertNoHorizontalOverflow(page, `${label} contact recovery`);
+  await page.screenshot({ path: `${outputDir}/contact-recovery-${label}.png`, fullPage: true });
+  await page.close();
+}
+
 let browser;
 const consoleErrors = [];
 const evidence = {
@@ -294,6 +348,9 @@ try {
   await mkdir(outputDir, { recursive: true });
   await waitForServer();
   browser = await chromium.launch({ headless: true });
+
+  await verifyContactRecovery(browser, { width: 1440, height: 1100 }, "desktop");
+  await verifyContactRecovery(browser, { width: 390, height: 844 }, "mobile");
 
   evidence.newsletterDesktopPayload = await verifyNewsletterSignup(
     browser,
@@ -427,6 +484,7 @@ try {
         viewports: ["1440x1100", "390x844"],
         evidence,
         assertions: [
+          "contact and newsletter recover from a failed security-script load without losing form values or consent on desktop and mobile",
           "newsletter signup uses explicit consent, Turnstile, honeypot, and private ingress on desktop and mobile",
           "newsletter signup renders without horizontal overflow on desktop and mobile",
           "privacy policy shows its current revision date without desktop or mobile overflow",

@@ -51,22 +51,25 @@ async function assertRenderedImage(imageLocator, label) {
 
 await mkdir(outputDir, { recursive: true });
 
-const versionResponse = await fetch(`${baseURL}/version`, {
-  headers: { accept: "application/json" },
-});
-assert.equal(versionResponse.ok, true, `version route returned HTTP ${versionResponse.status}.`);
-const versionPayload = await versionResponse.json();
-assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
-assert.equal(
-  versionPayload?.sha,
-  expectedHead,
-  `version SHA mismatch: expected ${expectedHead}, received ${versionPayload?.sha ?? "missing"}.`,
-);
-
 const browser = await chromium.launch({ headless: true });
 
 try {
+  // Check release identity through the same real browser used for checkout proof.
+  // Cloudflare can treat runner-side Node HTTP clients differently from storefront browsers.
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+  const versionResponse = await page.goto(`${baseURL}/version`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
+  assert.ok(versionResponse, "version route did not return a browser response.");
+  assert.equal(versionResponse.ok(), true, `version route returned HTTP ${versionResponse.status()}.`);
+  const versionPayload = await versionResponse.json();
+  assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
+  assert.equal(
+    versionPayload?.sha,
+    expectedHead,
+    `version SHA mismatch: expected ${expectedHead}, received ${versionPayload?.sha ?? "missing"}.`,
+  );
   const observedFunnelEvents = [];
 
   await page.route(`${expectedOrigin}/api/funnel`, async (route) => {

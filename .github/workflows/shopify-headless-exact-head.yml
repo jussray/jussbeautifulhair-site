@@ -26,6 +26,8 @@ on:
       - "scripts/shopify-physical-live-smoke.mjs"
       - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
+      - "scripts/cloudflare-free-candidate-proof.mjs"
+      - "tests/cloudflare-free-candidate-proof.test.mjs"
       - "scripts/catalog-images-live-playwright.mjs"
       - "scripts/shopify-image-ledger.mjs"
       - "tests/shopify-headless-contract.test.mjs"
@@ -127,8 +129,24 @@ jobs:
           )"
           printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
 
-      - name: Exercise candidate production witness against exact live base without payment
+      # Free-plan Bot Fight Mode challenges GitHub-hosted runners at the branded domain.
+      # Candidate readiness probes the existing production Worker on workers.dev and
+      # classifies the branded version as VERSION_VERIFIED or CLOUDFLARE_CHALLENGED.
+      # This does NOT create a production receipt or waive the main-branch live proof.
+      - name: Collect Cloudflare Free production-worker candidate evidence
         if: github.event_name == 'pull_request'
+        id: free-plan
+        shell: bash
+        env:
+          EXPECTED_HEAD_SHA: ${{ steps.live-base.outputs.sha }}
+        run: |
+          set -euo pipefail
+          node scripts/cloudflare-free-candidate-proof.mjs
+          branded="$(node -p 'JSON.parse(require("node:fs").readFileSync("artifacts/free-plan-runtime/manifest.json", "utf8")).brandedVersionVerified ? "true" : "false"')"
+          printf 'brand_verified=%s\\n' "$branded" >> "$GITHUB_OUTPUT"
+
+      - name: Exercise candidate production witness against exact live base without payment
+        if: github.event_name == 'pull_request' && steps.free-plan.outputs.brand_verified == 'true'
         env:
           EXPECTED_HEAD_SHA: ${{ steps.live-base.outputs.sha }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
@@ -304,6 +322,7 @@ jobs:
             artifacts/shopify-physical-live/
             artifacts/frontdoor-live/
             artifacts/shopify-production/
+            artifacts/free-plan-runtime/
             artifacts/production-proof/
             artifacts/catalog-images-live/
             artifacts/shopify-image-ledger/

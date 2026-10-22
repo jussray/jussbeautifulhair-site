@@ -10,7 +10,7 @@ export async function connectJbhProofBrowser(chromium, env = process.env) {
     throw new Error("Unsupported JBH proof browser mode; fail closed.");
   }
   const accountId = String(env.CLOUDFLARE_ACCOUNT_ID || "").trim();
-  const token = String(env.CLOUDFLARE_API_TOKEN || "").trim();
+  const token = String(env.CLOUDFLARE_BROWSER_RUN_TOKEN || "").trim();
   if (!/^[a-f0-9]{32}$/i.test(accountId) || !token) {
     throw new Error("Cloudflare Browser Run proof requires an authorized account ID and API token.");
   }

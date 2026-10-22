@@ -42,7 +42,7 @@ test("Cloudflare CDP proof connects remotely and preserves viewport without expo
   const output = await connectJbhProofBrowser(fakeChromium, {
     JBH_PROOF_BROWSER_MODE: "cloudflare-cdp",
     CLOUDFLARE_ACCOUNT_ID: accountId,
-    CLOUDFLARE_API_TOKEN: token,
+    CLOUDFLARE_BROWSER_RUN_TOKEN: token,
   });
   assert.equal(output.transport, "cloudflare-cdp");
   assert.match(connected.url, /browser-run\/devtools\/browser/);

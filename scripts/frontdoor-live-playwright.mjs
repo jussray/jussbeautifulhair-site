@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { connectJbhProofBrowser } from "./jbh-live-browser.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 
 const baseURL = process.env.LIVE_STOREFRONT_URL || "https://jussbeautifulhair.com";
@@ -54,7 +55,7 @@ const parsedBase = new URL(baseURL);
 assert(parsedBase.origin === expectedOrigin, `LIVE_STOREFRONT_URL must be exactly ${expectedOrigin}.`);
 
 await mkdir(outputDir, { recursive: true });
-const browser = await chromium.launch({ headless: true });
+const { browser, transport: liveBrowserTransport } = await connectJbhProofBrowser(chromium);
 const consoleErrors = [];
 const forbiddenRuntimeRequests = [];
 const results = [];
@@ -100,15 +101,13 @@ try {
   await versionPage.close();
 
   const knowledgePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  const knowledgeResponse = await knowledgePage.request.get(
+  const knowledgeResponse = await knowledgePage.goto(
     `${baseURL}/.well-known/jbh-meta-agent.json`,
-    { headers: { accept: "application/json" } },
+    { waitUntil: "domcontentloaded", timeout: 60_000 },
   );
-  assert(
-    knowledgeResponse.ok(),
-    `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse.status()}.`,
-  );
-  const knowledgeContentType = knowledgeResponse.headers()["content-type"] || "";
+  assert(knowledgeResponse && knowledgeResponse.ok(),
+    `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse?.status() ?? "no response"}.`);
+  const knowledgeContentType = (await knowledgeResponse.allHeaders())["content-type"] || "";
   assert(
     knowledgeContentType.toLowerCase().includes("application/json"),
     `Meta Business Agent knowledge contract expected application/json, received ${knowledgeContentType || "no content-type"}.`,
@@ -236,6 +235,7 @@ try {
         versionEvidenceRole: versionPayload.evidenceRole,
         versionAuthority: versionPayload.authority,
         versionTransport: "chromium-navigation",
+        liveBrowserTransport,
         assertions: [
           "root responds successfully on desktop and mobile",
           "legacy hash entry URLs migrate to canonical browser paths before customer interaction",

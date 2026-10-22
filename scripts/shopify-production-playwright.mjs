@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import process from "node:process";
 import { chromium } from "playwright";
+import { connectJbhProofBrowser } from "./jbh-live-browser.mjs";
 
 const baseURL = process.env.LIVE_STOREFRONT_URL || "https://jussbeautifulhair.com";
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "";
@@ -51,7 +52,7 @@ async function assertRenderedImage(imageLocator, label) {
 
 await mkdir(outputDir, { recursive: true });
 
-const browser = await chromium.launch({ headless: true });
+const { browser, transport: liveBrowserTransport } = await connectJbhProofBrowser(chromium);
 
 try {
   const versionPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -280,6 +281,7 @@ try {
         versionEvidenceRole: versionPayload.evidenceRole,
         versionAuthority: versionPayload.authority,
         versionTransport: "chromium-navigation",
+        liveBrowserTransport,
         verifiedAt: new Date().toISOString(),
         origin: expectedOrigin,
         productHandle: product.id,

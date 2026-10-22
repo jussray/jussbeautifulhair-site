@@ -179,7 +179,7 @@ test("candidate proof never receives Cloudflare credentials and release proof ru
   assert.doesNotMatch(mainShopifyWorkflow, /Exercise candidate production witness against exact live base/);
   assert.match(mainShopifyWorkflow, /Candidate checks are source\/local proofs only/);
   assert.match(mainShopifyWorkflow, /if: github\.event_name == 'push'[\s\S]*?JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
-  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
   assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
   assert.match(livePlaywright, /connectJbhProofBrowser\(chromium\)/);
   assert.match(shopifyProductionPlaywright, /connectJbhProofBrowser\(chromium\)/);
@@ -188,7 +188,7 @@ test("candidate proof never receives Cloudflare credentials and release proof ru
   assert.match(liveBrowserSource, /Unsupported JBH proof browser mode/);
   // The existing, approved manual activation uses the same trusted proof transport.
   assert.match(activationWorkflow, /JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
-  assert.match(activationWorkflow, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.match(activationWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
 });
 
 test("main commerce gate waits for the exact Worker build and emits verified only after live Playwright", () => {

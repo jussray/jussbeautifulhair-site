@@ -43,14 +43,20 @@ test('builds sanitized exact-SHA evidence', () => {
 });
 
 test('gates the always-on ledger on independent exact-head runtime proof', () => {
-  assert.equal((workflow.match(/\bruns-on:/g) ?? []).length, 2);
+  const jobs = workflow.split('\njobs:\n')[1];
+  assert.ok(jobs, 'workflow must define jobs');
+  assert.deepEqual(
+    [...jobs.matchAll(/^  ([a-z][a-z0-9-]*):\s*$/gm)].map((match) => match[1]),
+    ['runtime-state-contract', 'ledger'],
+  );
+  assert.equal((jobs.match(/^    runs-on:/gm) ?? []).length, 2);
   const runtimeJob = workflow.match(/  runtime-state-contract:\n([\s\S]*?)(?=\n  ledger:)/)?.[1];
   assert.ok(runtimeJob, 'stable runtime-state proof job must remain available');
   assert.match(runtimeJob, /name: Runtime-state proof contract/);
   assert.match(runtimeJob, /ref: \$\{\{ env\.EXPECTED_HEAD_SHA \}\}/);
   assert.match(runtimeJob, /persist-credentials: false/);
   assert.match(runtimeJob, /run: node --test test\/control-room-runtime-state\.test\.mjs/);
-  assert.match(workflow, /  ledger:\n    needs: runtime-state-contract/);
+  assert.match(jobs, /^    needs: runtime-state-contract$/m);
   assert.match(workflow, /CONTROL_ROOM_LEDGER_SELF_CHECK: Verify test-ledger contract/);
   assert.match(workflow, /name: Verify test-ledger contract/);
   assert.doesNotMatch(workflow, /publish-ledger:/);

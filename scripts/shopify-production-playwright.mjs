@@ -54,7 +54,20 @@ await mkdir(outputDir, { recursive: true });
 const versionResponse = await fetch(`${baseURL}/version`, {
   headers: { accept: "application/json" },
 });
-assert.equal(versionResponse.ok, true, `version route returned HTTP ${versionResponse.status}.`);
+if (!versionResponse.ok) {
+  // Cloudflare request metadata is safe to log; never print the denial body,
+  // request headers, cookies, challenge tokens, or other dynamic response data.
+  const safeHeader = (name) => {
+    const value = versionResponse.headers.get(name) ?? "absent";
+    return /^[a-zA-Z0-9._ -]{1,100}$/.test(value) ? value : "unavailable";
+  };
+  assert.fail(
+    `version route returned HTTP ${versionResponse.status}; `
+      + `cf-ray=${safeHeader("cf-ray")}; `
+      + `cf-mitigated=${safeHeader("cf-mitigated")}; `
+      + `server=${safeHeader("server")}.`,
+  );
+}
 const versionPayload = await versionResponse.json();
 assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
 assert.equal(

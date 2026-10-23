@@ -22,6 +22,10 @@ on:
       - "scripts/shopify-physical-live-smoke.mjs"
       - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
+      - "scripts/jbh-live-browser.mjs"
+      - "scripts/jbh-browser-preflight.mjs"
+      - "tests/jbh-live-browser.test.mjs"
+      - "tests/jbh-browser-preflight.test.mjs"
       - "scripts/catalog-images-live-playwright.mjs"
       - "scripts/shopify-image-ledger.mjs"
       - "tests/shopify-headless-contract.test.mjs"
@@ -34,6 +38,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      browser_token_preflight:
+        description: "Manual token and /version check only; no deploy or checkout"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -50,7 +60,40 @@ env:
   LIVE_STOREFRONT_URL: https://jussbeautifulhair.com
 
 jobs:
+  browser-run-token-preflight:
+    name: Manual Cloudflare Browser Run credential preflight (no deploy)
+    # Founder-triggered only, and only for this reviewed fix branch or main.
+    # Never put the dedicated token in a pull_request job.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.browser_token_preflight == true && github.actor == 'jussray' && github.repository == 'jussray/jussbeautifulhair-site' && (github.ref == 'refs/heads/fix/jbh-version-browser-proof-20261015' || github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout selected reviewed branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify exact selected head
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install pinned remote browser client only
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+      - name: Test dedicated token and live read-only identity
+        env:
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/jbh-browser-preflight.mjs
+
   verify:
+    # Preserve ordinary manual ledger dispatches; preflight-only skips commerce tests.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.browser_token_preflight != true }}
     name: Verify tokenless Shopify checkout bridge
     runs-on: ubuntu-22.04
     timeout-minutes: 30
@@ -75,7 +118,7 @@ jobs:
         run: npm run check
 
       - name: Verify Shopify checkout and production-witness contracts
-        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs tests/jbh-live-browser.test.mjs
+        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs tests/jbh-live-browser.test.mjs tests/jbh-browser-preflight.test.mjs
 
       - name: Build production storefront
         run: npm run build

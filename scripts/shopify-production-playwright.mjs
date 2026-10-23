@@ -54,6 +54,16 @@ await mkdir(outputDir, { recursive: true });
 const versionResponse = await fetch(`${baseURL}/version`, {
   headers: { accept: "application/json" },
 });
+if (!versionResponse.ok) {
+  // Safe edge-only diagnostics: do not expose response bodies, cookies, or request credentials.
+  console.error("production_version_edge_diagnostic", JSON.stringify({
+    status: versionResponse.status,
+    rayId: versionResponse.headers.get("cf-ray"),
+    mitigated: versionResponse.headers.get("cf-mitigated"),
+    server: versionResponse.headers.get("server"),
+    contentType: versionResponse.headers.get("content-type"),
+  }));
+}
 assert.equal(versionResponse.ok, true, `version route returned HTTP ${versionResponse.status}.`);
 const versionPayload = await versionResponse.json();
 assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");

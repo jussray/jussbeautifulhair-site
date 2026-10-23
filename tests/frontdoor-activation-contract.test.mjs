@@ -191,6 +191,21 @@ test("candidate proof never receives Cloudflare credentials and release proof ru
   assert.match(activationWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
 });
 
+test("founder-only manual Browser Run preflight cannot initiate a deploy or payment", () => {
+  assert.match(mainShopifyWorkflow, /browser_token_preflight:/);
+  assert.match(mainShopifyWorkflow, /type: boolean/);
+  assert.match(mainShopifyWorkflow, /browser-run-token-preflight:/);
+  assert.match(mainShopifyWorkflow, /github\.actor == 'jussray'/);
+  assert.match(mainShopifyWorkflow, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(mainShopifyWorkflow, /github\.ref == 'refs\/heads\/fix\/jbh-version-browser-proof-20261015'/);
+  assert.match(mainShopifyWorkflow, /node scripts\/jbh-browser-preflight\.mjs/);
+  assert.match(mainShopifyWorkflow, /inputs\.browser_token_preflight != true/);
+  const preflightBlock = mainShopifyWorkflow.split("  browser-run-token-preflight:")[1].split("  verify:")[0];
+  assert.match(preflightBlock, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
+  assert.doesNotMatch(preflightBlock, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.doesNotMatch(preflightBlock, /wrangler deploy|checkoutUrl|submit.*payment/);
+});
+
 test("main commerce gate waits for the exact Worker build and emits verified only after live Playwright", () => {
   assert.match(mainShopifyWorkflow, /^\s*push:\s*\n\s+branches: \[main\]/m);
   assert.match(mainShopifyWorkflow, /checks: read/);

@@ -56,7 +56,7 @@ test('gates the always-on ledger on independent exact-head runtime proof', () =>
   assert.match(runtimeJob, /ref: \$\{\{ env\.EXPECTED_HEAD_SHA \}\}/);
   assert.match(runtimeJob, /persist-credentials: false/);
   assert.match(runtimeJob, /run: node --test test\/control-room-runtime-state\.test\.mjs/);
-  assert.match(jobs, /^    needs: runtime-state-contract$/m);
+  assert.match(jobs, /^  ledger:\n    needs: runtime-state-contract$/m);
   assert.match(workflow, /CONTROL_ROOM_LEDGER_SELF_CHECK: Verify test-ledger contract/);
   assert.match(workflow, /name: Verify test-ledger contract/);
   assert.doesNotMatch(workflow, /publish-ledger:/);

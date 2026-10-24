@@ -14,18 +14,18 @@ import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 const VALUES = [
   {
     icon: Truck,
-    title: "Live Inventory",
-    body: "Product availability and pricing are read from Shopify so the storefront does not promise stale stock.",
+    title: "Shop Live Inventory",
+    body: "Prices and availability come from Shopify, so you can shop what is actually available.",
   },
   {
     icon: Heart,
-    title: "Product Facts First",
-    body: "Review current product details, options, pricing, and policies before you choose your install.",
+    title: "Choose Your Fit",
+    body: "Compare texture, length, lace, options, and care details before you choose your install.",
   },
   {
     icon: MessageCircle,
-    title: "Human Support",
-    body: "Questions before or after checkout can be sent to hello@jussbeautifulhair.com.",
+    title: "Ask Before You Buy",
+    body: "Need a second opinion before checkout? Human support is available at hello@jussbeautifulhair.com.",
   },
 ];
 
@@ -115,21 +115,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-b border-border bg-card">
-        <div className="mx-auto max-w-7xl px-6 py-12 grid gap-8 sm:grid-cols-3">
-          {VALUES.map((value) => (
-            <div key={value.title} className="flex flex-col items-start">
-              <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-secondary/40 text-primary mb-4">
-                <value.icon className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-lg text-foreground">{value.title}</h3>
-              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{value.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <BrandMoatSection />
 
       <section className="mx-auto max-w-7xl px-6 pt-12" data-testid="hair-match-home-offer">
         <div className="rounded-2xl border border-gold/30 bg-secondary/20 p-6 sm:p-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -254,6 +240,22 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      <section className="border-b border-border bg-card">
+        <div className="mx-auto max-w-7xl px-6 py-12 grid gap-8 sm:grid-cols-3">
+          {VALUES.map((value) => (
+            <div key={value.title} className="flex flex-col items-start">
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-secondary/40 text-primary mb-4">
+                <value.icon className="h-5 w-5" />
+              </div>
+              <h3 className="font-display text-lg text-foreground">{value.title}</h3>
+              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{value.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <BrandMoatSection />
 
       <section className="bg-secondary/30">
         <div className="mx-auto max-w-2xl px-6 py-16 text-center">

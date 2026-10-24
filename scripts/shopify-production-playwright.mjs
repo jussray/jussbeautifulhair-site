@@ -8,7 +8,6 @@ const expectedHead = process.env.EXPECTED_HEAD_SHA || "";
 const expectedOrigin = "https://jussbeautifulhair.com";
 const approvedCheckoutHosts = new Set([
   "jussbeautifulhair.com",
-  "checkout.jussbeautifulhair.com",
   "8qp1z2-az.myshopify.com",
 ]);
 const outputDir = "artifacts/shopify-production";

@@ -84,14 +84,22 @@ test("cannot use unproven runtime, mismatched SHA, or alternate alias", async ()
   await assert.rejects(checkFreePlanRuntime(sha, wrong.request), /Workers.dev runtime/);
 });
 
-test("PR gets a candidate witness; push keeps mandatory branded browser and production receipt", async () => {
+test("retired diagnostic cannot replace candidate isolation or trusted production browser proof", async () => {
   const workflow = await readFile(".github/workflows/shopify-headless-exact-head.yml", "utf8");
-  assert.match(workflow, /node scripts\/cloudflare-free-candidate-proof\.mjs/);
-  assert.match(workflow, /if: github\.event_name == 'pull_request' && steps\.free-plan\.outputs\.brand_verified == 'true'/);
+  assert.doesNotMatch(workflow, /\bnode\s+scripts\/cloudflare-free-candidate-proof\.mjs\b/);
+  assert.doesNotMatch(workflow, /steps\.free-plan\.outputs|id: live-base/);
+  const candidateBoundary = workflow.split("      - name: Record candidate-only evidence boundary")[1]
+    ?.split("      - name: Wait for exact Cloudflare Worker build")[0];
+  assert.ok(candidateBoundary, "Candidate proof must retain its explicit source/local boundary.");
+  assert.match(candidateBoundary, /if: github\.event_name == 'pull_request'/);
+  assert.match(candidateBoundary, /Candidate checks are source\/local proofs only/);
+  assert.doesNotMatch(candidateBoundary, /secrets\.|shopify-production-playwright|frontdoor-live-playwright/);
   assert.match(workflow, /if: github\.event_name == 'push'/);
   assert.match(workflow, /node scripts\/frontdoor-live-playwright\.mjs/);
   assert.match(workflow, /node scripts\/shopify-production-playwright\.mjs/);
+  assert.match(workflow, /JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
+  assert.match(workflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
   assert.match(workflow, /schema: 'juss\/jbh-production-evidence-receipt@v2'/);
   assert.match(workflow, /live_state: 'verified'/);
-  assert.match(workflow, /artifacts\/free-plan-runtime\//);
+  assert.doesNotMatch(workflow, /artifacts\/free-plan-runtime\//);
 });

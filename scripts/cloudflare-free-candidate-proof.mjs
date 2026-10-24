@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
+// Retained as a non-authoritative diagnostic utility. PR/release workflows do
+// not execute this legacy probe; trusted production proof uses the main branch's
+// branded Playwright browser transport and exact-release gates.
 // This is the Cloudflare-account-owned route for the existing production Worker.
 // It is not a second storefront, redirect, WAF exception, or authorization token.
 export const WORKER_RUNTIME_ORIGIN = "https://jussbeautifulhair-site.mcgill-raylene.workers.dev";

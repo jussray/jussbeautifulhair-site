@@ -164,35 +164,20 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
   assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
 });
 
-test("pull requests execute the candidate production witness against the current live main", () => {
+test("pull requests stop at the Bot Fight boundary without claiming live browser proof", () => {
   const liveSmokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
-  const resolverIndex = mainShopifyWorkflow.indexOf(
-    "Resolve current main SHA for candidate production witness",
-  );
-  const candidateWitnessIndex = mainShopifyWorkflow.indexOf(
-    "Exercise candidate production witness against exact live base without payment",
-  );
+  const boundaryIndex = mainShopifyWorkflow.indexOf("Record PR live-browser boundary");
   const pushProviderIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
 
-  assert.ok(liveSmokeIndex >= 0, "Live Shopify smoke is missing from the candidate gate.");
-  assert.ok(resolverIndex > liveSmokeIndex, "Current-main resolution must follow the live Shopify smoke.");
-  assert.ok(candidateWitnessIndex > resolverIndex, "Candidate production witness must use the freshly resolved current main.");
-  assert.ok(pushProviderIndex > candidateWitnessIndex, "Pull-request witness must remain separate from push-only provider proof.");
-  assert.match(mainShopifyWorkflow, /if: github\.event_name == 'pull_request'/);
-  assert.match(mainShopifyWorkflow, /id:\s*live-base/);
-  assert.match(mainShopifyWorkflow, /git\/ref\/heads\/main/);
-  assert.ok(
-    mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ steps.live-base.outputs.sha }}"),
-    "Pull-request production witness must bind to the freshly resolved current main SHA.",
-  );
-  assert.ok(
-    !mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ github.event.pull_request.base.sha }}"),
-    "Pull-request production witness must not reuse a stale PR creation-base SHA.",
-  );
-  assert.match(mainShopifyWorkflow, /run: node scripts\/shopify-production-playwright\.mjs/);
+  assert.ok(liveSmokeIndex >= 0, "Live Shopify no-payment smoke is missing from the PR gate.");
+  assert.ok(boundaryIndex > liveSmokeIndex, "The explicit live-browser boundary must follow the live Shopify smoke.");
+  assert.ok(pushProviderIndex > boundaryIndex, "Production-only provider proof must remain after the PR boundary.");
+  assert.match(mainShopifyWorkflow, /Cloudflare Bot Fight Mode blocks GitHub datacenter browsers/);
+  assert.doesNotMatch(mainShopifyWorkflow, /Resolve current main SHA for candidate production witness/);
+  assert.doesNotMatch(mainShopifyWorkflow, /Exercise candidate production witness against exact live base without payment/);
 });
 
-test("main commerce gate waits for the exact Worker build and emits verified only after live Playwright", () => {
+test("main commerce gate uses provider-owned browser proof after the exact Worker build", () => {
   assert.match(mainShopifyWorkflow, /^\s*push:\s*\n\s+branches: \[main\]/m);
   assert.match(mainShopifyWorkflow, /checks: read/);
   assert.match(mainShopifyWorkflow, /Workers Builds: jussbeautifulhair-site/);
@@ -201,13 +186,21 @@ test("main commerce gate waits for the exact Worker build and emits verified onl
   // Worker builds have reported ~6.5 min after job start; keep a ~10 min window.
   assert.match(mainShopifyWorkflow, /for attempt in \{1\.\.300\}; do/);
   const providerIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
-  const frontdoorIndex = mainShopifyWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs", providerIndex);
-  const productionIndex = mainShopifyWorkflow.indexOf("node scripts/shopify-production-playwright.mjs", frontdoorIndex);
+  const browserIndex = mainShopifyWorkflow.indexOf(
+    "node scripts/cloudflare-production-browser-proof.mjs",
+    providerIndex,
+  );
+  const cartIndex = mainShopifyWorkflow.indexOf(
+    "Re-prove live Shopify cart after provider build",
+    browserIndex,
+  );
   const receiptIndex = mainShopifyWorkflow.indexOf("Write canonical production receipt");
   assert.ok(providerIndex >= 0, "Exact Worker-build wait is missing.");
-  assert.ok(frontdoorIndex > providerIndex, "Live front-door Playwright must follow exact provider build proof.");
-  assert.ok(productionIndex > frontdoorIndex, "Production Shopify Playwright must follow live SHA proof.");
-  assert.ok(receiptIndex > productionIndex, "Verified receipt must be emitted only after both live browser gates.");
+  assert.ok(browserIndex > providerIndex, "Cloudflare Browser Rendering proof must follow exact provider build proof.");
+  assert.ok(cartIndex > browserIndex, "Live Shopify cart re-proof must follow runtime identity proof.");
+  assert.ok(receiptIndex > cartIndex, "Verified receipt must be emitted only after provider browser and cart proof.");
+  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
   assert.match(mainShopifyWorkflow, /schema: 'juss\/jbh-production-evidence-receipt@v2'/);
   assert.match(mainShopifyWorkflow, /live_state: 'verified'/);
   assert.match(mainShopifyWorkflow, /authority: 'none'/);
@@ -217,8 +210,8 @@ test("main commerce gate waits for the exact Worker build and emits verified onl
   assert.match(mainShopifyWorkflow, /commit_sha: sha/);
   assert.match(mainShopifyWorkflow, /run_id: runId/);
   assert.match(mainShopifyWorkflow, /Workers Builds: jussbeautifulhair-site/);
-  assert.match(mainShopifyWorkflow, /artifact:\/\/frontdoor-live\/manifest\.json/);
-  assert.match(mainShopifyWorkflow, /artifact:\/\/shopify-production\//);
+  assert.match(mainShopifyWorkflow, /artifact:\/\/cloudflare-browser-production\/manifest\.json/);
+  assert.match(mainShopifyWorkflow, /artifact:\/\/shopify-physical-live\/manifest\.json/);
   assert.match(mainShopifyWorkflow, /runtime:\/\/\$\{url\.host\}\/version/);
   assert.match(mainShopifyWorkflow, /non_authoritative_markers: \['receipt'\]/);
   assert.match(mainShopifyWorkflow, /https:\/\/jussbeautifulhair\.com\/version/);

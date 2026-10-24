@@ -28,6 +28,7 @@ on:
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
       - "tests/frontdoor-activation-contract.test.mjs"
+      - "tests/catalog-images-live-contract.test.mjs"
       - "tests/runtime-build-proof-version-contract.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"

@@ -50,21 +50,25 @@ async function assertRenderedImage(imageLocator, label) {
 
 await mkdir(outputDir, { recursive: true });
 
-const versionResponse = await fetch(`${baseURL}/version`, {
-  headers: { accept: "application/json" },
-});
-assert.equal(versionResponse.ok, true, `version route returned HTTP ${versionResponse.status}.`);
-const versionPayload = await versionResponse.json();
-assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
-assert.equal(
-  versionPayload?.sha,
-  expectedHead,
-  `version SHA mismatch: expected ${expectedHead}, received ${versionPayload?.sha ?? "missing"}.`,
-);
-
 const browser = await chromium.launch({ headless: true });
 
 try {
+  const versionPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await versionPage.goto(baseURL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
+  assert.ok(versionResponse?.ok(), `version route returned HTTP ${versionResponse?.status() ?? "unknown" }.`);
+  const versionPayload = JSON.parse(await versionResponse.text());
+  assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
+  assert.equal(
+    versionPayload?.sha,
+    expectedHead,
+    `version SHA mismatch: expected ${expectedHead}, received ${versionPayload?.sha ?? "missing"}.`,
+  );
+  await versionPage.close();
+
   const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
   const observedFunnelEvents = [];
 

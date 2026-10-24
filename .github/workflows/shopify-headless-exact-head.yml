@@ -22,6 +22,7 @@ on:
       - "scripts/shopify-physical-live-smoke.mjs"
       - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
+      - "scripts/cloudflare-production-browser-proof.mjs"
       - "scripts/catalog-images-live-playwright.mjs"
       - "scripts/shopify-image-ledger.mjs"
       - "tests/shopify-headless-contract.test.mjs"
@@ -95,38 +96,13 @@ jobs:
       - name: Verify live Shopify catalog and no-payment cart
         run: node scripts/shopify-physical-live-smoke.mjs
 
-      - name: Resolve current main SHA for candidate production witness
+      - name: Record PR live-browser boundary
         if: github.event_name == 'pull_request'
-        id: live-base
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          sha="$(
-            curl --fail --silent --show-error \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/$GITHUB_REPOSITORY/git/ref/heads/main" \
-            | node --input-type=module -e '
-                let raw = "";
-                process.stdin.on("data", (chunk) => { raw += chunk; });
-                process.stdin.on("end", () => {
-                  const sha = JSON.parse(raw)?.object?.sha || "";
-                  if (!/^[0-9a-f]{40}$/i.test(sha)) process.exit(1);
-                  process.stdout.write(sha);
-                });
-              '
-          )"
-          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
-
-      - name: Exercise candidate production witness against exact live base without payment
-        if: github.event_name == 'pull_request'
-        env:
-          EXPECTED_HEAD_SHA: ${{ steps.live-base.outputs.sha }}
-          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
-        run: node scripts/shopify-production-playwright.mjs
+          printf '%s\n' \
+            'PR proof intentionally stops before live browser impersonation: Cloudflare Bot Fight Mode blocks GitHub datacenter browsers. Exact runtime identity and branded-frontdoor browser proof run only after main deploy through Cloudflare Browser Rendering with production-only credentials.'
 
       - name: Wait for exact Cloudflare Worker build
         if: github.event_name == 'push'
@@ -181,27 +157,20 @@ jobs:
             sleep 2
           done
 
-      - name: Prove exact live SHA and branded front door
+      - name: Prove exact live SHA and branded front door through Cloudflare Browser Rendering
+        if: github.event_name == 'push'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: node scripts/cloudflare-production-browser-proof.mjs
+
+      - name: Re-prove live Shopify cart after provider build
         if: github.event_name == 'push'
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
-          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
-        run: node scripts/frontdoor-live-playwright.mjs
-
-      - name: Prove exact deployed Shopify purchase path without payment
-        if: github.event_name == 'push'
-        env:
-          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
-          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
-        run: node scripts/shopify-production-playwright.mjs
-
-      - name: Prove live catalog image authority without payment
-        if: github.event_name != 'pull_request'
-        env:
-          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
-          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
-          REQUIRE_EXACT_HEAD: ${{ github.event_name == 'push' }}
-        run: node scripts/catalog-images-live-playwright.mjs
+        run: node scripts/shopify-physical-live-smoke.mjs
 
       - name: Audit Shopify product media against JBH presentation (read-only)
         if: github.event_name == 'workflow_dispatch'
@@ -269,12 +238,13 @@ jobs:
             },
             proof_scope: [
               'exact-provider-build',
-              'branded-frontdoor-browser',
-              'shopify-no-payment-production-path',
+              'cloudflare-browser-runtime-identity',
+              'cloudflare-browser-frontdoor',
+              'shopify-no-payment-live-cart',
             ],
             evidence_refs: [
-              'artifact://frontdoor-live/manifest.json',
-              'artifact://shopify-production/',
+              'artifact://cloudflare-browser-production/manifest.json',
+              'artifact://shopify-physical-live/manifest.json',
               `runtime://${url.host}/version`,
               `github-actions://${repo}/runs/${runId}`,
             ],
@@ -298,6 +268,7 @@ jobs:
             artifacts/shopify-physical-live/
             artifacts/frontdoor-live/
             artifacts/shopify-production/
+            artifacts/cloudflare-browser-production/
             artifacts/production-proof/
             artifacts/catalog-images-live/
             artifacts/shopify-image-ledger/

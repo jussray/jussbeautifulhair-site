@@ -105,13 +105,13 @@ try {
   );
 
   const knowledgePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  const knowledgeResponse = await knowledgePage.request.get(
+  const knowledgeResponse = await knowledgePage.goto(
     `${baseURL}/.well-known/jbh-meta-agent.json`,
-    { headers: { accept: "application/json" } },
+    { waitUntil: "domcontentloaded", timeout: 60_000 },
   );
   assert(
-    knowledgeResponse.ok(),
-    `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse.status()}.`,
+    knowledgeResponse?.ok(),
+    `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse?.status() ?? "unknown" }.`,
   );
   const knowledgeContentType = knowledgeResponse.headers()["content-type"] || "";
   assert(

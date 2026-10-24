@@ -22,6 +22,10 @@ on:
       - "scripts/shopify-physical-live-smoke.mjs"
       - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
+      - "scripts/jbh-live-browser.mjs"
+      - "scripts/jbh-browser-preflight.mjs"
+      - "tests/jbh-live-browser.test.mjs"
+      - "tests/jbh-browser-preflight.test.mjs"
       - "scripts/catalog-images-live-playwright.mjs"
       - "scripts/shopify-image-ledger.mjs"
       - "tests/shopify-headless-contract.test.mjs"
@@ -34,6 +38,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      browser_token_preflight:
+        description: "Manual token and /version check only; no deploy or checkout"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -50,7 +60,40 @@ env:
   LIVE_STOREFRONT_URL: https://jussbeautifulhair.com
 
 jobs:
+  browser-run-token-preflight:
+    name: Manual Cloudflare Browser Run credential preflight (no deploy)
+    # Founder-triggered only, and only for this reviewed fix branch or main.
+    # Never put the dedicated token in a pull_request job.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.browser_token_preflight == true && github.actor == 'jussray' && github.repository == 'jussray/jussbeautifulhair-site' && (github.ref == 'refs/heads/fix/jbh-version-browser-proof-20261015' || github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout selected reviewed branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify exact selected head
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install pinned remote browser client only
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+      - name: Test dedicated token and live read-only identity
+        env:
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/jbh-browser-preflight.mjs
+
   verify:
+    # Preserve ordinary manual ledger dispatches; preflight-only skips commerce tests.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.browser_token_preflight != true }}
     name: Verify tokenless Shopify checkout bridge
     runs-on: ubuntu-22.04
     timeout-minutes: 30
@@ -75,7 +118,7 @@ jobs:
         run: npm run check
 
       - name: Verify Shopify checkout and production-witness contracts
-        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs
+        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs tests/jbh-live-browser.test.mjs tests/jbh-browser-preflight.test.mjs
 
       - name: Build production storefront
         run: npm run build
@@ -95,38 +138,14 @@ jobs:
       - name: Verify live Shopify catalog and no-payment cart
         run: node scripts/shopify-physical-live-smoke.mjs
 
-      - name: Resolve current main SHA for candidate production witness
+      # Never expose Cloudflare credentials to pull_request code. Candidate PRs
+      # run local browser, schema, cart and no-payment smoke tests above.
+      # An exact deployed production witness runs only after trusted main push.
+      - name: Record candidate-only evidence boundary
         if: github.event_name == 'pull_request'
-        id: live-base
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
-          sha="$(
-            curl --fail --silent --show-error \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/$GITHUB_REPOSITORY/git/ref/heads/main" \
-            | node --input-type=module -e '
-                let raw = "";
-                process.stdin.on("data", (chunk) => { raw += chunk; });
-                process.stdin.on("end", () => {
-                  const sha = JSON.parse(raw)?.object?.sha || "";
-                  if (!/^[0-9a-f]{40}$/i.test(sha)) process.exit(1);
-                  process.stdout.write(sha);
-                });
-              '
-          )"
-          printf 'sha=%s\n' "$sha" >> "$GITHUB_OUTPUT"
-
-      - name: Exercise candidate production witness against exact live base without payment
-        if: github.event_name == 'pull_request'
-        env:
-          EXPECTED_HEAD_SHA: ${{ steps.live-base.outputs.sha }}
-          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
-        run: node scripts/shopify-production-playwright.mjs
+          echo "Candidate checks are source/local proofs only."
+          echo "Production release evidence is gated by a trusted main push."
 
       - name: Wait for exact Cloudflare Worker build
         if: github.event_name == 'push'
@@ -186,6 +205,9 @@ jobs:
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/frontdoor-live-playwright.mjs
 
       - name: Prove exact deployed Shopify purchase path without payment
@@ -193,6 +215,9 @@ jobs:
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/shopify-production-playwright.mjs
 
       - name: Prove live catalog image authority without payment

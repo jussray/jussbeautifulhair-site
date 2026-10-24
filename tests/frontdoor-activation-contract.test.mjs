@@ -22,6 +22,10 @@ const shopifyProductionPlaywright = await readFile(
   new URL("../scripts/shopify-production-playwright.mjs", import.meta.url),
   "utf8",
 );
+const liveBrowserSource = await readFile(
+  new URL("../scripts/jbh-live-browser.mjs", import.meta.url),
+  "utf8",
+);
 const worker = await readFile(
   new URL("../worker/index.ts", import.meta.url),
   "utf8",
@@ -107,6 +111,10 @@ test("post-deploy route identity is exact and failed proof removes only that rou
 test("live Playwright proof binds to the branded origin and rejects Shopify password wall", () => {
   assert.match(livePlaywright, /https:\/\/jussbeautifulhair\.com/);
   assert.match(livePlaywright, /\/version/);
+  assert.match(livePlaywright, /const versionPage = await browser\.newPage/);
+  assert.match(livePlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
+  assert.doesNotMatch(livePlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
+  assert.match(livePlaywright, /versionTransport: "chromium-navigation"/);
   assert.match(livePlaywright, /versionPayload\.sha === expectedHead/);
   assert.match(livePlaywright, /versionPayload\.identitySource === "runtime-binding"/);
   assert.match(livePlaywright, /versionPayload\.identitySource === "asset-build-proof"/);
@@ -138,6 +146,10 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
 
   assert.match(shopifyProductionPlaywright, /EXPECTED_HEAD_SHA/);
   assert.match(shopifyProductionPlaywright, /\/version/);
+  assert.match(shopifyProductionPlaywright, /const versionPage = await browser\.newPage/);
+  assert.match(shopifyProductionPlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
+  assert.doesNotMatch(shopifyProductionPlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
+  assert.match(shopifyProductionPlaywright, /versionTransport: "chromium-navigation"/);
   assert.match(shopifyProductionPlaywright, /versionPayload\?\.sha,\s*expectedHead/);
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/catalog/);
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/cart/);
@@ -156,32 +168,42 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
   assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
 });
 
-test("pull requests execute the candidate production witness against the current live main", () => {
-  const liveSmokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
-  const resolverIndex = mainShopifyWorkflow.indexOf(
-    "Resolve current main SHA for candidate production witness",
-  );
-  const candidateWitnessIndex = mainShopifyWorkflow.indexOf(
-    "Exercise candidate production witness against exact live base without payment",
-  );
-  const pushProviderIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
+test("candidate proof never receives Cloudflare credentials and release proof runs on trusted push", () => {
+  const smokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
+  const boundaryIndex = mainShopifyWorkflow.indexOf("Record candidate-only evidence boundary");
+  const providerIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
+  assert.ok(smokeIndex >= 0);
+  assert.ok(boundaryIndex > smokeIndex);
+  assert.ok(providerIndex > boundaryIndex);
+  assert.doesNotMatch(mainShopifyWorkflow, /Resolve current main SHA for candidate production witness/);
+  assert.doesNotMatch(mainShopifyWorkflow, /Exercise candidate production witness against exact live base/);
+  assert.match(mainShopifyWorkflow, /Candidate checks are source\/local proofs only/);
+  assert.match(mainShopifyWorkflow, /if: github\.event_name == 'push'[\s\S]*?JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
+  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
+  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(livePlaywright, /connectJbhProofBrowser\(chromium\)/);
+  assert.match(shopifyProductionPlaywright, /connectJbhProofBrowser\(chromium\)/);
+  assert.match(liveBrowserSource, /chromium\.connectOverCDP/);
+  assert.match(liveBrowserSource, /browser-run\/devtools\/browser/);
+  assert.match(liveBrowserSource, /Unsupported JBH proof browser mode/);
+  // The existing, approved manual activation uses the same trusted proof transport.
+  assert.match(activationWorkflow, /JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
+  assert.match(activationWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
+});
 
-  assert.ok(liveSmokeIndex >= 0, "Live Shopify smoke is missing from the candidate gate.");
-  assert.ok(resolverIndex > liveSmokeIndex, "Current-main resolution must follow the live Shopify smoke.");
-  assert.ok(candidateWitnessIndex > resolverIndex, "Candidate production witness must use the freshly resolved current main.");
-  assert.ok(pushProviderIndex > candidateWitnessIndex, "Pull-request witness must remain separate from push-only provider proof.");
-  assert.match(mainShopifyWorkflow, /if: github\.event_name == 'pull_request'/);
-  assert.match(mainShopifyWorkflow, /id:\s*live-base/);
-  assert.match(mainShopifyWorkflow, /git\/ref\/heads\/main/);
-  assert.ok(
-    mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ steps.live-base.outputs.sha }}"),
-    "Pull-request production witness must bind to the freshly resolved current main SHA.",
-  );
-  assert.ok(
-    !mainShopifyWorkflow.includes("EXPECTED_HEAD_SHA: ${{ github.event.pull_request.base.sha }}"),
-    "Pull-request production witness must not reuse a stale PR creation-base SHA.",
-  );
-  assert.match(mainShopifyWorkflow, /run: node scripts\/shopify-production-playwright\.mjs/);
+test("founder-only manual Browser Run preflight cannot initiate a deploy or payment", () => {
+  assert.match(mainShopifyWorkflow, /browser_token_preflight:/);
+  assert.match(mainShopifyWorkflow, /type: boolean/);
+  assert.match(mainShopifyWorkflow, /browser-run-token-preflight:/);
+  assert.match(mainShopifyWorkflow, /github\.actor == 'jussray'/);
+  assert.match(mainShopifyWorkflow, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(mainShopifyWorkflow, /github\.ref == 'refs\/heads\/fix\/jbh-version-browser-proof-20261015'/);
+  assert.match(mainShopifyWorkflow, /node scripts\/jbh-browser-preflight\.mjs/);
+  assert.match(mainShopifyWorkflow, /inputs\.browser_token_preflight != true/);
+  const preflightBlock = mainShopifyWorkflow.split("  browser-run-token-preflight:")[1].split("  verify:")[0];
+  assert.match(preflightBlock, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
+  assert.doesNotMatch(preflightBlock, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.doesNotMatch(preflightBlock, /wrangler deploy|checkoutUrl|submit.*payment/);
 });
 
 test("main commerce gate waits for the exact Worker build and emits verified only after live Playwright", () => {

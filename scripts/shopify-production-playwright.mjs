@@ -54,13 +54,23 @@ const browser = await chromium.launch({ headless: true });
 
 try {
   const versionPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await versionPage.goto(baseURL, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
+  const versionDocument = await versionPage.goto(baseURL, {
     waitUntil: "domcontentloaded",
     timeout: 60_000,
   });
-  assert.ok(versionResponse?.ok(), `version route returned HTTP ${versionResponse?.status() ?? "unknown" }.`);
-  const versionPayload = JSON.parse(await versionResponse.text());
+  assert.ok(versionDocument?.ok(), `storefront bootstrap returned HTTP ${versionDocument?.status() ?? "unknown" }.`);
+  const versionObservation = await versionPage.evaluate(async () => {
+    const response = await fetch("/version", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    return { status: response.status, contentType: response.headers.get("content-type") || "", body: await response.text() };
+  });
+  assert.equal(versionObservation.status, 200, `version route returned HTTP ${versionObservation.status}.`);
+  assert.match(versionObservation.contentType, /application\/json/i, "version route must return JSON.");
+  const versionPayload = JSON.parse(versionObservation.body);
   assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
   assert.equal(
     versionPayload?.sha,

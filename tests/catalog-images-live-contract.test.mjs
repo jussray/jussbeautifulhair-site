@@ -98,11 +98,9 @@ test("read-only image ledger compares Shopify media to JBH images visually, incl
   );
 });
 
-test("exact-head gate runs the live image proof after push and on dispatch, and keeps its evidence", () => {
-  assert.match(workflow, /run: node scripts\/catalog-images-live-playwright\.mjs/);
-  assert.match(
-    workflow,
-    /if: github\.event_name != 'pull_request'\n[\s\S]*?REQUIRE_EXACT_HEAD: \$\{\{ github\.event_name == 'push' \}\}/,
-  );
+test("exact-head gate does not send GitHub datacenter Chromium through Bot Fight Mode", () => {
+  assert.doesNotMatch(workflow, /run: node scripts\/catalog-images-live-playwright\.mjs/);
+  assert.match(workflow, /node scripts\/cloudflare-production-browser-proof\.mjs/);
+  assert.match(workflow, /Cloudflare Bot Fight Mode blocks GitHub datacenter browsers/);
   assert.match(workflow, /artifacts\/catalog-images-live\//);
 });

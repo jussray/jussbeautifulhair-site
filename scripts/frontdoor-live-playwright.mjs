@@ -68,21 +68,36 @@ function watchForbiddenRuntimeRequests(page, label) {
 
 try {
   const versionPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  await versionPage.goto(baseURL, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
+  const versionDocument = await versionPage.goto(baseURL, {
     waitUntil: "domcontentloaded",
     timeout: 60_000,
   });
   assert(
-    versionResponse?.ok(),
-    `version route returned HTTP ${versionResponse?.status() ?? "unknown" }.`,
+    versionDocument?.ok(),
+    `storefront bootstrap returned HTTP ${versionDocument?.status() ?? "unknown" }.`,
   );
-  const versionBody = await versionResponse.text();
+  const versionObservation = await versionPage.evaluate(async () => {
+    const response = await fetch("/version", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    return { status: response.status, contentType: response.headers.get("content-type") || "", body: await response.text() };
+  });
+  assert(
+    versionObservation.status === 200,
+    `version route returned HTTP ${versionObservation.status}.`,
+  );
+  assert(
+    versionObservation.contentType.toLowerCase().includes("application/json"),
+    `version route expected application/json, received ${versionObservation.contentType || "no content-type"}.`,
+  );
   let versionPayload;
   try {
-    versionPayload = JSON.parse(versionBody);
+    versionPayload = JSON.parse(versionObservation.body);
   } catch {
-    throw new Error(`version route returned invalid JSON: ${JSON.stringify(versionBody.slice(0, 80))}`);
+    throw new Error(`version route returned invalid JSON: ${JSON.stringify(versionObservation.body.slice(0, 80))}`);
   }
   await versionPage.close();
   assert(versionPayload.ok === true, "version route did not report ok=true.");
@@ -105,20 +120,33 @@ try {
   );
 
   const knowledgePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  const knowledgeResponse = await knowledgePage.goto(
-    `${baseURL}/.well-known/jbh-meta-agent.json`,
-    { waitUntil: "domcontentloaded", timeout: 60_000 },
-  );
+  const knowledgeDocument = await knowledgePage.goto(baseURL, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
+  });
   assert(
-    knowledgeResponse?.ok(),
-    `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse?.status() ?? "unknown" }.`,
+    knowledgeDocument?.ok(),
+    `Meta Business Agent browser bootstrap returned HTTP ${knowledgeDocument?.status() ?? "unknown" }.`,
   );
-  const knowledgeContentType = knowledgeResponse.headers()["content-type"] || "";
+  const knowledgeObservation = await knowledgePage.evaluate(async () => {
+    const response = await fetch("/.well-known/jbh-meta-agent.json", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    return { status: response.status, contentType: response.headers.get("content-type") || "", body: await response.text() };
+  });
+  assert(
+    knowledgeObservation.status === 200,
+    `Meta Business Agent knowledge contract returned HTTP ${knowledgeObservation.status}.`,
+  );
+  const knowledgeContentType = knowledgeObservation.contentType;
   assert(
     knowledgeContentType.toLowerCase().includes("application/json"),
     `Meta Business Agent knowledge contract expected application/json, received ${knowledgeContentType || "no content-type"}.`,
   );
-  const knowledgeBody = await knowledgeResponse.text();
+  const knowledgeBody = knowledgeObservation.body;
   let knowledge;
   try {
     knowledge = JSON.parse(knowledgeBody);

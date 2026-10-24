@@ -22,6 +22,10 @@ const shopifyProductionPlaywright = await readFile(
   new URL("../scripts/shopify-production-playwright.mjs", import.meta.url),
   "utf8",
 );
+const cloudflareProductionBrowserProof = await readFile(
+  new URL("../scripts/cloudflare-production-browser-proof.mjs", import.meta.url),
+  "utf8",
+);
 const worker = await readFile(
   new URL("../worker/index.ts", import.meta.url),
   "utf8",
@@ -216,6 +220,20 @@ test("main commerce gate uses provider-owned browser proof after the exact Worke
   assert.match(mainShopifyWorkflow, /non_authoritative_markers: \['receipt'\]/);
   assert.match(mainShopifyWorkflow, /https:\/\/jussbeautifulhair\.com\/version/);
   assert.doesNotMatch(mainShopifyWorkflow, /wrangler[^\n]*deploy/i);
+});
+
+test("provider-owned production browser proof is exact-head, read-only, and non-authorizing", () => {
+  assert.match(cloudflareProductionBrowserProof, /browser-rendering\/accessibilityTree/);
+  assert.match(cloudflareProductionBrowserProof, /CLOUDFLARE_API_TOKEN/);
+  assert.match(cloudflareProductionBrowserProof, /CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(cloudflareProductionBrowserProof, /EXPECTED_HEAD_SHA/);
+  assert.match(cloudflareProductionBrowserProof, /version\.sha/);
+  assert.match(cloudflareProductionBrowserProof, /expectedHead/);
+  assert.match(cloudflareProductionBrowserProof, /identity-observation/);
+  assert.match(cloudflareProductionBrowserProof, /authority, "none"/);
+  assert.match(cloudflareProductionBrowserProof, /no order or payment was submitted/);
+  assert.doesNotMatch(cloudflareProductionBrowserProof, /checkout\.jussbeautifulhair\.com/);
+  assert.doesNotMatch(cloudflareProductionBrowserProof, /wrangler[^\n]*deploy/i);
 });
 
 test("front-door Wrangler config remains one route for the branded root", () => {

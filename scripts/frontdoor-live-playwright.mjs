@@ -67,14 +67,24 @@ function watchForbiddenRuntimeRequests(page, label) {
 }
 
 try {
-  const versionResponse = await fetch(`${baseURL}/version`, {
-    headers: { accept: "application/json" },
+  const versionPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await versionPage.goto(baseURL, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
+    waitUntil: "domcontentloaded",
+    timeout: 60_000,
   });
   assert(
-    versionResponse.ok,
-    `version route returned HTTP ${versionResponse.status}.`,
+    versionResponse?.ok(),
+    `version route returned HTTP ${versionResponse?.status() ?? "unknown" }.`,
   );
-  const versionPayload = await parseJsonResponse(versionResponse, "version route");
+  const versionBody = await versionResponse.text();
+  let versionPayload;
+  try {
+    versionPayload = JSON.parse(versionBody);
+  } catch {
+    throw new Error(`version route returned invalid JSON: ${JSON.stringify(versionBody.slice(0, 80))}`);
+  }
+  await versionPage.close();
   assert(versionPayload.ok === true, "version route did not report ok=true.");
   assert(
     versionPayload.sha === expectedHead,

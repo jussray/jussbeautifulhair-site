@@ -384,6 +384,9 @@ async function providerResponse(request: Request, env: Env, pathname: string): P
   if (pathname === PROVIDER_INVOKE_PATH && request.method === "POST") {
     const input = await request.json().catch(() => ({}));
     try {
+      // Operator-key-authenticated calls are founder-source by definition;
+      // stamp it server-side so callers cannot self-declare a source.
+      if (input && typeof input === "object") (input as Record<string, unknown>).source = "founder";
       const result = await invokeJbhProvider(env, input as Record<string, unknown>);
       return providerJson({ service: "jussbeautifulhair-site", result });
     } catch (error) {

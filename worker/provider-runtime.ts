@@ -61,7 +61,7 @@ function textFromBody(provider: ProviderName, body: Record<string, unknown>): st
 
 export async function invokeJbhProvider(
   env: ProviderEnv,
-  input: { provider?: unknown; prompt?: unknown; sensitivity?: unknown },
+  input: { provider?: unknown; prompt?: unknown; sensitivity?: unknown; source?: unknown },
   fetchImpl: typeof fetch = fetch,
 ) {
   const provider = String(input?.provider || '').trim().toLowerCase() as ProviderName;
@@ -70,6 +70,8 @@ export async function invokeJbhProvider(
   const sensitivity = String(input?.sensitivity || 'standard').trim().toLowerCase();
   if (!prompt || prompt.length > 12_000) throw new Error('prompt must be 1..12000 characters');
   if (sensitivity === 'restricted') throw new Error('restricted context is not authorized for external providers');
+  const source = String(input?.source || 'founder').trim().toLowerCase();
+  if (!['founder', 'repository', 'system'].includes(source)) throw new Error('user_content_not_authorized');
   const config = configFor(env, provider);
   if (!config.key) throw new Error(`${provider} provider is not configured`);
 

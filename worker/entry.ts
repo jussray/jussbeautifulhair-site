@@ -2,6 +2,10 @@ import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json
 import worker from "./index";
 import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
 import { enforceJbhRateLimit, type RateLimitBinding } from "./rate-limit";
+import {
+  isShopifyProxyPath,
+  proxyToShopify,
+} from "./shopifyProxy.mjs";
 
 type BaseEnv = Parameters<typeof worker.fetch>[1];
 type AnalyticsPoint = {
@@ -442,6 +446,15 @@ export default {
           "X-Robots-Tag": "noindex, nofollow, noarchive",
         },
       });
+    }
+
+    // Branded checkout: serve Shopify-owned checkout paths from the Shopify
+    // origin instead of letting them fall through to the SPA shell (blank
+    // page) or loop through the SPA handoff redirect. The proxy sends the
+    // branded Host header so Shopify serves checkout directly (200) instead
+    // of 301-canonicalizing back to the primary domain.
+    if (isShopifyProxyPath(pathname)) {
+      return proxyToShopify(request);
     }
 
     return allowCloudflareWebAnalytics(await worker.fetch(request, env));

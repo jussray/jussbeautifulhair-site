@@ -69,7 +69,7 @@ export async function invokeJbhProvider(
   const prompt = String(input?.prompt || '').trim();
   const sensitivity = String(input?.sensitivity || 'standard').trim().toLowerCase();
   if (!prompt || prompt.length > 12_000) throw new Error('prompt must be 1..12000 characters');
-  if (sensitivity === 'restricted') throw new Error('restricted context is not authorized for external providers');
+  if (sensitivity !== 'standard') throw new Error('sensitive_context_not_authorized');
   const source = String(input?.source || 'founder').trim().toLowerCase();
   if (!['founder', 'repository', 'system'].includes(source)) throw new Error('user_content_not_authorized');
   const config = configFor(env, provider);

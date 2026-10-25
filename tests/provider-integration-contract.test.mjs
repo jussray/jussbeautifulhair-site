@@ -23,7 +23,7 @@ test('provider runtime keeps all provider keys server-side', async () => {
   assert.match(runtime, /https:\/\/api\.openai\.com\/v1\/responses/);
   assert.match(runtime, /https:\/\/api\.anthropic\.com\/v1\/messages/);
   assert.match(runtime, /https:\/\/api\.meta\.ai\/v1\/responses/);
-  assert.match(runtime, /restricted context is not authorized/);
+  assert.match(runtime, /sensitive_context_not_authorized/);
   assert.doesNotMatch(runtime, /EXPO_PUBLIC_|VITE_[A-Z_]*API_KEY/);
 });
 
@@ -33,4 +33,11 @@ test('provider runtime enforces the founder/repository/system source allowlist',
   assert.match(runtime, /user_content_not_authorized/);
   const entry = await read('worker/entry.ts');
   assert.match(entry, /\.source = "founder"/);
+});
+
+test('provider runtime rejects any non-standard sensitivity (Sekret-Bip parity)', async () => {
+  const runtime = await read('worker/provider-runtime.ts');
+  assert.match(runtime, /sensitivity !== 'standard'/);
+  assert.match(runtime, /sensitive_context_not_authorized/);
+  assert.doesNotMatch(runtime, /sensitivity === 'restricted'/);
 });

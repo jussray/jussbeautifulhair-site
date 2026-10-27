@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 
 import {
+  SHOPIFY_PRIMARY_HOST,
   SHOPIFY_PROXY_HOST,
   SHOPIFY_PROXY_ORIGIN,
   SHOPIFY_PROXY_PATH_PREFIXES,
@@ -13,6 +14,7 @@ import {
 
 test("proxy target is the fixed Shopify origin, never caller-controlled", () => {
   assert.equal(SHOPIFY_PROXY_HOST, "8qp1z2-az.myshopify.com");
+  assert.equal(SHOPIFY_PRIMARY_HOST, "www.jussbeautifulhair.com");
   assert.equal(SHOPIFY_PROXY_ORIGIN, "https://8qp1z2-az.myshopify.com");
   assert.ok(Object.isFrozen(SHOPIFY_PROXY_PATH_PREFIXES));
 });
@@ -130,7 +132,7 @@ test("proxyToShopify targets the Shopify origin with the branded Host header", a
     );
     // Loop-break: Shopify sees the branded Host, so it serves 200 instead of
     // 301-canonicalizing back to the primary domain.
-    assert.equal(seen[0].host, "jussbeautifulhair.com");
+    assert.equal(seen[0].host, "www.jussbeautifulhair.com");
     assert.equal(seen[0].method, "POST");
     assert.equal(seen[0].redirect, "manual");
   } finally {
@@ -169,5 +171,25 @@ test("proxyToShopify rewrites Shopify-origin redirects to the branded host", asy
     );
   } finally {
     globalThis.fetch = realFetch;
+  }
+});
+
+
+test("apex and www checkout requests both use Shopify's verified primary Host", async () => {
+  const originalFetch = globalThis.fetch;
+  const seen = [];
+  globalThis.fetch = async (request) => {
+    seen.push({ host: request.headers.get("host"), url: request.url });
+    return new Response("checkout", { status: 200 });
+  };
+  try {
+    for (const host of ["jussbeautifulhair.com", "www.jussbeautifulhair.com"]) {
+      const result = await proxyToShopify(new Request(`https://${host}/cart/c/test-token`));
+      assert.equal(result.status, 200);
+    }
+    assert.deepEqual(seen.map((item) => item.host), [SHOPIFY_PRIMARY_HOST, SHOPIFY_PRIMARY_HOST]);
+    assert.ok(seen.every((item) => item.url === "https://8qp1z2-az.myshopify.com/cart/c/test-token"));
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });

@@ -33,14 +33,11 @@ export default function About() {
           Our public standard is <strong className="text-foreground">Story, Quality,
           Care, and Proof</strong>. Story gives the look meaning. Quality requires
           current product facts instead of louder adjectives. Care includes guidance,
-          policies, and human support. Proof keeps public claims, catalog state,
-          checkout, payment, fulfillment, and customer outcomes in separate evidence
-          layers.
+          policies, and human support. Proof means giving you clear information to review before you buy.
         </p>
         <p>
-          Product details should be reviewed from the current catalog and policies
-          before purchase. Missing sourcing, stock, performance, longevity, or
-          customer-outcome evidence stays missing until it is approved and verified.
+          Review current product details and policies before purchase. If you need
+          more information about a product, ask us before placing your order.
         </p>
         <p>
           Whether you're a stylist, preparing for a major moment, or simply ready for

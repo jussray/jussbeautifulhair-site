@@ -28,7 +28,8 @@ test("brand moat is wired with four evidence-grounded pillars", async () => {
   }
 
   assert.match(content, /Story\. Quality\. Care\. Proof\./);
-  assert.match(content, /Missing proof stays missing until verified\./);
+  assert.match(content, /If a detail you need is missing, ask us before placing your order\./);
+  assert.doesNotMatch(content, /evidence layers|approved evidence|Missing proof/);
   assert.match(home, /import \{ BrandMoatSection \}/);
   assert.match(home, /<BrandMoatSection \/>/);
   assert.match(about, /Story,\s+Quality,\s+Care,\s+and Proof/);

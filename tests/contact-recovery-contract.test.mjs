@@ -42,7 +42,8 @@ test("public contact recovery preserves the private customer-data boundary", asy
   assert.match(contact, /DM us on Instagram/);
 
   assert.match(layout, /Wholesale &amp; stylists:/);
-  assert.match(layout, /use the contact form/);
+  assert.match(layout, /contact us/);
+  assert.doesNotMatch(layout, /Online support available through the contact form/);
   assert.doesNotMatch(layout, /BRAND\.wholesaleEmail/);
 
   for (const heading of [

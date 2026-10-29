@@ -38,7 +38,7 @@ export default function Contact() {
 
     if (!configured || !contactEndpoint) {
       toast({
-        title: "Contact form is not configured",
+        title: "Contact form is temporarily unavailable",
         description: "Please send us a DM on Instagram while we restore this path.",
         variant: "destructive",
       });
@@ -159,7 +159,7 @@ export default function Contact() {
           </div>
           <div className="rounded-lg bg-secondary/20 p-4 text-sm text-muted-foreground">
             <strong className="text-foreground">Wholesale &amp; stylists:</strong>{" "}
-            use this form and include “wholesale” in your message.
+            contact us and include “wholesale” in your message.
           </div>
         </div>
 
@@ -283,7 +283,7 @@ export default function Contact() {
                 />
               ) : (
                 <p className="text-sm text-destructive" role="alert">
-                  The contact security check is not configured. Please use Instagram.
+                  The contact form is temporarily unavailable. Please message us on Instagram.
                 </p>
               )}
 

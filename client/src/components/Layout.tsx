@@ -142,12 +142,12 @@ function Footer() {
             <Instagram className="h-4 w-4" /> {BRAND.instagram}
           </a>
           <p className="text-sm text-primary-foreground/60 mt-3">
-            Online support available through the contact form.
+            Questions? Contact us for support.
           </p>
           <p className="text-sm text-primary-foreground/60 mt-1">
             Wholesale &amp; stylists:{" "}
             <Link href="/contact" className="underline hover:text-gold">
-              use the contact form
+              contact us
             </Link>
           </p>
         </div>

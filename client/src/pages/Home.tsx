@@ -16,7 +16,7 @@ const VALUES = [
   {
     icon: Truck,
     title: "Live Inventory",
-    body: "Product availability and pricing are read from Shopify so the storefront does not promise stale stock.",
+    body: "Check current prices and availability as you explore the collection.",
   },
   {
     icon: Heart,
@@ -414,7 +414,7 @@ export default function Home() {
 
               {!newsletterConfigured ? (
                 <p className="text-xs text-destructive" role="alert" data-testid="newsletter-unavailable">
-                  Email signup is temporarily unavailable. No signup will be claimed until the private ingress is configured.
+                  Email signup is temporarily unavailable. Please check back soon or follow us on Instagram for updates.
                 </p>
               ) : null}
             </form>

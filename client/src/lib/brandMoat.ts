@@ -9,7 +9,7 @@ export const BRAND_MOAT = {
   eyebrow: "The Crown Standard",
   heading: "Story. Quality. Care. Proof.",
   body:
-    "Juss Beautiful Hair is building a public standard around four questions: Does the look carry meaning? Are the product facts clear? Can customers understand care and support? Can each public claim be traced to approved evidence?",
+    "Find a look that fits your next chapter, with clear product details, practical care guidance, and a way to reach us when you need help.",
   promise:
     "Lawless And Flawless should mean the story is honored, the facts are clear, care continues after checkout, and trust is earned one verified detail at a time.",
   pillars: [
@@ -25,7 +25,7 @@ export const BRAND_MOAT = {
       label: "Quality",
       title: "Facts before adjectives",
       body:
-        "Materials, construction, texture, length, care, stock, and fulfillment claims belong in current product records and should be stated only when approved and supported.",
+        "Compare materials, texture, length, available options, and care details on each product page before choosing your look.",
     },
     {
       id: "care",
@@ -39,7 +39,7 @@ export const BRAND_MOAT = {
       label: "Proof",
       title: "Trust needs receipts",
       body:
-        "Public claims, catalog state, checkout, payment, fulfillment, and customer outcomes remain separate evidence layers. Missing proof stays missing until verified.",
+        "Check product details and policies before you buy. If a detail you need is missing, ask us before placing your order.",
     },
   ] satisfies BrandMoatPillar[],
 };

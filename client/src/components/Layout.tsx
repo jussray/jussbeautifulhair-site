@@ -125,6 +125,9 @@ function Footer() {
           <h4 className="font-display text-lg mb-4 text-gold">Help</h4>
           <ul className="space-y-2 text-sm text-primary-foreground/80">
             <li><Link href="/faq" className="hover:text-gold">FAQ</Link></li>
+            <li><Link href="/hair-care" className="hover:text-gold">Hair Care Guide</Link></li>
+            <li><Link href="/length-guide" className="hover:text-gold">Hair Length Guide</Link></li>
+            <li><Link href="/order-help" className="hover:text-gold">Order Help</Link></li>
             <li><Link href="/shipping" className="hover:text-gold">Shipping Policy</Link></li>
             <li><Link href="/returns" className="hover:text-gold">Returns &amp; Refunds</Link></li>
             <li><Link href="/privacy" className="hover:text-gold">Privacy Policy</Link></li>

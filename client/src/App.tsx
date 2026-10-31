@@ -21,6 +21,9 @@ import Shipping from "@/pages/Shipping";
 import Returns from "@/pages/Returns";
 import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
+import HairCare from "@/pages/HairCare";
+import LengthGuide from "@/pages/LengthGuide";
+import OrderHelp from "@/pages/OrderHelp";
 
 const CANONICAL_ORIGIN = "https://jussbeautifulhair.com";
 const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/success"]);
@@ -89,6 +92,9 @@ function AppRouter() {
       <Route path="/returns" component={Returns} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/terms" component={Terms} />
+      <Route path="/hair-care" component={HairCare} />
+      <Route path="/length-guide" component={LengthGuide} />
+      <Route path="/order-help" component={OrderHelp} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -7,10 +7,14 @@ on:
       - "worker/entry.ts"
       - "client/src/components/Layout.tsx"
       - "client/src/components/ProductCard.tsx"
+      - "client/src/components/TurnstileChallenge.tsx"
       - "client/src/lib/cart.tsx"
+      - "client/src/lib/privateIngress.ts"
       - "client/src/lib/shopifyCatalog.ts"
       - "client/src/lib/shopifyStorefront.ts"
       - "client/src/pages/Home.tsx"
+      - "client/src/pages/Contact.tsx"
+      - "client/src/pages/Privacy.tsx"
       - "client/src/pages/Shop.tsx"
       - "client/src/pages/Product.tsx"
       - "client/src/pages/Cart.tsx"
@@ -32,6 +36,10 @@ on:
       - "tests/shopify-physical-contract.test.mjs"
       - "tests/frontdoor-activation-contract.test.mjs"
       - "tests/runtime-build-proof-version-contract.test.mjs"
+      - "tests/newsletter-ingress-contract.test.mjs"
+      - "tests/contact-recovery-contract.test.mjs"
+      - "scripts/cloudflare-free-candidate-proof.mjs"
+      - "tests/cloudflare-free-candidate-proof.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
       - ".github/workflows/frontdoor-activate.yml"
@@ -118,7 +126,7 @@ jobs:
         run: npm run check
 
       - name: Verify Shopify checkout and production-witness contracts
-        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs tests/jbh-live-browser.test.mjs tests/jbh-browser-preflight.test.mjs
+        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs tests/jbh-live-browser.test.mjs tests/jbh-browser-preflight.test.mjs tests/newsletter-ingress-contract.test.mjs tests/contact-recovery-contract.test.mjs
 
       - name: Build production storefront
         run: npm run build

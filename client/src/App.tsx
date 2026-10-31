@@ -24,6 +24,7 @@ import Terms from "@/pages/Terms";
 import HairCare from "@/pages/HairCare";
 import LengthGuide from "@/pages/LengthGuide";
 import OrderHelp from "@/pages/OrderHelp";
+import PrivacyChoices from "@/pages/PrivacyChoices";
 
 const CANONICAL_ORIGIN = "https://jussbeautifulhair.com";
 const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/success"]);
@@ -95,6 +96,7 @@ function AppRouter() {
       <Route path="/hair-care" component={HairCare} />
       <Route path="/length-guide" component={LengthGuide} />
       <Route path="/order-help" component={OrderHelp} />
+      <Route path="/pages/data-sharing-opt-out" component={PrivacyChoices} />
       <Route component={NotFound} />
     </Switch>
   );

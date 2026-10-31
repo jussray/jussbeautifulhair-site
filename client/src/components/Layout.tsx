@@ -131,6 +131,7 @@ function Footer() {
             <li><Link href="/shipping" className="hover:text-gold">Shipping Policy</Link></li>
             <li><Link href="/returns" className="hover:text-gold">Returns &amp; Refunds</Link></li>
             <li><Link href="/privacy" className="hover:text-gold">Privacy Policy</Link></li>
+            <li><Link href="/pages/data-sharing-opt-out" className="hover:text-gold">Your Privacy Choices</Link></li>
             <li><Link href="/terms" className="hover:text-gold">Terms of Service</Link></li>
             <li><Link href="/contact" className="hover:text-gold">Contact Us</Link></li>
             <li><Link href="/about" className="hover:text-gold">Our Story</Link></li>

@@ -24,3 +24,12 @@ test("order assistance never exposes a public order lookup endpoint", () => {
   assert.match(help, /shopify\.com\/84576043251\/account\/orders/);
   assert.doesNotMatch(help, /fetch\s*\(|\/api\/orders/);
 });
+
+test("privacy choices link resolves to a bounded informational route", () => {
+  const page = readFileSync("client/src/pages/PrivacyChoices.tsx", "utf8");
+  assert.ok(app.includes('path="/pages/data-sharing-opt-out" component={PrivacyChoices}'));
+  assert.ok(layout.includes('href="/pages/data-sharing-opt-out"'));
+  assert.ok(sitemap.includes("/pages/data-sharing-opt-out"));
+  assert.match(page, /privacy\.shopify\.com\/en/);
+  assert.match(page, /does not itself submit or complete an opt-out request/);
+});

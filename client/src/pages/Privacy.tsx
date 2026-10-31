@@ -12,7 +12,7 @@ export default function Privacy() {
             Privacy Policy
           </h1>
           <p className="mt-4 text-sm text-primary-foreground/70">
-            Last updated: October 11, 2026
+            Last updated: October 31, 2026
           </p>
         </div>
       </section>
@@ -49,12 +49,12 @@ export default function Privacy() {
             <li><strong>Cloudflare</strong> — to deliver and protect the public storefront and provide basic technical traffic signals.</li>
             <li><strong>Neon</strong> — to store private order and customer records used for fulfillment and owner operations.</li>
           </ul>
-          <p>We do <strong>not</strong> sell or rent your personal information to anyone.</p>
+          <p>For current data-sharing, advertising, and privacy rights disclosures related to Shopify checkout, review <a href="https://checkout.shopify.com/84576043251/policies/46398865651.html?locale=en" className="underline" target="_blank" rel="noopener noreferrer">our Shopify-hosted Privacy Policy</a> and <a href="/pages/data-sharing-opt-out" className="underline">Your Privacy Choices</a>.</p>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Cookies and browser storage</h2>
           <p>
             We use browser storage and a small number of cookies needed to keep the Site and shopping experience working.
-            Shopify may set its own cookies when you continue to hosted checkout. We do not use third-party advertising cookies on the public storefront.
+            Shopify and its service providers may use cookies and similar technologies during checkout or on Shopify-managed services, as described in the linked Shopify-hosted Privacy Policy.
           </p>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Your choices</h2>
@@ -80,8 +80,7 @@ export default function Privacy() {
 
           <h2 className="font-display text-2xl mt-8 mb-3">Contact</h2>
           <p>
-            Questions? Email <a href="mailto:hello@jussbeautifulhair.com" className="underline">hello@jussbeautifulhair.com</a> or
-            visit our <a href="/contact" className="underline">Contact page</a>.
+            Questions? Visit our <a href="/contact" className="underline">Contact page</a>.
           </p>
         </div>
       </section>

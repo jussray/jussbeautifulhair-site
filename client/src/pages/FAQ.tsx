@@ -7,38 +7,14 @@ import {
 } from "@/components/ui/accordion";
 
 const FAQS = [
-  {
-    q: "How long does shipping take?",
-    a: "Most orders ship within 2–3 business days from our US warehouse and arrive within 5–7 business days total. You'll receive a tracking number as soon as your order ships.",
-  },
-  {
-    q: "Is your hair real human hair?",
-    a: "Yes. Our bundles are listed as human hair on their product pages. With proper care they can be washed, styled and reused.",
-  },
-  {
-    q: "Can I dye or bleach the hair?",
-    a: "Human hair can usually be colored, but results vary by bundle, and lifting to 613 (platinum blonde) is not guaranteed. Have a licensed colorist do a strand test first. Want blonde already done? Juss Blonde bundles come pre-lightened.",
-  },
-  {
-    q: "What's your return policy?",
-    a: "Unopened, unaltered products can be returned within 14 days of delivery for a refund or exchange. Hair that has been washed, dyed, cut, or installed cannot be returned for hygiene reasons.",
-  },
-  {
-    q: "Do you offer custom wigs or install services?",
-    a: "Custom unit construction is coming soon. For installs in the Pittsburgh area, DM us on Instagram @jussbeautifulhair.",
-  },
-  {
-    q: "Do you offer wholesale pricing?",
-    a: "Yes — stylists and salons can email wholesale@jussbeautifulhair.com for our wholesale pricing sheet.",
-  },
-  {
-    q: "How do I pick the right length?",
-    a: "Measure from where the hair will be installed (usually the nape) to where you want it to fall. Most 22\" bundles fall to mid-back on someone 5'5\". When in doubt, size up — you can always cut, you can't add.",
-  },
-  {
-    q: "Can I track my order?",
-    a: "Absolutely. You'll get a tracking number via email and SMS the moment your order ships.",
-  },
+  { q: "How long does shipping take?", a: "Shipping costs and available delivery estimates depend on the item and destination. Review the methods and charges at Shopify checkout. If tracking is supplied, follow the carrier link for current updates." },
+  { q: "Is your hair real human hair?", a: "Review the current product description for materials, texture, and care details. If anything is unclear, please contact us before ordering." },
+  { q: "Can I dye or bleach the hair?", a: "Color and heat tolerance vary by product. Check its specifications first and ask a qualified stylist to test a small section before any chemical service." },
+  { q: "What's your return policy?", a: "Review the published Shopify refund policy linked from our Returns page for current windows, eligibility and exclusions. Contact support for return instructions and an approved mailing address before sending anything." },
+  { q: "Do you offer custom wigs or install services?", a: "Please contact us to ask whether custom work or installation services are currently available. We do not confirm appointments through this FAQ." },
+  { q: "Do you offer wholesale pricing?", a: "Stylists and salons can submit a wholesale inquiry through our Contact page. Pricing, approval, and availability are confirmed individually." },
+  { q: "How do I pick the right length?", a: "Measure from the installation point to your preferred endpoint. Wavy and curly textures may look shorter than straight hair at the same measured length. Our Hair Length Guide has more tips." },
+  { q: "Can I track my order?", a: "Check your order confirmation and any shipping emails. You can also use Shopify customer-account order history where available, or contact support privately for help." },
 ];
 
 export default function FAQ() {

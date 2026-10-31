@@ -1,43 +1,21 @@
+import { Link } from "wouter";
 import { Layout } from "@/components/Layout";
-
 export default function Shipping() {
   return (
     <Layout>
       <section className="bg-primary text-primary-foreground">
         <div className="mx-auto max-w-3xl px-6 py-14 text-center">
-          <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">
-            Policies
-          </p>
-          <h1 className="font-display text-4xl sm:text-5xl">Shipping Policy</h1>
+          <p className="mb-3 text-xs uppercase tracking-[0.3em] text-gold">Policies</p>
+          <h1 className="font-display text-4xl sm:text-5xl">Shipping Information</h1>
         </div>
       </section>
-
-      <article className="mx-auto max-w-2xl px-6 py-14 space-y-6 text-foreground/85 leading-relaxed">
-        <p>
-          All orders are processed within 1–2 business days. Domestic US shipping
-          takes an additional 3–5 business days via USPS Priority or UPS Ground.
-        </p>
-        <div>
-          <h2 className="font-display text-xl text-foreground mb-3">Rates</h2>
-          <ul className="space-y-2 list-disc pl-5">
-            <li>Standard shipping: $9.99</li>
-            <li>Free shipping on orders over $150</li>
-            <li>Expedited 2-day shipping: $24.99</li>
-          </ul>
-        </div>
-        <p>
-          Once your order ships, you'll receive a tracking number via email. Juss
-          Beautiful Hair is not responsible for delays caused by the carrier,
-          weather, or incorrect shipping addresses. Please double-check your
-          shipping info at checkout.
-        </p>
-        <p className="text-muted-foreground">
-          Questions? Email{" "}
-          <a href="mailto:hello@jussbeautifulhair.com" className="text-primary underline">
-            hello@jussbeautifulhair.com
-          </a>
-          .
-        </p>
+      <article className="mx-auto max-w-2xl space-y-6 px-6 py-14 text-foreground/85 leading-relaxed">
+        <h2 className="font-display text-xl text-foreground">Shipping options and cost</h2>
+        <p>Available shipping methods, delivery estimates, taxes, and shipping charges are calculated or confirmed at Shopify checkout for your destination and order. Shipping offers may vary by item and address. Review the total before paying.</p>
+        <h2 className="font-display text-xl text-foreground">Processing and tracking</h2>
+        <p>Processing and transit times can vary by product, availability, destination, and carrier. When a tracking link is provided, use that link to check the shipment's current status.</p>
+        <h2 className="font-display text-xl text-foreground">Help with an order</h2>
+        <p>If you need an update or notice a shipping issue, use <Link href="/order-help" className="text-primary underline">Order Help</Link> or <Link href="/contact" className="text-primary underline">Contact</Link>. Do not include private order details in public comments.</p>
       </article>
     </Layout>
   );

@@ -33,3 +33,18 @@ test("privacy choices link resolves to a bounded informational route", () => {
   assert.match(page, /privacy\.shopify\.com\/en/);
   assert.match(page, /does not itself submit or complete an opt-out request/);
 });
+
+test("storefront policies do not contradict Shopify checkout facts", () => {
+  const faq = readFileSync("client/src/pages/FAQ.tsx", "utf8");
+  const returns = readFileSync("client/src/pages/Returns.tsx", "utf8");
+  const shipping = readFileSync("client/src/pages/Shipping.tsx", "utf8");
+  const terms = readFileSync("client/src/pages/Terms.tsx", "utf8");
+  const privacy = readFileSync("client/src/pages/Privacy.tsx", "utf8");
+  assert.doesNotMatch(faq + returns, /within 14 days of delivery/i);
+  assert.match(returns, /checkout\.shopify\.com\/84576043251\/policies\/47609413875/);
+  assert.doesNotMatch(shipping, /\$9\.99|\$24\.99|Free shipping on orders over \$150/);
+  assert.match(shipping, /Shopify checkout/);
+  assert.doesNotMatch(terms, /processed by Stripe|Stripe's chargeback process/i);
+  assert.match(terms, /Shopify-hosted checkout/);
+  assert.match(privacy, /checkout\.shopify\.com\/84576043251\/policies\/46398865651/);
+});

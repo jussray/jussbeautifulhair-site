@@ -27,13 +27,13 @@ export default function Terms() {
           <h2 className="font-display text-2xl mt-8 mb-3">Who we are</h2>
           <p>
             Juss Beautiful Hair is a small business operating in Pennsylvania, USA.
-            Contact: <a href="mailto:hello@jussbeautifulhair.com" className="underline">hello@jussbeautifulhair.com</a>.
+            Contact: <a href="/contact" className="underline">our Contact page</a>.
           </p>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Orders and payment</h2>
           <ul className="list-disc pl-6 space-y-1">
             <li>All prices are in US Dollars (USD).</li>
-            <li>Payments are processed by Stripe. Placing an order means you authorize the charge.</li>
+            <li>Payments for physical goods are completed at Shopify-hosted checkout using the payment methods offered there. Confirm your total and method before authorizing a charge.</li>
             <li>We reserve the right to cancel or refuse any order — for example, if a product was mispriced, out of stock, or we suspect fraud. If we cancel, you'll be refunded in full.</li>
             <li>An order confirmation email is not a guarantee of acceptance. Your order is accepted once it ships.</li>
           </ul>
@@ -53,8 +53,8 @@ export default function Terms() {
           <h2 className="font-display text-2xl mt-8 mb-3">Chargebacks and disputes</h2>
           <p>
             If you have a problem with your order, please email us first — we'll do our best to resolve it.
-            Initiating a chargeback before contacting us delays resolution and may result in being unable to order from us in the future.
-            All disputes are governed by Stripe's chargeback process in addition to our return policy.
+            Please contact support when possible so we can investigate an order problem. Your right to contact your payment provider remains unchanged.
+            Payment disputes may involve the payment provider and card issuer. Your rights under applicable law are not waived by these terms.
           </p>
 
           <h2 className="font-display text-2xl mt-8 mb-3">Product information</h2>
@@ -102,7 +102,7 @@ export default function Terms() {
 
           <h2 className="font-display text-2xl mt-8 mb-3">Contact</h2>
           <p>
-            Questions about these terms? Email <a href="mailto:hello@jussbeautifulhair.com" className="underline">hello@jussbeautifulhair.com</a>.
+            Questions about these terms? Visit <a href="/contact" className="underline">our Contact page</a>.
           </p>
         </div>
       </section>

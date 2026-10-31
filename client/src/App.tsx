@@ -79,6 +79,10 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/shop/bundles"><Shop initialCategory="Bundles" /></Route>
+      <Route path="/shop/wigs"><Shop initialCategory="Wigs" /></Route>
+      <Route path="/shop/closures-frontals"><Shop initialCategory="Closures & Frontals" /></Route>
+      <Route path="/shop/beauty-essentials"><Shop initialCategory="Beauty Essentials" /></Route>
       <Route path="/shop" component={Shop} />
       <Route path="/product/:id" component={Product} />
       <Route path="/cart/c/:cartId" component={ShopifyCartHandoff} />

@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/catalog";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 
-export default function Shop() {
-  const [active, setActive] = useState("All");
+export default function Shop({ initialCategory = "All" }: { initialCategory?: string }) {
+  const [active, setActive] = useState(initialCategory);
+  useEffect(() => setActive(initialCategory), [initialCategory]);
   const { data: products = [], isLoading, isError, refetch } = useShopifyCatalog();
 
   const categories = useMemo(
@@ -33,7 +34,7 @@ export default function Shop() {
           <p className="text-xs uppercase tracking-[0.3em] text-gold mb-3">
             Shop the Collection
           </p>
-          <h1 className="font-display text-4xl sm:text-5xl">All Products</h1>
+          <h1 className="font-display text-4xl sm:text-5xl">{active === "All" ? "All Products" : active}</h1>
           <p className="mt-3 text-primary-foreground/80 max-w-xl mx-auto">
             Live hair and beauty inventory, with secure checkout powered by Shopify.
           </p>

@@ -48,3 +48,22 @@ test("storefront policies do not contradict Shopify checkout facts", () => {
   assert.match(terms, /Shopify-hosted checkout/);
   assert.match(privacy, /checkout\.shopify\.com\/84576043251\/policies\/46398865651/);
 });
+
+test("category footer links lead to distinct Shopify-backed catalog filters", () => {
+  const shop = readFileSync("client/src/pages/Shop.tsx", "utf8");
+  for (const [slug, label] of [
+    ["bundles", "Bundles"],
+    ["wigs", "Wigs"],
+    ["closures-frontals", "Closures & Frontals"],
+    ["beauty-essentials", "Beauty Essentials"],
+  ]) {
+    const route = "/shop/" + slug;
+    assert.ok(app.includes('path="' + route + '"'));
+    assert.ok(app.includes('initialCategory="' + label + '"'));
+    assert.ok(layout.includes('href="' + route + '"'));
+    assert.ok(sitemap.includes("https://jussbeautifulhair.com" + route));
+  }
+  assert.match(shop, /useShopifyCatalog/);
+  assert.match(shop, /initialCategory/);
+  assert.match(shop, /setActive\(initialCategory\)/);
+});

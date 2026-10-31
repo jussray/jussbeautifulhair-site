@@ -115,10 +115,10 @@ function Footer() {
           <h4 className="font-display text-lg mb-4 text-gold">Shop</h4>
           <ul className="space-y-2 text-sm text-primary-foreground/80">
             <li><Link href="/shop" className="hover:text-gold">All Products</Link></li>
-            <li><Link href="/shop" className="hover:text-gold">Bundles</Link></li>
-            <li><Link href="/shop" className="hover:text-gold">Wigs</Link></li>
-            <li><Link href="/shop" className="hover:text-gold">Closures &amp; Frontals</Link></li>
-            <li><Link href="/shop" className="hover:text-gold">Beauty Essentials</Link></li>
+            <li><Link href="/shop/bundles" className="hover:text-gold">Bundles</Link></li>
+            <li><Link href="/shop/wigs" className="hover:text-gold">Wigs</Link></li>
+            <li><Link href="/shop/closures-frontals" className="hover:text-gold">Closures &amp; Frontals</Link></li>
+            <li><Link href="/shop/beauty-essentials" className="hover:text-gold">Beauty Essentials</Link></li>
           </ul>
         </div>
         <div>

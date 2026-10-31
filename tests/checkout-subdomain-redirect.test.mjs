@@ -5,9 +5,10 @@ import path from "node:path";
 import ts from "typescript";
 
 // Checkout-host contract follows live provider truth.
-// Shopify currently reports jussbeautifulhair.com as the active primary domain.
-// Until Shopify proves checkout.jussbeautifulhair.com as attached, that hostname
-// stays untrusted while apex cart URLs are rewritten to the canonical shop domain.
+// Shopify Admin reports www.jussbeautifulhair.com as the active primary domain.
+// Both the apex and www host are branded storefront origins, so cart URLs must
+// retain path and key while escaping to the canonical .myshopify.com checkout.
+// The unverified checkout subdomain stays blocked.
 async function loadGuard() {
   const source = await readFile(
     path.join(process.cwd(), "client", "src", "lib", "shopifyCatalog.ts"),
@@ -40,10 +41,20 @@ test("apex storefront host is still escaped to the canonical shop domain", async
   );
 });
 
+test("verified Shopify primary www host preserves cart path and key on handoff", async () => {
+  const { assertApprovedShopifyCheckoutRedirect } = await loadGuard();
+  assert.equal(
+    assertApprovedShopifyCheckoutRedirect("https://www.jussbeautifulhair.com/cart/c/abc123?key=keep-me&source=JBH"),
+    "https://8qp1z2-az.myshopify.com/cart/c/abc123?key=keep-me&source=JBH",
+  );
+});
+
 test("lookalike and unapproved hosts stay blocked", async () => {
   const { assertApprovedShopifyCheckoutRedirect } = await loadGuard();
   for (const bad of [
     "https://checkout.jussbeautifulhair.com.evil.example/cart/c/x",
+    "https://www.jussbeautifulhair.com.evil.example/cart/c/x",
+    "http://www.jussbeautifulhair.com/cart/c/x",
     "https://evilcheckout.jussbeautifulhair.com/cart/c/x",
     "http://checkout.jussbeautifulhair.com/cart/c/x",
     "https://checkout.jussbeautifulhair.com:8443/cart/c/x",
@@ -60,4 +71,5 @@ test("production Playwright proof excludes the unverified checkout subdomain", a
   const hostSet = proof.match(/const approvedCheckoutHosts = new Set\(\[([\s\S]*?)\]\)/);
   assert.ok(hostSet, "approvedCheckoutHosts set not found in production proof");
   assert.doesNotMatch(hostSet[1], /"checkout\.jussbeautifulhair\.com"/);
+  assert.match(hostSet[1], /"www\.jussbeautifulhair\.com"/);
 });

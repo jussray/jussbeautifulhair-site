@@ -29,6 +29,21 @@ import PrivacyChoices from "@/pages/PrivacyChoices";
 const CANONICAL_ORIGIN = "https://jussbeautifulhair.com";
 const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/success"]);
 
+// Shopify menu URLs remain valid on the Cloudflare headless storefront.
+const SHOPIFY_COMPAT_PATHS: Record<string, string> = {
+  "/collections/all": "/shop",
+  "/pages/contact": "/contact",
+  "/pages/about": "/about",
+  "/pages/faq": "/faq",
+  "/pages/hair-care": "/hair-care",
+  "/pages/length-guide": "/length-guide",
+  "/pages/order-help": "/order-help",
+  "/pages/shipping": "/shipping",
+  "/policies/privacy-policy": "/privacy",
+  "/policies/refund-policy": "/returns",
+  "/policies/terms-of-service": "/terms",
+};
+
 function isNonIndexableRoute(pathname: string): boolean {
   return NON_INDEXABLE_ROUTES.has(pathname) || pathname.startsWith("/cart/c/");
 }
@@ -38,6 +53,7 @@ function RouteDiscoveryMetadata() {
 
   useEffect(() => {
     const canonicalUrl = new URL(location || "/", CANONICAL_ORIGIN);
+    canonicalUrl.pathname = SHOPIFY_COMPAT_PATHS[canonicalUrl.pathname] || canonicalUrl.pathname;
     canonicalUrl.search = "";
     canonicalUrl.hash = "";
     const canonicalHref = canonicalUrl.toString();
@@ -84,6 +100,17 @@ function AppRouter() {
       <Route path="/shop/closures-frontals"><Shop initialCategory="Closures & Frontals" /></Route>
       <Route path="/shop/beauty-essentials"><Shop initialCategory="Beauty Essentials" /></Route>
       <Route path="/shop" component={Shop} />
+      <Route path="/collections/all" component={Shop} />
+      <Route path="/pages/contact" component={Contact} />
+      <Route path="/pages/about" component={About} />
+      <Route path="/pages/faq" component={FAQ} />
+      <Route path="/pages/hair-care" component={HairCare} />
+      <Route path="/pages/length-guide" component={LengthGuide} />
+      <Route path="/pages/order-help" component={OrderHelp} />
+      <Route path="/pages/shipping" component={Shipping} />
+      <Route path="/policies/privacy-policy" component={Privacy} />
+      <Route path="/policies/refund-policy" component={Returns} />
+      <Route path="/policies/terms-of-service" component={Terms} />
       <Route path="/product/:id" component={Product} />
       <Route path="/cart/c/:cartId" component={ShopifyCartHandoff} />
       <Route path="/cart" component={Cart} />

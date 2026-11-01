@@ -67,3 +67,27 @@ test("category footer links lead to distinct Shopify-backed catalog filters", ()
   assert.match(shop, /initialCategory/);
   assert.match(shop, /setActive\(initialCategory\)/);
 });
+
+
+test("Shopify-native paths resolve to the correct headless storefront pages", () => {
+  for (const [nativePath, canonicalPath, componentName] of [
+    ["/collections/all", "/shop", "Shop"],
+    ["/pages/contact", "/contact", "Contact"],
+    ["/pages/about", "/about", "About"],
+    ["/pages/faq", "/faq", "FAQ"],
+    ["/pages/hair-care", "/hair-care", "HairCare"],
+    ["/pages/length-guide", "/length-guide", "LengthGuide"],
+    ["/pages/order-help", "/order-help", "OrderHelp"],
+    ["/pages/shipping", "/shipping", "Shipping"],
+    ["/policies/privacy-policy", "/privacy", "Privacy"],
+    ["/policies/refund-policy", "/returns", "Returns"],
+    ["/policies/terms-of-service", "/terms", "Terms"],
+  ]) {
+    assert.ok(app.includes('path="' + nativePath + '" component={' + componentName + '}'), nativePath + " route");
+    assert.ok(
+      app.includes(JSON.stringify(nativePath) + ": " + JSON.stringify(canonicalPath)),
+      nativePath + " canonical path"
+    );
+  }
+  assert.match(app, /canonicalUrl\.pathname = SHOPIFY_COMPAT_PATHS\[canonicalUrl\.pathname\]/);
+});

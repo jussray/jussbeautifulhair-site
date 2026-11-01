@@ -65,7 +65,10 @@ test("category footer links lead to distinct Shopify-backed catalog filters", ()
   }
   assert.match(shop, /useShopifyCatalog/);
   assert.match(shop, /initialCategory/);
-  assert.match(shop, /setActive\(initialCategory\)/);
+  assert.match(shop, /const active = initialCategory;/);
+  assert.match(shop, /href=\{CATEGORY_ROUTES\[category\] \|\| "\/shop"\}/);
+  assert.match(shop, /category === active \|\|/);
+  assert.doesNotMatch(shop, /setActive\(category\)/);
 });
 
 
@@ -90,4 +93,20 @@ test("Shopify-native paths resolve to the correct headless storefront pages", ()
     );
   }
   assert.match(app, /canonicalUrl\.pathname = SHOPIFY_COMPAT_PATHS\[canonicalUrl\.pathname\]/);
+});
+
+test("catalog category links preserve selected routes and accessibility", () => {
+  const shop = readFileSync("client/src/pages/Shop.tsx", "utf8");
+  for (const [label, route] of [
+    ["All", "/shop"],
+    ["Bundles", "/shop/bundles"],
+    ["Wigs", "/shop/wigs"],
+    ["Closures & Frontals", "/shop/closures-frontals"],
+    ["Beauty Essentials", "/shop/beauty-essentials"],
+  ]) {
+    assert.ok(shop.includes(JSON.stringify(label) + ': "' + route + '"') ||
+      shop.includes(label + ': "' + route + '"'));
+  }
+  assert.match(shop, /aria-current=\{active === category \? "page" : undefined\}/);
+  assert.doesNotMatch(shop, /onClick=\{\(\) => setActive\(category\)\}/);
 });

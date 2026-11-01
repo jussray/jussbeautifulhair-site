@@ -1,22 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { Link } from "wouter";
 import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/catalog";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 
+const CATEGORY_ROUTES: Record<string, string> = {
+  All: "/shop",
+  Bundles: "/shop/bundles",
+  Wigs: "/shop/wigs",
+  "Closures & Frontals": "/shop/closures-frontals",
+  "Beauty Essentials": "/shop/beauty-essentials",
+};
+
 export default function Shop({ initialCategory = "All" }: { initialCategory?: string }) {
-  const [active, setActive] = useState(initialCategory);
-  useEffect(() => setActive(initialCategory), [initialCategory]);
+  const active = initialCategory;
   const { data: products = [], isLoading, isError, refetch } = useShopifyCatalog();
 
   const categories = useMemo(
     () =>
       CATEGORIES.filter(
         (category) =>
-          category === "All" || products.some((product) => product.category === category),
+          category === "All" || category === active || products.some((product) => product.category === category),
       ),
-    [products],
+    [active, products],
   );
 
   const filtered = useMemo(
@@ -45,9 +53,10 @@ export default function Shop({ initialCategory = "All" }: { initialCategory?: st
         {!isError && (
           <div className="flex flex-wrap gap-2 justify-center mb-10">
             {categories.map((category) => (
-              <button
+              <Link
                 key={category}
-                onClick={() => setActive(category)}
+                href={CATEGORY_ROUTES[category] || "/shop"}
+                aria-current={active === category ? "page" : undefined}
                 data-testid={`filter-${category.toLowerCase().replace(/[^a-z]+/g, "-")}`}
                 className={`text-sm px-4 py-2 rounded-full border transition-colors ${
                   active === category
@@ -56,7 +65,7 @@ export default function Shop({ initialCategory = "All" }: { initialCategory?: st
                 }`}
               >
                 {category}
-              </button>
+              </Link>
             ))}
           </div>
         )}

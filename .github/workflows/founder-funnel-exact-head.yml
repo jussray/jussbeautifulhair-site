@@ -89,7 +89,7 @@ jobs:
                 try {
                   const data = JSON.parse(raw);
                   const runs = (data.check_runs || []).filter(
-                    (run) => run.name === "Verify tokenless Shopify checkout bridge"
+                    (run) => run.name === "Verify trusted production Shopify browser proof"
                   );
                   if (runs.some((run) => run.status === "completed" && run.conclusion === "success")) {
                     console.log("success");

@@ -120,3 +120,21 @@ test("empty catalog categories show a customer-facing explanation", () => {
   assert.match(shop, /Draft and unavailable items are not offered for checkout/);
   assert.match(shop, /href="\/shop"/);
 });
+
+
+test("Shopify search is backed by the approved live catalog", () => {
+  const search = readFileSync("client/src/pages/Search.tsx", "utf8");
+  assert.ok(app.includes('path="/search" component={Search}'));
+  assert.ok(layout.includes('href: "/search", label: "Search"'));
+  assert.ok(layout.includes('href="/search"'));
+  assert.match(search, /useShopifyCatalog/);
+  assert.match(search, /ProductCard/);
+  assert.match(search, /role="search"/);
+  assert.match(search, /name="q"/);
+  assert.match(search, /maxLength=\{100\}/);
+  assert.match(search, /new URLSearchParams\(window\.location\.search\)/);
+  assert.match(search, /data-testid="search-empty-state"/);
+  assert.match(search, /isError/);
+  assert.ok(app.includes('"/success", "/search"'));
+  assert.doesNotMatch(sitemap, /https:\/\/jussbeautifulhair\.com\/search/);
+});

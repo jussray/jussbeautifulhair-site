@@ -8,6 +8,7 @@ import { CartProvider } from "@/lib/cart";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
+import Search from "@/pages/Search";
 import Product from "@/pages/Product";
 import Cart from "@/pages/Cart";
 import ShopifyCartHandoff from "@/pages/ShopifyCartHandoff";
@@ -27,7 +28,7 @@ import OrderHelp from "@/pages/OrderHelp";
 import PrivacyChoices from "@/pages/PrivacyChoices";
 
 const CANONICAL_ORIGIN = "https://jussbeautifulhair.com";
-const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/success"]);
+const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/success", "/search"]);
 
 // Shopify menu URLs remain valid on the Cloudflare headless storefront.
 const SHOPIFY_COMPAT_PATHS: Record<string, string> = {
@@ -100,6 +101,7 @@ function AppRouter() {
       <Route path="/shop/closures-frontals"><Shop initialCategory="Closures & Frontals" /></Route>
       <Route path="/shop/beauty-essentials"><Shop initialCategory="Beauty Essentials" /></Route>
       <Route path="/shop" component={Shop} />
+      <Route path="/search" component={Search} />
       <Route path="/collections/all" component={Shop} />
       <Route path="/pages/contact" component={Contact} />
       <Route path="/pages/about" component={About} />

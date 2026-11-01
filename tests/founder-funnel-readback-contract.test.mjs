@@ -65,7 +65,7 @@ test("Founder Funnel source verification remains secretless while production rea
   assert.match(productionSection, /if: github\.event_name == 'push'/);
   assert.match(productionSection, /needs: verify/);
   assert.match(productionSection, /environment:\s*Production/);
-  assert.match(productionSection, /Verify tokenless Shopify checkout bridge/);
+  assert.match(productionSection, /Verify trusted production Shopify browser proof/);
   assert.match(productionSection, /Verify production Cloudflare credentials are present/);
   assert.match(productionSection, /secrets\.CLOUDFLARE_API_TOKEN/);
   assert.match(productionSection, /secrets\.CLOUDFLARE_ACCOUNT_ID/);

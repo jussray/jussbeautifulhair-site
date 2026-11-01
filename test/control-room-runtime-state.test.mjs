@@ -32,6 +32,15 @@ test('ordinary source events stay source-bound and do not pretend to prove provi
   assert.equal(receipt.proofRule.sourceShaAloneProvesExternalState, false);
 });
 
+test('persisted runtime receipt round-trips as JSON for ledger consumption', () => {
+  const root = fixture();
+  const outputPath = path.join(root, 'artifacts', 'runtime-state.json');
+  const receipt = writeRuntimeStateReceipt(env({ CONTROL_ROOM_RUNTIME_STATE_PATH: outputPath }), root);
+  const bytes = fs.readFileSync(outputPath, 'utf8');
+  assert.deepEqual(JSON.parse(bytes), receipt);
+  assert.equal(bytes.endsWith('\n'), true);
+});
+
 test('external state invalidation requires a fresh queue, non-secret epoch, and source', () => {
   const root = fixture();
   const valid = env({ GITHUB_EVENT_NAME: 'repository_dispatch', CONTROL_ROOM_EXTERNAL_STATE_ACTION: 'runtime_state_changed', CONTROL_ROOM_EXTERNAL_STATE_EPOCH: EPOCH, CONTROL_ROOM_EXTERNAL_STATE_SOURCE: 'cloudflare:project' });

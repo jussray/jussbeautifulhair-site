@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import process from "node:process";
 import { chromium } from "playwright";
+import { connectJbhProofBrowser } from "./jbh-live-browser.mjs";
 
 const baseURL = process.env.LIVE_STOREFRONT_URL || "https://jussbeautifulhair.com";
 const expectedHead = process.env.EXPECTED_HEAD_SHA || "";
 const expectedOrigin = "https://jussbeautifulhair.com";
 const approvedCheckoutHosts = new Set([
   "jussbeautifulhair.com",
+  "www.jussbeautifulhair.com",
   "8qp1z2-az.myshopify.com",
 ]);
 const outputDir = "artifacts/shopify-production";
@@ -50,32 +52,43 @@ async function assertRenderedImage(imageLocator, label) {
 
 await mkdir(outputDir, { recursive: true });
 
-const browser = await chromium.launch({ headless: true });
+const { browser, transport: liveBrowserTransport } = await connectJbhProofBrowser(chromium);
 
 try {
-  const versionPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  const versionDocument = await versionPage.goto(baseURL, {
+  const versionPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
     waitUntil: "domcontentloaded",
     timeout: 60_000,
   });
-  assert.ok(versionDocument?.ok(), `storefront bootstrap returned HTTP ${versionDocument?.status() ?? "unknown" }.`);
-  const versionObservation = await versionPage.evaluate(async () => {
-    const response = await fetch("/version", {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-      credentials: "same-origin",
-    });
-    return { status: response.status, contentType: response.headers.get("content-type") || "", body: await response.text() };
-  });
-  assert.equal(versionObservation.status, 200, `version route returned HTTP ${versionObservation.status}.`);
-  assert.match(versionObservation.contentType, /application\/json/i, "version route must return JSON.");
-  const versionPayload = JSON.parse(versionObservation.body);
+  assert.ok(versionResponse, "version route navigation returned no response.");
+  assert.equal(versionResponse.ok(), true, `version route returned HTTP ${versionResponse.status()}.`);
+  const versionHeaders = await versionResponse.allHeaders();
+  assert.match(
+    versionHeaders["content-type"] || "",
+    /application\/json/i,
+    "version route must return application/json.",
+  );
+  const versionPayload = JSON.parse(await versionResponse.text());
   assert.equal(versionPayload?.ok, true, "version route did not report ok=true.");
   assert.equal(
     versionPayload?.sha,
     expectedHead,
     `version SHA mismatch: expected ${expectedHead}, received ${versionPayload?.sha ?? "missing"}.`,
+  );
+  assert.ok(
+    versionPayload?.identitySource === "runtime-binding"
+      || versionPayload?.identitySource === "asset-build-proof",
+    `version identity source is not evidence-bound: ${versionPayload?.identitySource ?? "missing"}.`,
+  );
+  assert.equal(
+    versionPayload?.evidenceRole,
+    "identity-observation",
+    "version route must label its SHA as identity observation evidence.",
+  );
+  assert.equal(
+    versionPayload?.authority,
+    "none",
+    "version route must not claim authority from an identity observation.",
   );
   await versionPage.close();
 
@@ -264,6 +277,11 @@ try {
       {
         expectedHead,
         observedHead: versionPayload.sha,
+        versionIdentitySource: versionPayload.identitySource,
+        versionEvidenceRole: versionPayload.evidenceRole,
+        versionAuthority: versionPayload.authority,
+        versionTransport: "chromium-navigation",
+        liveBrowserTransport,
         verifiedAt: new Date().toISOString(),
         origin: expectedOrigin,
         productHandle: product.id,
@@ -282,7 +300,7 @@ try {
         renderedHandoffHost: observedCheckout.hostname,
         proofFunnelEvents: observedFunnelEvents,
         assertions: [
-          "production /version matched the exact activated main SHA before commerce proof",
+          "production /version was observed through Chromium and matched the exact activated main SHA before commerce proof",
           "rendered production Shop consumed the live /api/shopify/catalog boundary",
           "a live sellable product card image loaded and decoded before navigation",
           "the selected live product detail image loaded and decoded before cart interaction",

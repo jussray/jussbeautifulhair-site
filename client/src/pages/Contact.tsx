@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Mail, Instagram, MapPin, Check, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { BRAND } from "@/lib/catalog";
+import { TurnstileChallenge } from "@/components/TurnstileChallenge";
+import { getContactEndpoint } from "@/lib/privateIngress";
 
 type ContactReceipt = {
   received?: boolean;
@@ -14,108 +16,6 @@ type ContactReceipt = {
   duplicate?: boolean;
   error?: string;
 };
-
-type TurnstileApi = {
-  render: (
-    container: HTMLElement,
-    options: {
-      sitekey: string;
-      action: string;
-      callback: (token: string) => void;
-      "expired-callback": () => void;
-      "error-callback": () => void;
-    },
-  ) => string;
-  reset: (widgetId?: string) => void;
-  remove: (widgetId: string) => void;
-};
-
-declare global {
-  interface Window {
-    turnstile?: TurnstileApi;
-  }
-}
-
-const TURNSTILE_SCRIPT_ID = "jbh-turnstile-script";
-const TURNSTILE_SCRIPT_URL =
-  "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-
-function getContactEndpoint(): string | null {
-  const configured = import.meta.env.VITE_CONTACT_API_URL?.trim();
-  if (!configured) return null;
-
-  try {
-    const url = new URL(configured);
-    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
-    if (url.protocol !== "https:" && !local) return null;
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
-function TurnstileChallenge({
-  siteKey,
-  onToken,
-}: {
-  siteKey: string;
-  onToken: (token: string) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const widgetIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const render = () => {
-      if (
-        cancelled ||
-        widgetIdRef.current ||
-        !containerRef.current ||
-        !window.turnstile
-      ) {
-        return;
-      }
-
-      widgetIdRef.current = window.turnstile.render(containerRef.current, {
-        sitekey: siteKey,
-        action: "contact",
-        callback: onToken,
-        "expired-callback": () => onToken(""),
-        "error-callback": () => onToken(""),
-      });
-    };
-
-    const existing = document.getElementById(TURNSTILE_SCRIPT_ID) as
-      | HTMLScriptElement
-      | null;
-
-    if (window.turnstile) {
-      render();
-    } else if (existing) {
-      existing.addEventListener("load", render, { once: true });
-    } else {
-      const script = document.createElement("script");
-      script.id = TURNSTILE_SCRIPT_ID;
-      script.src = TURNSTILE_SCRIPT_URL;
-      script.async = true;
-      script.defer = true;
-      script.addEventListener("load", render, { once: true });
-      document.head.appendChild(script);
-    }
-
-    return () => {
-      cancelled = true;
-      existing?.removeEventListener("load", render);
-      if (widgetIdRef.current && window.turnstile) {
-        window.turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-      }
-    };
-  }, [onToken, siteKey]);
-
-  return <div ref={containerRef} data-testid="contact-turnstile" />;
-}
 
 export default function Contact() {
   const { toast } = useToast();
@@ -375,7 +275,12 @@ export default function Contact() {
               </label>
 
               {turnstileSiteKey ? (
-                <TurnstileChallenge siteKey={turnstileSiteKey} onToken={setTurnstileToken} />
+                <TurnstileChallenge
+                  siteKey={turnstileSiteKey}
+                  action="contact"
+                  onToken={setTurnstileToken}
+                  testId="contact-turnstile"
+                />
               ) : (
                 <p className="text-sm text-destructive" role="alert">
                   The contact security check is not configured. Please use Instagram.

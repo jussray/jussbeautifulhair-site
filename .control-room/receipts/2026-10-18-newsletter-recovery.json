@@ -1,0 +1,65 @@
+{
+  "schema": "juss/bottleneck-remediation@v1",
+  "id": "JBH-NEWSLETTER-RECOVERY-2026-10-18",
+  "repository": "jussray/jussbeautifulhair-site",
+  "branch": "fix/newsletter-conversion-path",
+  "pull_request": 122,
+  "parent_sha": "82254e3cadc6ceceabebea5bf4ebce51afd10296",
+  "observed_at": "2026-10-18T09:47:39.223492+00:00",
+  "classification": "VERIFIED_BOTTLENECK",
+  "root_cause": "Turnstile script failure strands currently mounted acquisition/support forms without in-page recovery.",
+  "founder_goal": "Use the newsletter to attract sales; subscriber capture is only the first stage.",
+  "fix": "Offer an explicit retry, clear stale verification, preserve form values and consent, share in-flight script loads, and synchronize browser proof on actual readiness.",
+  "fingerprint": "97a72437805378f738111873e9a94a765bf476477c92e0e5885d0e87e3b20689",
+  "continuity_cookie": "JBH-NEWSLETTER-RECOVERY-2026-10-18:97a72437805378f7",
+  "markers_authorize": false,
+  "files": [
+    "client/src/components/TurnstileChallenge.tsx",
+    "scripts/shopify-headless-playwright.mjs",
+    ".github/workflows/contact-recovery-exact-head.yml",
+    ".github/workflows/shopify-headless-exact-head.yml",
+    "test/control-room-test-ledger.test.mjs"
+  ],
+  "proof": {
+    "build": "PASS after current-main refresh, including 136 tests and existing prebuild/commerce/deployment contracts",
+    "mcp_contract": "PASS",
+    "independent_review": "No actionable findings on source/browser recovery or the updated runtime-proof dependency contract.",
+    "browser": "Desktop/mobile recovery, newsletter signup, privacy, cart handoff, and Hair Match functional assertions completed. Full local run failed clean-console gate on external Google Fonts: direct network ERR_EMPTY_RESPONSE; configured proxy ERR_CERT_AUTHORITY_INVALID. Errors were retained, not bypassed. Pinned CI browser proof required.",
+    "local_browser": "Playwright 1.61.1 with Chromium headless shell 134 fallback; pinned Chromium 149 download unavailable. CI pinned-browser proof still required.",
+    "runtime_and_ledger_contracts": "12/12 PASS including persisted receipt JSON roundtrip",
+    "predecessor_ci": "Contact Recovery, Cookie, Secret History, Agent Contract passed on 6923655; those results are historical after rollover. Ledger missing-file failure triggered refresh; successor proof must run fresh."
+  },
+  "separate_blockers": [
+    "Latest inspected head checkout gate failed on production /version HTTP 503 (2026-10-16 run 38162864088); no bypass or production repair claimed.",
+    "Private PR #90 merged source only; migration/deployment/current ingress and email delivery remain unverified.",
+    "Public capture alone does not establish welcome campaigns, product-email clicks, purchases, or attributable sales."
+  ],
+  "redteam_i": "Do not confuse newsletter acquisition work with checkout readiness or proven revenue.",
+  "redteam_ii": "Retry must preserve explicit consent, fail closed on missing verification, and avoid hiding unrelated browser errors.",
+  "lindy": "Visible recovery and state-based proof remove durable failure modes.",
+  "leverage": "Unblocks one acquisition path; portfolio-wide percentage UNKNOWN.",
+  "5w1h": "Ray owns sales intent; shoppers are blocked by security loading in homepage/contact; failures matter before submission; explicit retry restores verification without weakening consent.",
+  "rollback": "Revert the focused recovery commit on this existing PR branch. No production/database change performed.",
+  "next_gate": "Fresh exact-head CI and pinned browser proof; retain current production witness failures and verify private capture, delivery, and eventual sales separately.",
+  "authority": {
+    "merge": false,
+    "deploy": false,
+    "database": false,
+    "email_send": false
+  },
+  "rollover": {
+    "previous_head": "6923655d2f2d5a21a57a6b4c6c2839162b205bdf",
+    "current_main": "889cefff0dc986c7a94cee5b4535626accc23f20",
+    "conflicts": false,
+    "reason": "Current main workflow executed runtime proof against old candidate missing runtime test. Refresh preserves current main runtime invalidation and CNAME changes."
+  },
+  "additional_fix": "Current main intentionally added independent runtime-state proof in 127758c but left a stale one-runner assertion. Preserve both proof jobs and assert exact head, disabled persisted credentials, actual test command, and ledger dependency.",
+  "serialization_fix": {
+    "predecessor_head": "0f40210844985142b606265937e657ccd00c67d3",
+    "evidence": "Runtime-state proof passed; ledger observation failed parsing persisted receipt: Unexpected non-whitespace character after JSON.",
+    "root_cause": "Receipt writer appended literal backslash-n instead of newline.",
+    "fix": "Write actual newline and verify persisted receipt round-trips through JSON.parse.",
+    "proof": "12/12 runtime-state and ledger contracts pass locally.",
+    "browser_applicability": "Receipt serialization is CI tooling; disk round-trip proof applies. Customer browser proof remains separately gated."
+  }
+}

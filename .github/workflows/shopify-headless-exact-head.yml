@@ -7,10 +7,14 @@ on:
       - "worker/entry.ts"
       - "client/src/components/Layout.tsx"
       - "client/src/components/ProductCard.tsx"
+      - "client/src/components/TurnstileChallenge.tsx"
       - "client/src/lib/cart.tsx"
+      - "client/src/lib/privateIngress.ts"
       - "client/src/lib/shopifyCatalog.ts"
       - "client/src/lib/shopifyStorefront.ts"
       - "client/src/pages/Home.tsx"
+      - "client/src/pages/Contact.tsx"
+      - "client/src/pages/Privacy.tsx"
       - "client/src/pages/Shop.tsx"
       - "client/src/pages/Product.tsx"
       - "client/src/pages/Cart.tsx"
@@ -22,20 +26,32 @@ on:
       - "scripts/shopify-physical-live-smoke.mjs"
       - "scripts/frontdoor-live-playwright.mjs"
       - "scripts/shopify-production-playwright.mjs"
-      - "scripts/cloudflare-production-browser-proof.mjs"
+      - "scripts/jbh-live-browser.mjs"
+      - "scripts/jbh-browser-preflight.mjs"
+      - "tests/jbh-live-browser.test.mjs"
+      - "tests/jbh-browser-preflight.test.mjs"
       - "scripts/catalog-images-live-playwright.mjs"
       - "scripts/shopify-image-ledger.mjs"
       - "tests/shopify-headless-contract.test.mjs"
       - "tests/shopify-physical-contract.test.mjs"
       - "tests/frontdoor-activation-contract.test.mjs"
-      - "tests/catalog-images-live-contract.test.mjs"
       - "tests/runtime-build-proof-version-contract.test.mjs"
+      - "tests/newsletter-ingress-contract.test.mjs"
+      - "tests/contact-recovery-contract.test.mjs"
+      - "scripts/cloudflare-free-candidate-proof.mjs"
+      - "tests/cloudflare-free-candidate-proof.test.mjs"
       - "docs/SHOPIFY_HEADLESS_BRIDGE.md"
       - ".github/workflows/shopify-headless-exact-head.yml"
       - ".github/workflows/frontdoor-activate.yml"
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      browser_token_preflight:
+        description: "Manual token and /version check only; no deploy or checkout"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -52,7 +68,40 @@ env:
   LIVE_STOREFRONT_URL: https://jussbeautifulhair.com
 
 jobs:
+  browser-run-token-preflight:
+    name: Manual Cloudflare Browser Run credential preflight (no deploy)
+    # Founder-triggered only, and only for this reviewed fix branch or main.
+    # Never put the dedicated token in a pull_request job.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.browser_token_preflight == true && github.actor == 'jussray' && github.repository == 'jussray/jussbeautifulhair-site' && (github.ref == 'refs/heads/fix/jbh-version-browser-proof-20261015' || github.ref == 'refs/heads/main') }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout selected reviewed branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify exact selected head
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install pinned remote browser client only
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+      - name: Test dedicated token and live read-only identity
+        env:
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/jbh-browser-preflight.mjs
+
   verify:
+    # Preserve ordinary manual ledger dispatches; preflight-only skips commerce tests.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.browser_token_preflight != true }}
     name: Verify tokenless Shopify checkout bridge
     runs-on: ubuntu-22.04
     timeout-minutes: 30
@@ -77,9 +126,7 @@ jobs:
         run: npm run check
 
       - name: Verify Shopify checkout and production-witness contracts
-        run: |
-          node --check scripts/cloudflare-production-browser-proof.mjs
-          node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs
+        run: node --test tests/shopify-headless-contract.test.mjs tests/shopify-physical-contract.test.mjs tests/checkout-redirect-contract.test.mjs tests/frontdoor-activation-contract.test.mjs tests/runtime-build-proof-version-contract.test.mjs tests/jbh-live-browser.test.mjs tests/jbh-browser-preflight.test.mjs tests/newsletter-ingress-contract.test.mjs tests/contact-recovery-contract.test.mjs
 
       - name: Build production storefront
         run: npm run build
@@ -99,13 +146,14 @@ jobs:
       - name: Verify live Shopify catalog and no-payment cart
         run: node scripts/shopify-physical-live-smoke.mjs
 
-      - name: Record PR live-browser boundary
+      # Never expose Cloudflare credentials to pull_request code. Candidate PRs
+      # run local browser, schema, cart and no-payment smoke tests above.
+      # An exact deployed production witness runs only after trusted main push.
+      - name: Record candidate-only evidence boundary
         if: github.event_name == 'pull_request'
-        shell: bash
         run: |
-          set -euo pipefail
-          printf '%s\n' \
-            'PR proof intentionally stops before live browser impersonation: Cloudflare Bot Fight Mode blocks GitHub datacenter browsers. Exact runtime identity and branded-frontdoor browser proof run only after main deploy through Cloudflare Browser Rendering with production-only credentials.'
+          echo "Candidate checks are source/local proofs only."
+          echo "Production release evidence is gated by a trusted main push."
 
       - name: Wait for exact Cloudflare Worker build
         if: github.event_name == 'push'
@@ -160,20 +208,33 @@ jobs:
             sleep 2
           done
 
-      - name: Prove exact live SHA and branded front door through Cloudflare Browser Rendering
+      - name: Prove exact live SHA and branded front door
         if: github.event_name == 'push'
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
-        run: node scripts/cloudflare-production-browser-proof.mjs
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/frontdoor-live-playwright.mjs
 
-      - name: Re-prove live Shopify cart after provider build
+      - name: Prove exact deployed Shopify purchase path without payment
         if: github.event_name == 'push'
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
-        run: node scripts/shopify-physical-live-smoke.mjs
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/shopify-production-playwright.mjs
+
+      - name: Prove live catalog image authority without payment
+        if: github.event_name != 'pull_request'
+        env:
+          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+          REQUIRE_EXACT_HEAD: ${{ github.event_name == 'push' }}
+        run: node scripts/catalog-images-live-playwright.mjs
 
       - name: Audit Shopify product media against JBH presentation (read-only)
         if: github.event_name == 'workflow_dispatch'
@@ -241,13 +302,12 @@ jobs:
             },
             proof_scope: [
               'exact-provider-build',
-              'cloudflare-browser-runtime-identity',
-              'cloudflare-browser-frontdoor',
-              'shopify-no-payment-live-cart',
+              'branded-frontdoor-browser',
+              'shopify-no-payment-production-path',
             ],
             evidence_refs: [
-              'artifact://cloudflare-browser-production/manifest.json',
-              'artifact://shopify-physical-live/manifest.json',
+              'artifact://frontdoor-live/manifest.json',
+              'artifact://shopify-production/',
               `runtime://${url.host}/version`,
               `github-actions://${repo}/runs/${runId}`,
             ],
@@ -271,7 +331,6 @@ jobs:
             artifacts/shopify-physical-live/
             artifacts/frontdoor-live/
             artifacts/shopify-production/
-            artifacts/cloudflare-browser-production/
             artifacts/production-proof/
             artifacts/catalog-images-live/
             artifacts/shopify-image-ledger/

@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import { connectJbhProofBrowser } from "./jbh-live-browser.mjs";
 import { mkdir, writeFile } from "node:fs/promises";
 
 const baseURL = process.env.LIVE_STOREFRONT_URL || "https://jussbeautifulhair.com";
@@ -11,7 +12,8 @@ function assert(condition, message) {
 }
 
 async function parseJsonResponse(response, label) {
-  const contentType = response.headers.get("content-type") || "";
+  const headers = await response.allHeaders();
+  const contentType = headers["content-type"] || "";
   const body = await response.text();
   assert(
     contentType.toLowerCase().includes("application/json"),
@@ -53,7 +55,7 @@ const parsedBase = new URL(baseURL);
 assert(parsedBase.origin === expectedOrigin, `LIVE_STOREFRONT_URL must be exactly ${expectedOrigin}.`);
 
 await mkdir(outputDir, { recursive: true });
-const browser = await chromium.launch({ headless: true });
+const { browser, transport: liveBrowserTransport } = await connectJbhProofBrowser(chromium);
 const consoleErrors = [];
 const forbiddenRuntimeRequests = [];
 const results = [];
@@ -67,39 +69,17 @@ function watchForbiddenRuntimeRequests(page, label) {
 }
 
 try {
-  const versionPage = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  const versionDocument = await versionPage.goto(baseURL, {
+  const versionPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const versionResponse = await versionPage.goto(`${baseURL}/version`, {
     waitUntil: "domcontentloaded",
     timeout: 60_000,
   });
+  assert(versionResponse, "version route navigation returned no response.");
   assert(
-    versionDocument?.ok(),
-    `storefront bootstrap returned HTTP ${versionDocument?.status() ?? "unknown" }.`,
+    versionResponse.ok(),
+    `version route returned HTTP ${versionResponse.status()}.`,
   );
-  const versionObservation = await versionPage.evaluate(async () => {
-    const response = await fetch("/version", {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-      credentials: "same-origin",
-    });
-    return { status: response.status, contentType: response.headers.get("content-type") || "", body: await response.text() };
-  });
-  assert(
-    versionObservation.status === 200,
-    `version route returned HTTP ${versionObservation.status}.`,
-  );
-  assert(
-    versionObservation.contentType.toLowerCase().includes("application/json"),
-    `version route expected application/json, received ${versionObservation.contentType || "no content-type"}.`,
-  );
-  let versionPayload;
-  try {
-    versionPayload = JSON.parse(versionObservation.body);
-  } catch {
-    throw new Error(`version route returned invalid JSON: ${JSON.stringify(versionObservation.body.slice(0, 80))}`);
-  }
-  await versionPage.close();
+  const versionPayload = await parseJsonResponse(versionResponse, "version route");
   assert(versionPayload.ok === true, "version route did not report ok=true.");
   assert(
     versionPayload.sha === expectedHead,
@@ -118,35 +98,21 @@ try {
     versionPayload.authority === "none",
     "version route must not claim authority from an identity observation.",
   );
+  await versionPage.close();
 
   const knowledgePage = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  const knowledgeDocument = await knowledgePage.goto(baseURL, {
-    waitUntil: "domcontentloaded",
-    timeout: 60_000,
-  });
-  assert(
-    knowledgeDocument?.ok(),
-    `Meta Business Agent browser bootstrap returned HTTP ${knowledgeDocument?.status() ?? "unknown" }.`,
+  const knowledgeResponse = await knowledgePage.goto(
+    `${baseURL}/.well-known/jbh-meta-agent.json`,
+    { waitUntil: "domcontentloaded", timeout: 60_000 },
   );
-  const knowledgeObservation = await knowledgePage.evaluate(async () => {
-    const response = await fetch("/.well-known/jbh-meta-agent.json", {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-      credentials: "same-origin",
-    });
-    return { status: response.status, contentType: response.headers.get("content-type") || "", body: await response.text() };
-  });
-  assert(
-    knowledgeObservation.status === 200,
-    `Meta Business Agent knowledge contract returned HTTP ${knowledgeObservation.status}.`,
-  );
-  const knowledgeContentType = knowledgeObservation.contentType;
+  assert(knowledgeResponse && knowledgeResponse.ok(),
+    `Meta Business Agent knowledge contract returned HTTP ${knowledgeResponse?.status() ?? "no response"}.`);
+  const knowledgeContentType = (await knowledgeResponse.allHeaders())["content-type"] || "";
   assert(
     knowledgeContentType.toLowerCase().includes("application/json"),
     `Meta Business Agent knowledge contract expected application/json, received ${knowledgeContentType || "no content-type"}.`,
   );
-  const knowledgeBody = knowledgeObservation.body;
+  const knowledgeBody = await knowledgeResponse.text();
   let knowledge;
   try {
     knowledge = JSON.parse(knowledgeBody);
@@ -268,11 +234,13 @@ try {
         versionIdentitySource: versionPayload.identitySource,
         versionEvidenceRole: versionPayload.evidenceRole,
         versionAuthority: versionPayload.authority,
+        versionTransport: "chromium-navigation",
+        liveBrowserTransport,
         assertions: [
           "root responds successfully on desktop and mobile",
           "legacy hash entry URLs migrate to canonical browser paths before customer interaction",
           "Cloudflare Worker security headers prove the Worker served the root response",
-          "version route serves application/json for the exact approved main SHA and labels whether the SHA came from a runtime binding or asset build proof",
+          "version route is observed through Chromium navigation, serves application/json for the exact approved main SHA, and labels whether the SHA came from a runtime binding or asset build proof",
           "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
           "Meta Business Agent knowledge endpoint returns application/json rather than the SPA fallback",
           "Meta Business Agent keeps shipping-address and payment credential collection out of chat",

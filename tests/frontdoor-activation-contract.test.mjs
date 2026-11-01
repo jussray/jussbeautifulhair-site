@@ -22,8 +22,8 @@ const shopifyProductionPlaywright = await readFile(
   new URL("../scripts/shopify-production-playwright.mjs", import.meta.url),
   "utf8",
 );
-const cloudflareProductionBrowserProof = await readFile(
-  new URL("../scripts/cloudflare-production-browser-proof.mjs", import.meta.url),
+const liveBrowserSource = await readFile(
+  new URL("../scripts/jbh-live-browser.mjs", import.meta.url),
   "utf8",
 );
 const worker = await readFile(
@@ -111,10 +111,10 @@ test("post-deploy route identity is exact and failed proof removes only that rou
 test("live Playwright proof binds to the branded origin and rejects Shopify password wall", () => {
   assert.match(livePlaywright, /https:\/\/jussbeautifulhair\.com/);
   assert.match(livePlaywright, /\/version/);
-  assert.match(livePlaywright, /versionPage\.goto\(baseURL/);
-  assert.match(livePlaywright, /versionPage\.evaluate/);
-  assert.match(livePlaywright, /fetch\("\/version"/);
+  assert.match(livePlaywright, /const versionPage = await browser\.newPage/);
+  assert.match(livePlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
   assert.doesNotMatch(livePlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
+  assert.match(livePlaywright, /versionTransport: "chromium-navigation"/);
   assert.match(livePlaywright, /versionPayload\.sha === expectedHead/);
   assert.match(livePlaywright, /versionPayload\.identitySource === "runtime-binding"/);
   assert.match(livePlaywright, /versionPayload\.identitySource === "asset-build-proof"/);
@@ -146,10 +146,10 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
 
   assert.match(shopifyProductionPlaywright, /EXPECTED_HEAD_SHA/);
   assert.match(shopifyProductionPlaywright, /\/version/);
-  assert.match(shopifyProductionPlaywright, /versionPage\.goto\(baseURL/);
-  assert.match(shopifyProductionPlaywright, /versionPage\.evaluate/);
-  assert.match(shopifyProductionPlaywright, /fetch\("\/version"/);
+  assert.match(shopifyProductionPlaywright, /const versionPage = await browser\.newPage/);
+  assert.match(shopifyProductionPlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
   assert.doesNotMatch(shopifyProductionPlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
+  assert.match(shopifyProductionPlaywright, /versionTransport: "chromium-navigation"/);
   assert.match(shopifyProductionPlaywright, /versionPayload\?\.sha,\s*expectedHead/);
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/catalog/);
   assert.match(shopifyProductionPlaywright, /\/api\/shopify\/cart/);
@@ -168,20 +168,45 @@ test("Shopify production proof is exact-deploy bound and stops before payment", 
   assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
 });
 
-test("pull requests stop at the Bot Fight boundary without claiming live browser proof", () => {
-  const liveSmokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
-  const boundaryIndex = mainShopifyWorkflow.indexOf("Record PR live-browser boundary");
-  const pushProviderIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
-
-  assert.ok(liveSmokeIndex >= 0, "Live Shopify no-payment smoke is missing from the PR gate.");
-  assert.ok(boundaryIndex > liveSmokeIndex, "The explicit live-browser boundary must follow the live Shopify smoke.");
-  assert.ok(pushProviderIndex > boundaryIndex, "Production-only provider proof must remain after the PR boundary.");
-  assert.match(mainShopifyWorkflow, /Cloudflare Bot Fight Mode blocks GitHub datacenter browsers/);
+test("candidate proof never receives Cloudflare credentials and release proof runs on trusted push", () => {
+  const smokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
+  const boundaryIndex = mainShopifyWorkflow.indexOf("Record candidate-only evidence boundary");
+  const providerIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
+  assert.ok(smokeIndex >= 0);
+  assert.ok(boundaryIndex > smokeIndex);
+  assert.ok(providerIndex > boundaryIndex);
   assert.doesNotMatch(mainShopifyWorkflow, /Resolve current main SHA for candidate production witness/);
-  assert.doesNotMatch(mainShopifyWorkflow, /Exercise candidate production witness against exact live base without payment/);
+  assert.doesNotMatch(mainShopifyWorkflow, /Exercise candidate production witness against exact live base/);
+  assert.match(mainShopifyWorkflow, /Candidate checks are source\/local proofs only/);
+  assert.match(mainShopifyWorkflow, /if: github\.event_name == 'push'[\s\S]*?JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
+  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
+  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(livePlaywright, /connectJbhProofBrowser\(chromium\)/);
+  assert.match(shopifyProductionPlaywright, /connectJbhProofBrowser\(chromium\)/);
+  assert.match(liveBrowserSource, /chromium\.connectOverCDP/);
+  assert.match(liveBrowserSource, /browser-run\/devtools\/browser/);
+  assert.match(liveBrowserSource, /Unsupported JBH proof browser mode/);
+  // The existing, approved manual activation uses the same trusted proof transport.
+  assert.match(activationWorkflow, /JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
+  assert.match(activationWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
 });
 
-test("main commerce gate uses provider-owned browser proof after the exact Worker build", () => {
+test("founder-only manual Browser Run preflight cannot initiate a deploy or payment", () => {
+  assert.match(mainShopifyWorkflow, /browser_token_preflight:/);
+  assert.match(mainShopifyWorkflow, /type: boolean/);
+  assert.match(mainShopifyWorkflow, /browser-run-token-preflight:/);
+  assert.match(mainShopifyWorkflow, /github\.actor == 'jussray'/);
+  assert.match(mainShopifyWorkflow, /github\.event_name == 'workflow_dispatch'/);
+  assert.match(mainShopifyWorkflow, /github\.ref == 'refs\/heads\/fix\/jbh-version-browser-proof-20261015'/);
+  assert.match(mainShopifyWorkflow, /node scripts\/jbh-browser-preflight\.mjs/);
+  assert.match(mainShopifyWorkflow, /inputs\.browser_token_preflight != true/);
+  const preflightBlock = mainShopifyWorkflow.split("  browser-run-token-preflight:")[1].split("  verify:")[0];
+  assert.match(preflightBlock, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
+  assert.doesNotMatch(preflightBlock, /secrets\.CLOUDFLARE_API_TOKEN/);
+  assert.doesNotMatch(preflightBlock, /wrangler deploy|checkoutUrl|submit.*payment/);
+});
+
+test("main commerce gate waits for the exact Worker build and emits verified only after live Playwright", () => {
   assert.match(mainShopifyWorkflow, /^\s*push:\s*\n\s+branches: \[main\]/m);
   assert.match(mainShopifyWorkflow, /checks: read/);
   assert.match(mainShopifyWorkflow, /Workers Builds: jussbeautifulhair-site/);
@@ -190,21 +215,13 @@ test("main commerce gate uses provider-owned browser proof after the exact Worke
   // Worker builds have reported ~6.5 min after job start; keep a ~10 min window.
   assert.match(mainShopifyWorkflow, /for attempt in \{1\.\.300\}; do/);
   const providerIndex = mainShopifyWorkflow.indexOf("Wait for exact Cloudflare Worker build");
-  const browserIndex = mainShopifyWorkflow.indexOf(
-    "node scripts/cloudflare-production-browser-proof.mjs",
-    providerIndex,
-  );
-  const cartIndex = mainShopifyWorkflow.indexOf(
-    "Re-prove live Shopify cart after provider build",
-    browserIndex,
-  );
+  const frontdoorIndex = mainShopifyWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs", providerIndex);
+  const productionIndex = mainShopifyWorkflow.indexOf("node scripts/shopify-production-playwright.mjs", frontdoorIndex);
   const receiptIndex = mainShopifyWorkflow.indexOf("Write canonical production receipt");
   assert.ok(providerIndex >= 0, "Exact Worker-build wait is missing.");
-  assert.ok(browserIndex > providerIndex, "Cloudflare Browser Rendering proof must follow exact provider build proof.");
-  assert.ok(cartIndex > browserIndex, "Live Shopify cart re-proof must follow runtime identity proof.");
-  assert.ok(receiptIndex > cartIndex, "Verified receipt must be emitted only after provider browser and cart proof.");
-  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_API_TOKEN/);
-  assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
+  assert.ok(frontdoorIndex > providerIndex, "Live front-door Playwright must follow exact provider build proof.");
+  assert.ok(productionIndex > frontdoorIndex, "Production Shopify Playwright must follow live SHA proof.");
+  assert.ok(receiptIndex > productionIndex, "Verified receipt must be emitted only after both live browser gates.");
   assert.match(mainShopifyWorkflow, /schema: 'juss\/jbh-production-evidence-receipt@v2'/);
   assert.match(mainShopifyWorkflow, /live_state: 'verified'/);
   assert.match(mainShopifyWorkflow, /authority: 'none'/);
@@ -214,26 +231,12 @@ test("main commerce gate uses provider-owned browser proof after the exact Worke
   assert.match(mainShopifyWorkflow, /commit_sha: sha/);
   assert.match(mainShopifyWorkflow, /run_id: runId/);
   assert.match(mainShopifyWorkflow, /Workers Builds: jussbeautifulhair-site/);
-  assert.match(mainShopifyWorkflow, /artifact:\/\/cloudflare-browser-production\/manifest\.json/);
-  assert.match(mainShopifyWorkflow, /artifact:\/\/shopify-physical-live\/manifest\.json/);
+  assert.match(mainShopifyWorkflow, /artifact:\/\/frontdoor-live\/manifest\.json/);
+  assert.match(mainShopifyWorkflow, /artifact:\/\/shopify-production\//);
   assert.match(mainShopifyWorkflow, /runtime:\/\/\$\{url\.host\}\/version/);
   assert.match(mainShopifyWorkflow, /non_authoritative_markers: \['receipt'\]/);
   assert.match(mainShopifyWorkflow, /https:\/\/jussbeautifulhair\.com\/version/);
   assert.doesNotMatch(mainShopifyWorkflow, /wrangler[^\n]*deploy/i);
-});
-
-test("provider-owned production browser proof is exact-head, read-only, and non-authorizing", () => {
-  assert.match(cloudflareProductionBrowserProof, /browser-rendering\/accessibilityTree/);
-  assert.match(cloudflareProductionBrowserProof, /CLOUDFLARE_API_TOKEN/);
-  assert.match(cloudflareProductionBrowserProof, /CLOUDFLARE_ACCOUNT_ID/);
-  assert.match(cloudflareProductionBrowserProof, /EXPECTED_HEAD_SHA/);
-  assert.match(cloudflareProductionBrowserProof, /version\.sha/);
-  assert.match(cloudflareProductionBrowserProof, /expectedHead/);
-  assert.match(cloudflareProductionBrowserProof, /identity-observation/);
-  assert.match(cloudflareProductionBrowserProof, /authority, "none"/);
-  assert.match(cloudflareProductionBrowserProof, /no order or payment was submitted/);
-  assert.doesNotMatch(cloudflareProductionBrowserProof, /checkout\.jussbeautifulhair\.com/);
-  assert.doesNotMatch(cloudflareProductionBrowserProof, /wrangler[^\n]*deploy/i);
 });
 
 test("front-door Wrangler config remains one route for the branded root", () => {

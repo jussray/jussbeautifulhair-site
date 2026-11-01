@@ -181,6 +181,17 @@ test("candidate proof never receives Cloudflare credentials and release proof ru
   assert.match(mainShopifyWorkflow, /if: github\.event_name == 'push'[\s\S]*?JBH_PROOF_BROWSER_MODE: cloudflare-cdp/);
   assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
   assert.match(mainShopifyWorkflow, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
+
+  const candidateBlock = mainShopifyWorkflow.split("  verify:")[1].split("  production-proof:")[0];
+  const productionBlock = mainShopifyWorkflow.split("  production-proof:")[1];
+  assert.doesNotMatch(candidateBlock, /CLOUDFLARE_BROWSER_RUN_TOKEN/);
+  assert.doesNotMatch(candidateBlock, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
+  assert.match(productionBlock, /name: Verify trusted production Shopify browser proof/);
+  assert.match(productionBlock, /environment:\s*\n\s+name: Production/);
+  assert.match(productionBlock, /deployment:\s*false/);
+  assert.match(productionBlock, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
+  assert.match(productionBlock, /secrets\.CLOUDFLARE_ACCOUNT_ID/);
+
   assert.match(livePlaywright, /connectJbhProofBrowser\(chromium\)/);
   assert.match(shopifyProductionPlaywright, /connectJbhProofBrowser\(chromium\)/);
   assert.match(liveBrowserSource, /chromium\.connectOverCDP/);
@@ -201,6 +212,8 @@ test("founder-only manual Browser Run preflight cannot initiate a deploy or paym
   assert.match(mainShopifyWorkflow, /node scripts\/jbh-browser-preflight\.mjs/);
   assert.match(mainShopifyWorkflow, /inputs\.browser_token_preflight != true/);
   const preflightBlock = mainShopifyWorkflow.split("  browser-run-token-preflight:")[1].split("  verify:")[0];
+  assert.match(preflightBlock, /environment:\s*\n\s+name: Production/);
+  assert.match(preflightBlock, /deployment:\s*false/);
   assert.match(preflightBlock, /secrets\.CLOUDFLARE_BROWSER_RUN_TOKEN/);
   assert.doesNotMatch(preflightBlock, /secrets\.CLOUDFLARE_API_TOKEN/);
   assert.doesNotMatch(preflightBlock, /wrangler deploy|checkoutUrl|submit.*payment/);

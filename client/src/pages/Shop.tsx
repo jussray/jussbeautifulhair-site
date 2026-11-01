@@ -102,6 +102,19 @@ export default function Shop({ initialCategory = "All" }: { initialCategory?: st
             <p className="text-sm text-muted-foreground mb-6" data-testid="text-result-count">
               {filtered.length} {filtered.length === 1 ? "product" : "products"}
             </p>
+            {filtered.length === 0 && (
+              <div data-testid="catalog-empty-state" role="status" className="mx-auto max-w-xl rounded-lg border border-card-border bg-card px-6 py-10 text-center">
+                <h2 className="font-display text-2xl text-foreground">No products available here right now</h2>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {active === "All"
+                    ? "No products are currently available to order. Please check again later."
+                    : "There are no available products in this category right now. Draft and unavailable items are not offered for checkout."}
+                </p>
+                {active !== "All" && (
+                  <Link href="/shop" className="mt-6 inline-block text-primary underline">Browse all available products</Link>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
               {filtered.map((product) => (
                 <ProductCard key={product.id} product={product} />

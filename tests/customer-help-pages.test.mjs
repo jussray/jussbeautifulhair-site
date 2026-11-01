@@ -110,3 +110,13 @@ test("catalog category links preserve selected routes and accessibility", () => 
   assert.match(shop, /aria-current=\{active === category \? "page" : undefined\}/);
   assert.doesNotMatch(shop, /onClick=\{\(\) => setActive\(category\)\}/);
 });
+
+
+test("empty catalog categories show a customer-facing explanation", () => {
+  const shop = readFileSync("client/src/pages/Shop.tsx", "utf8");
+  assert.match(shop, /filtered\.length === 0/);
+  assert.match(shop, /data-testid="catalog-empty-state"/);
+  assert.match(shop, /role="status"/);
+  assert.match(shop, /Draft and unavailable items are not offered for checkout/);
+  assert.match(shop, /href="\/shop"/);
+});

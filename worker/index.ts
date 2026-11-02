@@ -1,3 +1,4 @@
+import { APPROVED_SEO_PRODUCTS, renderProductSeoHtml } from "./product-seo.mjs";
 import Stripe from "stripe";
 import { z } from "zod";
 import { getProduct } from "../shared/catalog";
@@ -831,6 +832,39 @@ async function handleCheckoutSessionVerification(
   }
 }
 
+async function serveSeoProduct(request: Request, env: Env, handle: string): Promise<Response> {
+  const asset = await env.ASSETS.fetch(request);
+  if (!asset.ok) return secureAssetResponse(asset, env);
+  let liveProduct: {id: string; vendor?: string; availableForSale?:boolean;variants?:Array<{price:number; currencyCode?:string; availableForSale:boolean}>} | null = null;
+  try {
+    const catalog = await shopifyStorefrontRequest<{product:ShopifyCatalogProduct|null}>(request, `
+      query SeoProduct($handle:String!) {
+        product(handle:$handle) {
+          id handle title description productType vendor availableForSale
+          featuredImage { url altText }
+          variants(first:50) { nodes { id title availableForSale price { amount currencyCode } } }
+        }
+      }`, {handle});
+    const p = catalog.product;
+    if (p && p.handle === handle && p.vendor === SHOPIFY_STOREFRONT.vendor) {
+      liveProduct = {
+        id:p.handle, vendor:p.vendor,availableForSale:p.availableForSale,
+        variants:p.variants.nodes.map(v=>({
+          price:Number(v.price.amount),currencyCode:v.price.currencyCode,availableForSale:v.availableForSale
+        }))
+      };
+    }
+  } catch { /* Do not invent missing price or availability on upstream failure. */ }
+  const rendered = renderProductSeoHtml(await asset.text(),handle,liveProduct);
+  if (!rendered) return new Response("Not found",{status:404,headers:{"X-Robots-Tag":"noindex, nofollow"}});
+  const headers = new Headers(asset.headers);
+  headers.set("Content-Type","text/html; charset=utf-8");
+  headers.set("Cache-Control","public, max-age=60");
+  headers.delete("Content-Length");headers.delete("Content-Encoding");headers.delete("ETag");
+  if (!rendered.indexable) headers.set("X-Robots-Tag","noindex, follow");
+  return secureAssetResponse(new Response(request.method==="HEAD"?null:rendered.html,{status:200,headers}),env);
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (!isApprovedRequestHost(request, env)) {
@@ -863,6 +897,13 @@ export default {
       return json({ error: "Not found" }, 404);
     }
 
+    const productRoute = /^\\/product\\/([a-z0-9-]+)\\/?$/.exec(url.pathname);
+    if (productRoute && (request.method === "GET" || request.method === "HEAD")) {
+      if (!Object.hasOwn(APPROVED_SEO_PRODUCTS,productRoute[1])) {
+        return new Response("Not found",{status:404,headers:{"X-Robots-Tag":"noindex, nofollow"}});
+      }
+      return serveSeoProduct(request, env, productRoute[1]);
+    }
     return secureAssetResponse(await env.ASSETS.fetch(request), env);
   },
 };

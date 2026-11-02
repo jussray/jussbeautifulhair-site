@@ -897,7 +897,7 @@ export default {
       return json({ error: "Not found" }, 404);
     }
 
-    const productRoute = /^\\/product\\/([a-z0-9-]+)\\/?$/.exec(url.pathname);
+    const productRoute = /^\/product\/([a-z0-9-]+)\/?$/.exec(url.pathname);
     if (productRoute && (request.method === "GET" || request.method === "HEAD")) {
       if (!Object.hasOwn(APPROVED_SEO_PRODUCTS,productRoute[1])) {
         return new Response("Not found",{status:404,headers:{"X-Robots-Tag":"noindex, nofollow"}});

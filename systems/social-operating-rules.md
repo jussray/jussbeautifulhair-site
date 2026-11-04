@@ -12,6 +12,8 @@ Personal accounts (@juss_fn_ray, @juss_ray, and the personal Facebook profile / 
 
 Every monetization post carries its featured app's **live branded look for ALL content** — images, videos, reels, carousels, graphics, thumbnails (see `live-branding-rule.md`; the live site/app is the source of truth for the look, and one app's view is never merged into another's). The caption leads with its primary searchable keyword phrase (SEO), states at least one self-contained quotable factual claim about the product/project (GEO), and is structured around one real audience question answered directly in the post (AEO). Approval binds to the **exact media shown to the founder** — a contact sheet precedes any batch tap; text approval never covers unseen media.
 
+**MAX clause (Ray, 2026-11-03):** SEO, GEO, and AEO are **maximized** on every post, never minimum-viable. SEO max = primary + secondary keyword phrases, keyword-led first line, full topical + niche + brand hashtag set, alt text on every image. GEO max = one canonical entity phrasing per product/project, identical across posts (same name + category + fact pattern, so generative engines learn the entity), plus multiple self-contained quotable facts where honest. AEO max = the caption opens with the exact question the audience asks and answers it in the first lines as a quotable block, with FAQ depth below. A post that merely passes on any of the three does not ship.
+
 ## Rule 3 — Engagement model
 
 - **SAFE** comment replies auto-send.

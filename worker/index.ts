@@ -823,6 +823,7 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
         shipping_address_collection: { allowed_countries: ["US"] },
         phone_number_collection: { enabled: true },
         allow_promotion_codes: true,
+        automatic_tax: { enabled: true },
         client_reference_id: reference,
         metadata: { checkout_attempt_id: reference },
         payment_intent_data: {

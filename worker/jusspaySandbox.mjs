@@ -22,6 +22,7 @@ export function parseJussPayCart(input, mapping) {
 }
 export async function handleJussPaySandbox(request,env) {
   if(env.JBH_JUSSPAY_SANDBOX_ENABLED!=='true') return json({error:'not_found'},404);
+  if(request.method==='GET') return json({enabled:true,mode:'sandbox'});
   if(request.method!=='POST') return json({error:'method_not_allowed'},405);
   const url=new URL(request.url);
   if(request.headers.get('origin')!==url.origin) return json({error:'forbidden'},403);
@@ -45,7 +46,7 @@ export async function handleJussPaySandbox(request,env) {
     });
     if(!upstream.ok) return json({error:'sandbox_checkout_unavailable'},502);
     const result=await upstream.json();
-    if(!result || typeof result.url!=='string' || !/^https:\/\/checkout\.stripe\.com\//.test(result.url) || !/^cs_test_/.test(result.sessionId||'') && result.sessionId!==undefined) return json({error:'invalid_provider_response'},502);
+    if(!result || typeof result.orderId!=='string' || !/^jbho_[A-Za-z0-9_-]+$/.test(result.orderId) || typeof result.url!=='string' || !/^https:\/\/checkout\.stripe\.com\//.test(result.url)) return json({error:'invalid_provider_response'},502);
     const checkout=new URL(result.url);
     if(checkout.origin!=='https://checkout.stripe.com' || checkout.username || checkout.password || checkout.port || checkout.hash || !/^\/c\//.test(checkout.pathname)) return json({error:'invalid_provider_response'},502);
     return json({url:checkout.href,mode:'sandbox'});

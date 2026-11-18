@@ -14,6 +14,8 @@ const [worker, catalogClient, cart, checkout, shop, product, home, liveSmoke] = 
   read("scripts/shopify-physical-live-smoke.mjs"),
 ]);
 
+const saleCatalog = await read("client/src/lib/saleCatalog.ts");
+
 test("Cloudflare owns the public Shopify catalog and cart bridge", () => {
   for (const required of [
     'shopDomain: "8qp1z2-az.myshopify.com"',
@@ -63,16 +65,17 @@ test("Shopify vendor catalog uses bounded cursor pagination instead of a fixed o
   assert.match(liveSmoke, /pagesFetched/);
 });
 
-test("physical checkout sends only Shopify variant IDs and quantities", () => {
-  assert.match(checkout, /fetch\("\/api\/shopify\/cart"/);
-  assert.match(checkout, /merchandiseId:\s*item\.variantId/);
+test("selected physical checkout sends first-party IDs to Stripe, without trusting browser totals", () => {
+  assert.match(checkout, /fetch\("\/api\/checkout"/);
+  assert.match(checkout, /checkoutAttemptId:\s*attemptRef\.current\.id/);
+  assert.match(checkout, /id:\s*item\.id/);
+  assert.match(checkout, /variant:\s*item\.variant/);
   assert.match(checkout, /quantity:\s*item\.qty/);
-  assert.match(checkout, /assertApprovedShopifyCheckoutRedirect/);
-  assert.doesNotMatch(checkout, /\/api\/checkout|Pay with Stripe|checkout\.stripe\.com/);
-
+  assert.match(checkout, /assertApprovedCheckoutRedirect\(data\.url\)/);
+  assert.doesNotMatch(checkout, /fetch\("\/api\/shopify\/cart"/);
   assert.match(cart, /variantId:\s*string/);
-  assert.match(cart, /jbh_cart_v2/);
-  assert.match(cart, /ProductVariant\\\/\\d\+/);
+  assert.match(cart, /jbh_stripe_cart_v1/);
+  assert.match(cart, /\^jbh:/);
   assert.doesNotMatch(cart, /FREE_SHIP_THRESHOLD|FLAT_SHIPPING/);
 });
 
@@ -82,33 +85,30 @@ test("branded Shopify checkout URLs escape the Cloudflare storefront without cha
   assert.match(catalogClient, /checkout\.hostname = SHOPIFY_PUBLIC_CONTRACT\.shopDomain/);
 });
 
-test("customer-facing product surfaces read live Shopify commerce through the JBH presentation firewall", () => {
+test("customer-facing products come only from the server-approved Stripe catalog", () => {
   for (const [name, source] of [
     ["shop", shop],
     ["product", product],
     ["home", home],
   ]) {
-    assert.match(source, /useShopifyCatalog/);
-    assert.doesNotMatch(source, /\bPRODUCTS\b/, `${name} must not render the static sellable catalog`);
+    assert.match(source, /useSaleCatalog/);
+    assert.doesNotMatch(source, /\bPRODUCTS\b/, name + " must not trust a client-only sellable catalog");
   }
-
-  assert.match(catalogClient, /fetch\("\/api\/shopify\/catalog"/);
-  assert.match(catalogClient, /staleTime:\s*30_000/);
-  assert.match(catalogClient, /JBH_PRESENTATION_BY_HANDLE/);
-  assert.match(catalogClient, /applyJbhPresentation/);
-  assert.match(catalogClient, /allowedOptions/);
-  assert.match(catalogClient, /if \(!presentation\) return null/);
-  assert.match(catalogClient, /No approved JBH products are available right now/);
-  assert.match(catalogClient, /checkoutHosts:\s*\["jussbeautifulhair\.com",\s*"www\.jussbeautifulhair\.com",\s*"8qp1z2-az\.myshopify\.com"\]/);
-  assert.doesNotMatch(
-    catalogClient,
-    /Dropship Beauty|Dropship Bundles|DSers|Faire|AZ Hair|APOHAIR|Indique|Jaipur|5S Hair/i,
-  );
-  assert.doesNotMatch(catalogClient, /X-Shopify-Storefront-Access-Token|access_token|STRIPE_SECRET_KEY/);
+  assert.match(saleCatalog, /fetch\("\/api\/stripe\/catalog"/);
+  assert.match(saleCatalog, /data\.source !== "jbh-approved-stripe-catalog"/);
+  assert.match(saleCatalog, /retry:\s*false/);
+  assert.match(worker, /STRIPE_APPROVED_VARIANTS/);
+  assert.match(worker, /Catalog is not available for orders/);
+  assert.match(worker, /approved\.get\(product\.id\)\?\.has\(variant\.option\)/);
+  assert.doesNotMatch(saleCatalog, /SHOPIFY_ADMIN|STRIPE_SECRET_KEY/);
 });
 
-test("legacy Stripe checkout remains isolated as rollback-only server code", () => {
+test("Stripe checkout and catalog both remain gated while the Shopify bridge is retained for rollback", () => {
   assert.match(worker, /if \(url\.pathname === "\/api\/checkout"\)/);
+  assert.match(worker, /if \(url\.pathname === "\/api\/stripe\/catalog"\)/);
   assert.match(worker, /createStripeClient/);
-  assert.doesNotMatch(checkout, /createCheckoutAttemptId|assertApprovedCheckoutRedirect/);
+  assert.match(worker, /idempotencyKey:\s*`jbh-checkout-\$\{reference\}`/);
+  assert.match(worker, /STRIPE_CATALOG_NOT_APPROVED/);
+  assert.match(worker, /STRIPE_CATALOG_INVALID/);
+  assert.match(catalogClient, /fetch\("\/api\/shopify\/catalog"/);
 });

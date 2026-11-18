@@ -22,7 +22,13 @@ export function parseJussPayCart(input, mapping) {
 }
 export async function handleJussPaySandbox(request,env) {
   if(env.JBH_JUSSPAY_SANDBOX_ENABLED!=='true') return json({error:'not_found'},404);
-  if(request.method==='GET') return json({enabled:true,mode:'sandbox'});
+  if(request.method==='GET') {
+    if(!env.JBH_JUSSPAY || typeof env.JBH_JUSSPAY.fetch!=='function' || !env.JBH_JUSSPAY_STOREFRONT_KEY || env.JBH_JUSSPAY_STOREFRONT_KEY.length<32) return json({error:'sandbox_unavailable'},503);
+    let mapping;
+    try { mapping=JSON.parse(env.JBH_JUSSPAY_VARIANT_SKUS||'null'); } catch { return json({error:'mapping_unavailable'},503); }
+    if(!mapping || typeof mapping!=='object' || Array.isArray(mapping) || !Object.keys(mapping).length || Object.entries(mapping).some(([variant,sku])=>!VARIANT.test(variant) || typeof sku!=='string' || !SKU.test(sku))) return json({error:'mapping_unavailable'},503);
+    return json({enabled:true,mode:'sandbox'});
+  }
   if(request.method!=='POST') return json({error:'method_not_allowed'},405);
   const url=new URL(request.url);
   if(request.headers.get('origin')!==url.origin) return json({error:'forbidden'},403);

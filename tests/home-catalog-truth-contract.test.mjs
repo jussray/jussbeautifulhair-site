@@ -11,10 +11,10 @@ test("homepage keeps loading, failed truth, and verified-empty catalog states di
   assert.match(home, /isLoading\s*\?\s*\(/);
   assert.match(home, /catalogUnavailable\s*\?\s*\(/);
   assert.match(home, /data-testid="home-catalog-unavailable"/);
-  assert.match(home, /Live inventory could not be verified/);
-  assert.match(home, /No stale prices or availability are being shown\./);
+  assert.match(home, /Ordering is temporarily unavailable/);
+  assert.match(home, /We are not displaying unapproved prices or availability\./);
   assert.match(home, /data-testid="home-catalog-verified-empty"/);
-  assert.match(home, /No Shopify products are available for sale right now\./);
+  assert.match(home, /No products are approved for ordering right now\./);
 });
 
 test("initial and refetch errors fail closed before customer-facing products are derived", () => {
@@ -33,5 +33,5 @@ test("homepage catalog failure exposes a real React Query retry", () => {
   assert.match(home, /data-testid="button-retry-home-catalog"/);
   assert.match(home, /disabled=\{isFetching\}/);
   assert.match(home, /onClick=\{\(\) => void refetch\(\)\}/);
-  assert.match(home, /\{isFetching \? "Checking Shopify…" : "Try Again"\}/);
+  assert.match(home, /\{isFetching \? "Checking collection…" : "Try Again"\}/);
 });

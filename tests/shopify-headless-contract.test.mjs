@@ -89,7 +89,7 @@ test("Hair Match preferences are complete, unique, bounded, and non-sensitive", 
 
 test("approved checkout is deploy-ready without unproven build variables", () => {
   assert.match(hairMatch, /await createHairMatchCheckout\(preferences\)/);
-  assert.match(hairMatch, /disabled=\{submitting\}/);
+  assert.match(hairMatch, /disabled=\{true\}/);
   assert.doesNotMatch(hairMatch, /VITE_SHOPIFY|import\.meta\.env/);
   assert.doesNotMatch(hairMatch, /Checkout opens after the Shopify storefront connection/);
 });

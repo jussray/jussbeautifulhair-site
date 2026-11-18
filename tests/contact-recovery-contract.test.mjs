@@ -5,8 +5,10 @@ import test from "node:test";
 const read = (path) => readFile(path, "utf8");
 
 test("public contact recovery preserves the private customer-data boundary", async () => {
-  const [contact, layout, worker, handoff] = await Promise.all([
+  const [contact, turnstile, ingress, layout, worker, handoff] = await Promise.all([
     read("client/src/pages/Contact.tsx"),
+    read("client/src/components/TurnstileChallenge.tsx"),
+    read("client/src/lib/privateIngress.ts"),
     read("client/src/components/Layout.tsx"),
     read("worker/index.ts"),
     read("docs/CONTACT_RECOVERY_FUTUREYOU.md"),
@@ -16,20 +18,26 @@ test("public contact recovery preserves the private customer-data boundary", asy
   assert.doesNotMatch(worker, /DATABASE_URL/);
   assert.doesNotMatch(worker, /contact_messages/);
   assert.doesNotMatch(worker, /url\.pathname === ["']\/api\/contact["']/);
+  assert.doesNotMatch(worker, /url\.pathname === ["']\/api\/newsletter["']/);
+  assert.doesNotMatch(worker, /newsletter_subscribers/);
 
   assert.match(worker, /CONTACT_API_ORIGIN/);
   assert.match(worker, /https:\/\/challenges\.cloudflare\.com/);
   assert.match(worker, /frame-src https:\/\/challenges\.cloudflare\.com/);
   assert.match(worker, /connect-src \$\{connectSources\}/);
 
-  assert.match(contact, /VITE_CONTACT_API_URL/);
+  assert.match(ingress, /VITE_CONTACT_API_URL/);
+  assert.match(ingress, /configured\.pathname = "\/newsletter"/);
+  assert.match(ingress, /url\.protocol !== "https:" && !local/);
+  assert.match(turnstile, /action: "contact" \| "newsletter"/);
+  assert.match(turnstile, /action,/);
   assert.match(contact, /VITE_TURNSTILE_SITE_KEY/);
+  assert.match(contact, /action="contact"/);
   assert.match(contact, /turnstileToken/);
   assert.match(contact, /companyWebsite/);
   assert.match(contact, /consent/);
   assert.match(contact, /result\.receipt \|\| null/);
   assert.match(contact, /result\.duplicate/);
-  assert.match(contact, /url\.protocol !== "https:" && !local/);
   assert.match(contact, /Privacy Policy/);
   assert.match(contact, /DM us on Instagram/);
 

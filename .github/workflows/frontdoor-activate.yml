@@ -148,12 +148,18 @@ jobs:
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/frontdoor-live-playwright.mjs
 
       - name: Prove exact deployed Shopify purchase path without payment
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/shopify-production-playwright.mjs
 
       - name: Remove newly-created route if post-activation proof fails

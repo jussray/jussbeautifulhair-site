@@ -9,6 +9,7 @@ interface AssetBinding {
 interface Env {
   ASSETS: AssetBinding;
   STRIPE_SECRET_KEY: string;
+  STRIPE_CHECKOUT_MODE?: string;
   STRIPE_APPROVED_VARIANTS?: string;
   STORE_ORIGIN?: string;
   ALLOWED_STOREFRONT_ORIGINS?: string;
@@ -216,6 +217,15 @@ function getReleaseSha(env: Env): string {
       .map((value) => value?.trim())
       .find(Boolean) || "unknown"
   );
+}
+
+/** Explicitly distinguish Stripe test sessions from live merchant charges. */
+function stripeCheckoutModeAllowed(env: Env): boolean {
+  const mode = env.STRIPE_CHECKOUT_MODE?.trim().toLowerCase();
+  const key = env.STRIPE_SECRET_KEY?.trim() || "";
+  if (mode === "test") return /^(sk|rk)_test_/.test(key);
+  if (mode === "live") return /^(sk|rk)_live_/.test(key);
+  return false;
 }
 
 function createStripeClient(env: Env): Stripe {
@@ -698,6 +708,10 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
 
   if (!storeOrigin || !env.STRIPE_SECRET_KEY) {
     return json({ error: "Payments are not configured" }, 503);
+  }
+
+  if (!stripeCheckoutModeAllowed(env)) {
+    return json({ error: "Payment mode is not approved" }, 503);
   }
 
   if (!origin || !allowedOrigins.includes(origin)) {

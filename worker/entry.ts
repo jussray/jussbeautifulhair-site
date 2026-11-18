@@ -34,6 +34,7 @@ type FunnelEventName =
   | "add_to_cart"
   | "checkout_start"
   | "shopify_handoff"
+  | "stripe_handoff"
   | "checkout_error";
 
 type FunnelPayload = {
@@ -63,6 +64,7 @@ const FUNNEL_EVENTS = new Set<FunnelEventName>([
   "add_to_cart",
   "checkout_start",
   "shopify_handoff",
+  "stripe_handoff",
   "checkout_error",
 ]);
 const FUNNEL_KEYS = new Set([

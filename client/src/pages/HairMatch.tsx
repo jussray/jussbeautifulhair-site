@@ -171,16 +171,16 @@ export default function HairMatch() {
               <Button
                 size="lg"
                 className="mt-6 w-full font-semibold"
-                disabled={submitting}
+                disabled={true}
                 onClick={startCheckout}
                 data-testid="button-hair-match-checkout"
               >
-                {submitting ? "Opening secure checkout…" : "Reserve My Hair Match"}
+                Hair Match bookings temporarily paused
                 {!submitting && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
 
               <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                <ShieldCheck className="h-4 w-4" /> Secure checkout powered by Shopify
+                <ShieldCheck className="h-4 w-4" /> This service is not accepting orders during the checkout transition.
               </div>
             </aside>
           </div>

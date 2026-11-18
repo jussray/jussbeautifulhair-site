@@ -40,3 +40,7 @@ Each member distinguishes `VERIFIED`, `INFERRED`, `UNKNOWN`, and `BLOCKED`.
 Return one packet: `REALITY / COUNCIL / FIX / PROOF / RISK / ROLLBACK / NEXT GATE`.
 
 A green build, contract test, Shopify response, Cloudflare deploy, or Council vote is not by itself proof of a real successful customer checkout path.
+
+## Court
+
+For consequential storefront decisions, convene the architectural court in `.control-room/jbh-court.contract.json` (`juss/jbh-court@v1`): Merchandising, Checkout, and Storefront councils under the Founder Council. No second authority plane. Founder rules; spend stays separately gated.

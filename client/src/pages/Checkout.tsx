@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Lock, Info } from "lucide-react";
 import { Layout } from "@/components/Layout";
@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
 import { observeFunnel } from "@/lib/funnel";
-import { assertApprovedShopifyCheckoutRedirect } from "@/lib/shopifyCatalog";
+import { assertApprovedCheckoutRedirect } from "@/lib/checkoutRedirect.mjs";
 
 export default function Checkout() {
   const { items, subtotal } = useCart();
   const [, navigate] = useLocation();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const attemptRef = useRef<{ cart: string; id: string } | null>(null);
   const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
 
   useEffect(() => {
@@ -43,28 +44,35 @@ export default function Checkout() {
     setError(null);
 
     try {
-      const response = await fetch("/api/shopify/cart", {
+      // Keep the same attempt ID on network retries for the same basket.
+      const cartFingerprint = JSON.stringify(items.map((item) => [item.id, item.variant, item.qty]));
+      if (!attemptRef.current || attemptRef.current.cart !== cartFingerprint) {
+        attemptRef.current = { cart: cartFingerprint, id: crypto.randomUUID() };
+      }
+      const response = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          lines: items.map((item) => ({
-            merchandiseId: item.variantId,
+          checkoutAttemptId: attemptRef.current.id,
+          items: items.map((item) => ({
+            id: item.id,
+            variant: item.variant,
             quantity: item.qty,
           })),
         }),
       });
 
       const data = (await response.json().catch(() => ({}))) as {
-        checkoutUrl?: string;
+        url?: string;
         error?: string;
       };
-      if (!response.ok || !data.checkoutUrl) {
-        throw new Error(data.error || "Shopify checkout failed. Please try again.");
+      if (!response.ok || !data.url) {
+        throw new Error(data.error || "Secure checkout is not ready. Please try again.");
       }
 
-      const approvedCheckoutUrl = assertApprovedShopifyCheckoutRedirect(data.checkoutUrl);
+      const approvedCheckoutUrl = assertApprovedCheckoutRedirect(data.url);
       observeFunnel({
-        event: "shopify_handoff",
+        event: "stripe_handoff",
         route: window.location.pathname,
         quantity: totalQuantity,
         valueCents: Math.round(subtotal * 100),
@@ -80,7 +88,7 @@ export default function Checkout() {
       setError(
         checkoutError instanceof Error
           ? checkoutError.message
-          : "Shopify checkout failed. Please try again.",
+          : "Secure checkout is not ready. Please try again.",
       );
       setSubmitting(false);
     }
@@ -91,18 +99,18 @@ export default function Checkout() {
       <div className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="font-display text-3xl sm:text-4xl text-foreground mb-2">Checkout</h1>
         <p className="text-muted-foreground mb-8">
-          Review your items, then continue to Shopify for final availability, shipping, taxes, discounts, and payment.
+          Review your approved items, then continue to Stripe for secure payment and shipping details.
         </p>
 
         <div className="grid lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-8">
             <section className="rounded-lg border border-card-border bg-card p-6">
-              <h2 className="font-display text-xl text-foreground mb-4">Secure Shopify checkout</h2>
+              <h2 className="font-display text-xl text-foreground mb-4">Secure Stripe checkout</h2>
               <div className="flex items-start gap-3 rounded-md bg-secondary/30 px-4 py-4 text-sm text-primary">
                 <Info className="h-5 w-5 shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <p>
-                    Shopify confirms current variant availability and securely collects the information required to complete your order.
+                    Juss Beautiful Hair confirms sellable offers before Stripe securely collects checkout details.
                   </p>
                   <p>
                     Juss Beautiful Hair does not place payment credentials or customer contact details in the public storefront bundle.
@@ -147,7 +155,7 @@ export default function Checkout() {
                   <span className="text-2xl font-semibold text-foreground">{formatPrice(subtotal)}</span>
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  Final order totals are calculated by Shopify before payment.
+                  Shipping and any applicable charges are confirmed on Stripe before payment.
                 </p>
               </div>
 
@@ -160,7 +168,7 @@ export default function Checkout() {
                 className="mt-6 w-full font-semibold"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                {submitting ? "Opening Shopify…" : `Continue to Shopify — ${formatPrice(subtotal)}`}
+                {submitting ? "Opening secure checkout…" : `Continue to Stripe — ${formatPrice(subtotal)}`}
               </Button>
             </div>
           </div>

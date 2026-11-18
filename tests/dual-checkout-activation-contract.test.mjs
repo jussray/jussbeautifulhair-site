@@ -16,10 +16,13 @@ test("Stripe routes stay disabled by default at the outer Worker boundary", () =
   }
 });
 
-test("Shopify remains the customer checkout and Stripe is not advertised prematurely", () => {
-  assert.match(checkout, /fetch\("\/api\/shopify\/cart"/);
-  assert.match(checkout, /assertApprovedShopifyCheckoutRedirect\(data\.checkoutUrl\)/);
-  assert.doesNotMatch(checkout, /fetch\("\/api\/checkout"/);
+test("Stripe is the selected customer checkout but remains default-off until approved", () => {
+  assert.match(checkout, /fetch\("\/api\/checkout"/);
+  assert.match(checkout, /assertApprovedCheckoutRedirect\(data\.url\)/);
+  assert.doesNotMatch(checkout, /fetch\("\/api\/shopify\/cart"/);
+  assert.match(entry, /pathname === "\/api\/stripe\/catalog"/);
+  assert.match(worker, /approvedStripeOffers\(env\)/);
+  assert.match(worker, /\/api\/stripe\/catalog/);
 });
 
 test("Stripe checkout requires server credentials and uses idempotent sessions", () => {

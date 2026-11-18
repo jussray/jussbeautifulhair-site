@@ -1,5 +1,6 @@
 import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json";
 import worker from "./index";
+import { handleJussPaySandbox } from "./jusspaySandbox.mjs";
 import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
 import { enforceJbhRateLimit, type RateLimitBinding } from "./rate-limit";
 import {
@@ -18,6 +19,10 @@ type AnalyticsEngineDatasetBinding = {
 };
 type Env = BaseEnv & {
   ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
+  JBH_JUSSPAY_SANDBOX_ENABLED?: string;
+  JBH_JUSSPAY_VARIANT_SKUS?: string;
+  JBH_JUSSPAY_STOREFRONT_KEY?: string;
+  JBH_JUSSPAY?: { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
   FUNNEL_ANALYTICS?: AnalyticsEngineDatasetBinding;
   JBH_AI_OPERATOR_KEY?: string;
   JBH_RATE_LIMITER?: RateLimitBinding;
@@ -423,6 +428,10 @@ export default {
     if (limited) return limited;
 
     const pathname = new URL(request.url).pathname;
+
+    if (pathname === "/api/jusspay/sandbox/checkout") {
+      return handleJussPaySandbox(request, env);
+    }
 
     if (pathname === VERSION_PATH) {
       return versionResponse(request, env);

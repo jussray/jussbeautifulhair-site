@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { Lock, Info } from "lucide-react";
 import { Layout } from "@/components/Layout";
@@ -14,6 +14,7 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sandbox, setSandbox] = useState(false);
+  const checkoutAttempt = useRef<{ cart: string; requestId: string } | null>(null);
   const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
 
   useEffect(() => {
@@ -53,11 +54,15 @@ export default function Checkout() {
     setError(null);
 
     try {
+      const cartFingerprint = JSON.stringify(items.map((item) => [item.variantId, item.qty]));
+      if (!checkoutAttempt.current || checkoutAttempt.current.cart !== cartFingerprint) {
+        checkoutAttempt.current = { cart: cartFingerprint, requestId: crypto.randomUUID() };
+      }
       const response = await fetch(sandbox ? "/api/jusspay/sandbox/checkout" : "/api/shopify/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(sandbox ? { requestId: crypto.randomUUID(), shipping: "standard" } : {}),
+          ...(sandbox ? { requestId: checkoutAttempt.current.requestId, shipping: "standard" } : {}),
           lines: items.map((item) => ({
             merchandiseId: item.variantId,
             quantity: item.qty,

@@ -26,6 +26,7 @@ test("Founder Funnel rejects undeclared fields instead of storing arbitrary cust
   assert.match(workerEntry, /"add_to_cart"/);
   assert.match(workerEntry, /"checkout_start"/);
   assert.match(workerEntry, /"shopify_handoff"/);
+  assert.match(workerEntry, /"stripe_handoff"/);
   assert.match(workerEntry, /"checkout_error"/);
   assert.doesNotMatch(workerEntry, /"email"\s*,|"phone"\s*,|"address"\s*,|"customerId"\s*,/);
 });
@@ -55,16 +56,16 @@ test("product events bind to rendered live product and successful cart mutation"
   assert.ok(addToCart > addItem, "add_to_cart must follow the cart mutation");
 });
 
-test("Shopify handoff is observed only after checkout URL approval", () => {
+test("Stripe handoff is observed only after checkout URL approval", () => {
   const approval = checkoutPage.indexOf(
-    "const approvedCheckoutUrl = assertApprovedShopifyCheckoutRedirect(data.checkoutUrl);",
+    "const approvedCheckoutUrl = assertApprovedCheckoutRedirect(data.url);",
   );
-  const handoff = checkoutPage.indexOf('event: "shopify_handoff"');
+  const handoff = checkoutPage.indexOf('event: "stripe_handoff"');
   const redirect = checkoutPage.indexOf("window.location.assign(approvedCheckoutUrl)");
 
   assert.ok(checkoutPage.includes('event: "checkout_start"'));
   assert.ok(checkoutPage.includes('event: "checkout_error"'));
-  assert.ok(approval >= 0, "approved Shopify URL boundary is missing");
+  assert.ok(approval >= 0, "approved Stripe URL boundary is missing");
   assert.ok(handoff > approval, "handoff event must follow URL approval");
   assert.ok(redirect > handoff, "browser redirect must follow handoff observation");
 });

@@ -115,3 +115,19 @@ test("test/live Stripe key modes must match and missing mode fails closed", asyn
     assert.equal(result.error, "Payment mode is not approved");
   }
 });
+
+test("Stripe session verification refuses mismatched or unspecified payment mode", async () => {
+  const sessionRoute = "/api/checkout/session/cs_test_no_provider_call";
+  for (const [secret, mode] of [
+    ["sk_live_fake_not_a_provider_key", "test"],
+    ["sk_test_fake_not_a_provider_key", "live"],
+    ["sk_test_fake_not_a_provider_key", undefined],
+  ]) {
+    const response = await worker.fetch(
+      request(sessionRoute, { method: "GET" }),
+      { ...env, STRIPE_SECRET_KEY: secret, STRIPE_CHECKOUT_MODE: mode },
+    );
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error, "Payment mode is not approved");
+  }
+});

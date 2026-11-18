@@ -21,7 +21,7 @@ interface CartContextValue {
   subtotal: number;
 }
 
-const STORAGE_KEY = "jbh_cart_v2";
+const STORAGE_KEY = "jbh_stripe_cart_v1";
 
 function isStoredCartItem(value: unknown): value is CartItem {
   if (!value || typeof value !== "object") return false;
@@ -29,7 +29,7 @@ function isStoredCartItem(value: unknown): value is CartItem {
   return (
     typeof item.id === "string" &&
     typeof item.variantId === "string" &&
-    /^gid:\/\/shopify\/ProductVariant\/\d+$/.test(item.variantId) &&
+    /^jbh:[a-z0-9-]+:\d+$/.test(item.variantId) &&
     typeof item.name === "string" &&
     typeof item.variant === "string" &&
     typeof item.price === "number" &&

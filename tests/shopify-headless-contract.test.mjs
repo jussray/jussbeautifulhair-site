@@ -71,7 +71,9 @@ test("Hair Match route preserves truthful non-physical-product disclosure", () =
   assert.match(app, /path="\/hair-match"/);
   assert.match(hairMatch, /not an order\s+for physical hair/s);
   assert.match(hairMatch, /no hair product ships from this purchase/);
-  assert.match(hairMatch, /Secure checkout powered by Shopify/);
+  assert.match(hairMatch, /Hair Match bookings temporarily paused/);
+  assert.match(hairMatch, /disabled=\{true\}/);
+  assert.match(hairMatch, /This service is not accepting orders during the checkout transition/);
 });
 
 test("Hair Match preferences are complete, unique, bounded, and non-sensitive", () => {

@@ -66,6 +66,7 @@ test("Stripe Checkout refuses unapproved items even with payment credentials", a
   const configured = {
     ...env,
     STRIPE_SECRET_KEY: "sk_test_fake_not_a_provider_key",
+    STRIPE_CHECKOUT_MODE: "test",
     STRIPE_APPROVED_VARIANTS: JSON.stringify({ "bundle-bodywave": ['14"'] }),
   };
   const checkoutAttemptId = "6c11b5b4-05d5-4a9b-84ff-43836ecf8d41";
@@ -82,5 +83,35 @@ test("Stripe Checkout refuses unapproved items even with payment credentials", a
       configured,
     );
     assert.equal(response.status, 400);
+  }
+});
+
+test("test/live Stripe key modes must match and missing mode fails closed", async () => {
+  const body = JSON.stringify({
+    checkoutAttemptId: "6c11b5b4-05d5-4a9b-84ff-43836ecf8d41",
+    items: [{ id: "bundle-bodywave", variant: '14"', quantity: 1 }],
+  });
+  for (const [key, mode] of [
+    ["sk_live_fake_not_a_provider_key", "test"],
+    ["sk_test_fake_not_a_provider_key", "live"],
+    ["sk_test_fake_not_a_provider_key", undefined],
+    ["sk_live_fake_not_a_provider_key", undefined],
+  ]) {
+    const response = await worker.fetch(
+      request("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: base },
+        body,
+      }),
+      {
+        ...env,
+        STRIPE_SECRET_KEY: key,
+        STRIPE_CHECKOUT_MODE: mode,
+        STRIPE_APPROVED_VARIANTS: JSON.stringify({ "bundle-bodywave": ['14"'] }),
+      },
+    );
+    assert.equal(response.status, 503);
+    const result = await response.json();
+    assert.equal(result.error, "Payment mode is not approved");
   }
 });

@@ -75,7 +75,7 @@ const FUNNEL_KEYS = new Set([
 ]);
 
 function isLegacyStripeCheckout(pathname: string): boolean {
-  return pathname === "/api/checkout" || pathname.startsWith(LEGACY_STRIPE_SESSION_PREFIX);
+  return pathname === "/api/checkout" || pathname === "/api/stripe/catalog" || pathname.startsWith(LEGACY_STRIPE_SESSION_PREFIX);
 }
 
 function legacyStripeEnabled(env: Env): boolean {

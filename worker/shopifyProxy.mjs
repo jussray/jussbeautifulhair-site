@@ -17,6 +17,8 @@
 // an open proxy — only the paths below are forwarded, and only here.
 export const SHOPIFY_PROXY_HOST = "8qp1z2-az.myshopify.com";
 export const SHOPIFY_PROXY_ORIGIN = `https://${SHOPIFY_PROXY_HOST}`;
+// Verified Shopify Admin primary domain (2026-10-27). Keep upstream Host canonical.
+export const SHOPIFY_PRIMARY_HOST = "www.jussbeautifulhair.com";
 
 // Exact "/cart" stays with the SPA cart page; only Shopify-owned subpaths
 // proxy. "/checkouts/*" covers checkout-completion redirects, "/wallets/*"
@@ -67,7 +69,8 @@ export function rewriteProxyRedirectLocation(location, requestOrigin) {
  * Loop-break: Shopify 301-redirects myshopify-host requests to the store's
  * primary (custom) domain, which would bounce forever between the proxy and
  * the origin. Sending the branded Host header makes Shopify serve the
- * checkout directly with a 200 instead of canonicalizing.
+ * checkout directly instead of canonicalizing. Use the Shopify-configured
+ * primary hostname even for requests arriving on the apex domain.
  */
 export async function proxyToShopify(request) {
   const requestUrl = new URL(request.url);
@@ -76,7 +79,7 @@ export async function proxyToShopify(request) {
   target.search = requestUrl.search;
 
   const headers = new Headers(request.headers);
-  headers.set("host", requestUrl.hostname);
+  headers.set("host", SHOPIFY_PRIMARY_HOST);
 
   // Node's undici requires `duplex: "half"` for streaming request bodies;
   // the Workers runtime ignores the unknown init key.

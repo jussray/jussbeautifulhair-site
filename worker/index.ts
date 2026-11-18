@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { z } from "zod";
-import { getProduct } from "../shared/catalog";
+import { getProduct, PRODUCTS } from "../shared/catalog";
 
 interface AssetBinding {
   fetch(request: Request): Promise<Response>;
@@ -9,6 +9,7 @@ interface AssetBinding {
 interface Env {
   ASSETS: AssetBinding;
   STRIPE_SECRET_KEY: string;
+  STRIPE_APPROVED_VARIANTS?: string;
   STORE_ORIGIN?: string;
   ALLOWED_STOREFRONT_ORIGINS?: string;
   CONTACT_API_ORIGIN?: string;
@@ -620,6 +621,76 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
   }
 }
 
+
+/**
+ * Explicit founder-approved sale offers, keyed by first-party product ID.
+ * Missing/invalid configuration fails closed. This is independent of Shopify.
+ * Approval also confirms that the listed variants can be fulfilled at the
+ * prices encoded in the shared, server-owned catalog.
+ */
+function approvedStripeOffers(env: Env): Map<string, Set<string>> {
+  if (!env.STRIPE_APPROVED_VARIANTS?.trim()) {
+    throw new Error("STRIPE_CATALOG_NOT_APPROVED");
+  }
+  let input: unknown;
+  try {
+    input = JSON.parse(env.STRIPE_APPROVED_VARIANTS);
+  } catch {
+    throw new Error("STRIPE_CATALOG_INVALID");
+  }
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("STRIPE_CATALOG_INVALID");
+  }
+  const approved = new Map<string, Set<string>>();
+  for (const [id, options] of Object.entries(input)) {
+    const product = getProduct(id);
+    if (!product || !Array.isArray(options) || options.length === 0 ||
+        options.some((option) => typeof option !== "string") ||
+        new Set(options).size !== options.length ||
+        options.some((option) => !product.variants.some((v) => v.option === option))) {
+      throw new Error("STRIPE_CATALOG_INVALID");
+    }
+    approved.set(id, new Set(options as string[]));
+  }
+  if (approved.size === 0) throw new Error("STRIPE_CATALOG_NOT_APPROVED");
+  return approved;
+}
+
+function handleStripeCatalog(request: Request, env: Env): Response {
+  if (request.method !== "GET") {
+    return new Response("Method not allowed", { status: 405, headers: { Allow: "GET" } });
+  }
+  try {
+    const approved = approvedStripeOffers(env);
+    const products = PRODUCTS.flatMap((product) => {
+      const allowed = approved.get(product.id);
+      if (!allowed) return [];
+      const variants = product.variants.flatMap((variant, idx) =>
+        allowed.has(variant.option) ? [{
+          id: `jbh:${product.id}:${idx}`,
+          option: variant.option,
+          price: variant.price,
+          availableForSale: true,
+        }] : [],
+      );
+      return [{
+        id: product.id,
+        name: product.name,
+        category: product.category,
+        tagline: product.tagline,
+        description: product.description,
+        variants,
+        badge: product.badge,
+        image: product.image,
+        availableForSale: variants.length > 0,
+      }];
+    });
+    return json({ products, source: "jbh-approved-stripe-catalog" });
+  } catch {
+    return json({ error: "Catalog is not available for orders" }, 503);
+  }
+}
+
 async function handleCheckout(request: Request, env: Env): Promise<Response> {
   const allowedOrigins = getAllowedOrigins(env);
   const storeOrigin = allowedOrigins[0];
@@ -666,6 +737,13 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
   const parsed = checkoutSchema.safeParse(parsedJson);
   if (!parsed.success) return json({ error: "Invalid cart" }, 400, origin);
 
+  let approved: Map<string, Set<string>>;
+  try {
+    approved = approvedStripeOffers(env);
+  } catch {
+    return json({ error: "Catalog is not approved for orders" }, 503, origin);
+  }
+
   const canonicalItems = [] as Array<{
     id: string;
     name: string;
@@ -681,7 +759,7 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
       (candidate) => candidate.option === requested.variant,
     );
 
-    if (!product || !variant) {
+    if (!product || !variant || !approved.get(product.id)?.has(variant.option)) {
       return json({ error: "Cart contains an unavailable item" }, 400, origin);
     }
 
@@ -841,6 +919,10 @@ export default {
 
     if (url.pathname === "/version") {
       return json({ ok: true, sha: getReleaseSha(env) });
+    }
+
+    if (url.pathname === "/api/stripe/catalog") {
+      return handleStripeCatalog(request, env);
     }
 
     if (url.pathname === "/api/shopify/catalog") {

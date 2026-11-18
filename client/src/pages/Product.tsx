@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
 import { observeFunnel } from "@/lib/funnel";
-import { useShopifyCatalog } from "@/lib/shopifyCatalog";
+import { useSaleCatalog } from "@/lib/saleCatalog";
 
 export default function Product() {
   const [, params] = useRoute("/product/:id");
@@ -18,7 +18,7 @@ export default function Product() {
     isError,
     isRefetchError,
     refetch,
-  } = useShopifyCatalog();
+  } = useSaleCatalog();
   const catalogUnavailable = isError || isRefetchError;
   const product = params ? products.find((candidate) => candidate.id === params.id) : undefined;
   const { addItem } = useCart();
@@ -82,7 +82,7 @@ export default function Product() {
           className="mx-auto max-w-3xl px-6 py-24 text-center"
           data-testid="product-catalog-unavailable"
         >
-          <h1 className="font-display text-3xl text-foreground">Live product details are refreshing</h1>
+          <h1 className="font-display text-3xl text-foreground">Product ordering is temporarily unavailable</h1>
           <p className="mt-3 text-muted-foreground">We are not showing stale pricing or availability.</p>
           <Button
             className="mt-6"

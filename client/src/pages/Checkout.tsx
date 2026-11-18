@@ -13,7 +13,17 @@ export default function Checkout() {
   const [, navigate] = useLocation();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sandbox, setSandbox] = useState(false);
   const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/jusspay/sandbox/checkout", { cache: "no-store" })
+      .then(async (response) => response.ok && (await response.json()).mode === "sandbox")
+      .then((enabled) => { if (active) setSandbox(Boolean(enabled)); })
+      .catch(() => { if (active) setSandbox(false); });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -43,10 +53,11 @@ export default function Checkout() {
     setError(null);
 
     try {
-      const response = await fetch("/api/shopify/cart", {
+      const response = await fetch(sandbox ? "/api/jusspay/sandbox/checkout" : "/api/shopify/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(sandbox ? { requestId: crypto.randomUUID(), shipping: "standard" } : {}),
           lines: items.map((item) => ({
             merchandiseId: item.variantId,
             quantity: item.qty,
@@ -56,15 +67,16 @@ export default function Checkout() {
 
       const data = (await response.json().catch(() => ({}))) as {
         checkoutUrl?: string;
+        url?: string;
         error?: string;
       };
-      if (!response.ok || !data.checkoutUrl) {
-        throw new Error(data.error || "Shopify checkout failed. Please try again.");
+      if (!response.ok || !(sandbox ? data.url : data.checkoutUrl)) {
+        throw new Error(data.error || "Checkout is temporarily unavailable. Please try again.");
       }
 
-      const approvedCheckoutUrl = assertApprovedShopifyCheckoutRedirect(data.checkoutUrl);
+      const approvedCheckoutUrl = sandbox ? data.url! : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);
       observeFunnel({
-        event: "shopify_handoff",
+        event: sandbox ? "checkout_start" : "shopify_handoff",
         route: window.location.pathname,
         quantity: totalQuantity,
         valueCents: Math.round(subtotal * 100),
@@ -80,7 +92,7 @@ export default function Checkout() {
       setError(
         checkoutError instanceof Error
           ? checkoutError.message
-          : "Shopify checkout failed. Please try again.",
+          : "Checkout failed. Please try again.",
       );
       setSubmitting(false);
     }
@@ -91,18 +103,18 @@ export default function Checkout() {
       <div className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="font-display text-3xl sm:text-4xl text-foreground mb-2">Checkout</h1>
         <p className="text-muted-foreground mb-8">
-          Review your items, then continue to Shopify for final availability, shipping, taxes, discounts, and payment.
+          {sandbox ? "Sandbox checkout uses Stripe test mode. No real payment will be collected." : "Review your items, then continue to Shopify for final availability, shipping, taxes, discounts, and payment."}
         </p>
 
         <div className="grid lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-8">
             <section className="rounded-lg border border-card-border bg-card p-6">
-              <h2 className="font-display text-xl text-foreground mb-4">Secure Shopify checkout</h2>
+              <h2 className="font-display text-xl text-foreground mb-4">{sandbox ? "JussPay test checkout" : "Secure Shopify checkout"}</h2>
               <div className="flex items-start gap-3 rounded-md bg-secondary/30 px-4 py-4 text-sm text-primary">
                 <Info className="h-5 w-5 shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <p>
-                    Shopify confirms current variant availability and securely collects the information required to complete your order.
+                    {sandbox ? "Test-only checkout. Orders are not automatically sent to vendors." : "Shopify confirms current variant availability and securely collects the information required to complete your order."}
                   </p>
                   <p>
                     Juss Beautiful Hair does not place payment credentials or customer contact details in the public storefront bundle.
@@ -147,7 +159,7 @@ export default function Checkout() {
                   <span className="text-2xl font-semibold text-foreground">{formatPrice(subtotal)}</span>
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  Final order totals are calculated by Shopify before payment.
+                  {sandbox ? "Sandbox prices and shipping are calculated by the server. Displayed subtotal is informational." : "Final order totals are calculated by Shopify before payment."}
                 </p>
               </div>
 
@@ -160,7 +172,7 @@ export default function Checkout() {
                 className="mt-6 w-full font-semibold"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                {submitting ? "Opening Shopify…" : `Continue to Shopify — ${formatPrice(subtotal)}`}
+                {submitting ? "Opening checkout…" : sandbox ? "Continue to JussPay test checkout" : `Continue to Shopify — ${formatPrice(subtotal)}`}
               </Button>
             </div>
           </div>

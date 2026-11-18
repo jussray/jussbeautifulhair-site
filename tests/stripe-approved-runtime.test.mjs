@@ -1,25 +1,27 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
-import { build } from "esbuild";
+import ts from "typescript";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const temp = await mkdtemp(path.join(root, ".stripe-runtime-test-"));
 let worker;
 try {
+  const workerSource = await readFile(path.join(root, "worker/index.ts"), "utf8");
+  const catalogSource = await readFile(path.join(root, "shared/catalog.ts"), "utf8");
+  assert.match(workerSource, /from "\.\.\/shared\/catalog"/);
+  const transpile = (source) => ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const compiled = transpile(workerSource.replace(
+    'from "../shared/catalog"',
+    'from "./catalog.mjs"',
+  ));
+  await writeFile(path.join(temp, "catalog.mjs"), transpile(catalogSource));
   const outfile = path.join(temp, "worker.mjs");
-  await build({
-    entryPoints: [path.join(root, "worker/index.ts")],
-    bundle: true,
-    platform: "node",
-    format: "esm",
-    packages: "external",
-    outfile,
-    logLevel: "silent",
-    target: "node24",
-  });
+  await writeFile(outfile, compiled);
   worker = (await import(pathToFileURL(outfile).href)).default;
 } finally {
   await rm(temp, { recursive: true, force: true });

@@ -254,7 +254,7 @@ export default function Product() {
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-border pt-6">
               <div className="flex items-start gap-2.5 text-sm">
                 <Truck className="h-5 w-5 text-primary shrink-0" />
-                <span className="text-muted-foreground">Live availability synced through Shopify.</span>
+                <span className="text-muted-foreground">Only approved product options are offered for ordering.</span>
               </div>
               <div className="flex items-start gap-2.5 text-sm">
                 <ShieldCheck className="h-5 w-5 text-primary shrink-0" />

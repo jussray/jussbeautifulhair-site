@@ -4,11 +4,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
 
-// Behavior contract for the Shopify primary-domain move to checkout.jussbeautifulhair.com.
-// Once Shopify's primary domain is the checkout subdomain, Cart checkoutUrl comes back on
-// that host. The client guard must accept it and must NOT rewrite it (it is served by
-// Shopify, not the Cloudflare SPA). The apex host still collides with the SPA and keeps
-// its rewrite to the canonical shop domain.
+// Checkout-host contract follows live provider truth.
+// Shopify Admin reports www.jussbeautifulhair.com as the active primary domain.
+// Both the apex and www host are branded storefront origins, so cart URLs must
+// retain path and key while escaping to the canonical .myshopify.com checkout.
+// The unverified checkout subdomain stays blocked.
 async function loadGuard() {
   const source = await readFile(
     path.join(process.cwd(), "client", "src", "lib", "shopifyCatalog.ts"),
@@ -25,10 +25,12 @@ async function loadGuard() {
   return import(`data:text/javascript;base64,${encoded}`);
 }
 
-test("checkout subdomain URL is approved and preserved exactly", async () => {
+test("unverified checkout subdomain fails closed", async () => {
   const { assertApprovedShopifyCheckoutRedirect } = await loadGuard();
-  const url = "https://checkout.jussbeautifulhair.com/cart/c/abc123?key=k1";
-  assert.equal(assertApprovedShopifyCheckoutRedirect(url), url);
+  assert.throws(
+    () => assertApprovedShopifyCheckoutRedirect("https://checkout.jussbeautifulhair.com/cart/c/abc123?key=k1"),
+    /not approved/,
+  );
 });
 
 test("apex storefront host is still escaped to the canonical shop domain", async () => {
@@ -39,10 +41,20 @@ test("apex storefront host is still escaped to the canonical shop domain", async
   );
 });
 
+test("verified Shopify primary www host preserves cart path and key on handoff", async () => {
+  const { assertApprovedShopifyCheckoutRedirect } = await loadGuard();
+  assert.equal(
+    assertApprovedShopifyCheckoutRedirect("https://www.jussbeautifulhair.com/cart/c/abc123?key=keep-me&source=JBH"),
+    "https://8qp1z2-az.myshopify.com/cart/c/abc123?key=keep-me&source=JBH",
+  );
+});
+
 test("lookalike and unapproved hosts stay blocked", async () => {
   const { assertApprovedShopifyCheckoutRedirect } = await loadGuard();
   for (const bad of [
     "https://checkout.jussbeautifulhair.com.evil.example/cart/c/x",
+    "https://www.jussbeautifulhair.com.evil.example/cart/c/x",
+    "http://www.jussbeautifulhair.com/cart/c/x",
     "https://evilcheckout.jussbeautifulhair.com/cart/c/x",
     "http://checkout.jussbeautifulhair.com/cart/c/x",
     "https://checkout.jussbeautifulhair.com:8443/cart/c/x",
@@ -51,12 +63,13 @@ test("lookalike and unapproved hosts stay blocked", async () => {
   }
 });
 
-test("production Playwright proof approves the checkout subdomain", async () => {
+test("production Playwright proof excludes the unverified checkout subdomain", async () => {
   const proof = await readFile(
     path.join(process.cwd(), "scripts", "shopify-production-playwright.mjs"),
     "utf8",
   );
   const hostSet = proof.match(/const approvedCheckoutHosts = new Set\(\[([\s\S]*?)\]\)/);
   assert.ok(hostSet, "approvedCheckoutHosts set not found in production proof");
-  assert.match(hostSet[1], /"checkout\.jussbeautifulhair\.com"/);
+  assert.doesNotMatch(hostSet[1], /"checkout\.jussbeautifulhair\.com"/);
+  assert.match(hostSet[1], /"www\.jussbeautifulhair\.com"/);
 });

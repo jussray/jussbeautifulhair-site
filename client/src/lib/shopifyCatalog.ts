@@ -39,7 +39,7 @@ export const SHOPIFY_PUBLIC_CONTRACT = Object.freeze({
   shopDomain: "8qp1z2-az.myshopify.com",
   apiVersion: "2026-07",
   vendor: "JBH",
-  checkoutHosts: ["jussbeautifulhair.com", "checkout.jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
+  checkoutHosts: ["jussbeautifulhair.com", "www.jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 
 const REJECTED_SHOPIFY_IMAGE_PATTERN = /-approved-4x5\.(?:png|jpe?g)(?:\?|$)/i;
@@ -451,7 +451,7 @@ export function assertApprovedShopifyCheckoutRedirect(rawUrl: unknown): string {
   // is owned by the Cloudflare SPA, so sending /cart/c/* there loops back into the
   // storefront. Preserve Shopify's exact cart path and key while escaping only the
   // colliding hostname to the canonical shop domain that serves Shopify checkout.
-  if (checkoutHost === "jussbeautifulhair.com") {
+  if (checkoutHost === "jussbeautifulhair.com" || checkoutHost === "www.jussbeautifulhair.com") {
     checkout.hostname = SHOPIFY_PUBLIC_CONTRACT.shopDomain;
   }
 

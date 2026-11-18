@@ -3,11 +3,11 @@ import { Layout } from "@/components/Layout";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/catalog";
-import { useShopifyCatalog } from "@/lib/shopifyCatalog";
+import { useSaleCatalog } from "@/lib/saleCatalog";
 
 export default function Shop() {
   const [active, setActive] = useState("All");
-  const { data: products = [], isLoading, isError, refetch } = useShopifyCatalog();
+  const { data: products = [], isLoading, isError, refetch } = useSaleCatalog();
 
   const categories = useMemo(
     () =>
@@ -35,7 +35,7 @@ export default function Shop() {
           </p>
           <h1 className="font-display text-4xl sm:text-5xl">All Products</h1>
           <p className="mt-3 text-primary-foreground/80 max-w-xl mx-auto">
-            Live hair and beauty inventory, with secure checkout powered by Shopify.
+            Shop our approved collection with secure Stripe checkout.
           </p>
         </div>
       </section>
@@ -61,7 +61,7 @@ export default function Shop() {
         )}
 
         {isLoading && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5" aria-label="Loading live inventory">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5" aria-label="Loading approved collection">
             {Array.from({ length: 8 }, (_, index) => (
               <div key={index} className="rounded-lg border border-card-border bg-card overflow-hidden animate-pulse">
                 <div className="aspect-square bg-muted" />
@@ -77,9 +77,9 @@ export default function Shop() {
 
         {isError && (
           <div className="mx-auto max-w-xl rounded-lg border border-card-border bg-card px-6 py-10 text-center">
-            <h2 className="font-display text-2xl text-foreground">Live inventory is refreshing</h2>
+            <h2 className="font-display text-2xl text-foreground">Collection temporarily unavailable</h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              We could not load Shopify inventory just now. No stale prices are being shown.
+              No items are offered until availability and pricing are approved.
             </p>
             <Button className="mt-6" onClick={() => void refetch()} data-testid="button-retry-catalog">
               Try Again

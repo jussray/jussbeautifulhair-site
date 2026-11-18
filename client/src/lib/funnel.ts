@@ -3,6 +3,7 @@ export type FunnelEventName =
   | "add_to_cart"
   | "checkout_start"
   | "shopify_handoff"
+  | "stripe_handoff"
   | "checkout_error";
 
 export type FunnelEvent = {

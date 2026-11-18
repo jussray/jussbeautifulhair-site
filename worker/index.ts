@@ -868,6 +868,9 @@ async function handleCheckoutSessionVerification(
   if (!env.STRIPE_SECRET_KEY) {
     return json({ error: "Payments are not configured" }, 503, responseOrigin);
   }
+  if (!stripeCheckoutModeAllowed(env)) {
+    return json({ error: "Payment mode is not approved" }, 503, responseOrigin);
+  }
 
   if (origin && !allowedOrigins.includes(origin)) {
     return json({ error: "Origin not allowed" }, 403, responseOrigin);

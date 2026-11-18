@@ -100,7 +100,7 @@ export default function Cart() {
                 </span>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Shopify confirms current item availability, shipping, discounts, and taxes before payment.
+                Final prices, shipping, and payment are confirmed by our secure Stripe checkout.
               </p>
               <Link href="/checkout">
                 <Button

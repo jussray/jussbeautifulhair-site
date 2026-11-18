@@ -36,7 +36,9 @@ test('sandbox discovery is disabled by default and explicitly marked test-only',
  const url='https://jussbeautifulhair.com/api/jusspay/sandbox/checkout';
  const off=await handleJussPaySandbox(new Request(url),{});
  assert.equal(off.status,404);
- const on=await handleJussPaySandbox(new Request(url),{JBH_JUSSPAY_SANDBOX_ENABLED:'true'});
+ const unconfigured=await handleJussPaySandbox(new Request(url),{JBH_JUSSPAY_SANDBOX_ENABLED:'true'});
+ assert.equal(unconfigured.status,503);
+ const on=await handleJussPaySandbox(new Request(url),{JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{fetch:async()=>Response.json({})}});
  assert.deepEqual(await on.json(),{enabled:true,mode:'sandbox'});
 });
 test('provider response without an order receipt is rejected',async()=>{

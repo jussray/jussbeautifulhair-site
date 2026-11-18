@@ -18,3 +18,11 @@ test("production analytics matches the Cloudflare storefront runtime", () => {
   assert.match(workerEntry, /allowCloudflareWebAnalytics\(await worker\.fetch\(request, env\)\)/);
   assert.match(storefrontWorker, /const connectSources = \[\s*"'self'"/);
 });
+
+test("RFC 9116 route never returns the SPA fallback as a valid disclosure", () => {
+  assert.match(storefrontWorker, /url\.pathname === "\/\.well-known\/security\.txt"/);
+  assert.match(storefrontWorker, /disclosureAsset = await env\.ASSETS\.fetch\(request\)/);
+  assert.match(storefrontWorker, /!disclosureAsset\.ok \|\| !disclosureType\.startsWith\("text\/plain"\)/);
+  assert.match(storefrontWorker, /"Security disclosure unavailable"[\s\S]*?status: 503/);
+  assert.match(storefrontWorker, /return secureAssetResponse\(disclosureAsset, env\)/);
+});

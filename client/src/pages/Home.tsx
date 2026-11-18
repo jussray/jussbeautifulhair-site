@@ -8,15 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { BRAND } from "@/lib/catalog";
-import { useShopifyCatalog } from "@/lib/shopifyCatalog";
+import { useSaleCatalog } from "@/lib/saleCatalog";
 import { TurnstileChallenge } from "@/components/TurnstileChallenge";
 import { getNewsletterEndpoint } from "@/lib/privateIngress";
 
 const VALUES = [
   {
     icon: Truck,
-    title: "Shop Live Inventory",
-    body: "Prices and availability come from Shopify, so you can shop what is actually available.",
+    title: "Shop Approved Collection",
+    body: "Browse styles approved for ordering, with secure checkout and independently confirmed fulfillment.",
   },
   {
     icon: Heart,
@@ -38,7 +38,7 @@ export default function Home() {
     isRefetchError,
     isFetching,
     refetch,
-  } = useShopifyCatalog();
+  } = useSaleCatalog();
   const catalogUnavailable = isError || isRefetchError;
   const authoritativeProducts = catalogUnavailable ? [] : products;
   const availableProducts = authoritativeProducts.filter((product) => product.availableForSale);
@@ -207,7 +207,7 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">Live from Shopify</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">Juss Beautiful Hair Collection</p>
             <h2 className="font-display text-3xl sm:text-4xl text-foreground">Featured Hair</h2>
           </div>
           <Link
@@ -232,7 +232,7 @@ export default function Home() {
           >
             <h3 className="font-display text-2xl text-foreground">Live inventory could not be verified</h3>
             <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">
-              Shopify inventory is unavailable right now. No stale prices or availability are being shown.
+              Ordering is temporarily unavailable. We are not displaying unapproved prices or availability.
             </p>
             <Button
               type="button"
@@ -241,7 +241,7 @@ export default function Home() {
               disabled={isFetching}
               onClick={() => void refetch()}
             >
-              {isFetching ? "Checking Shopify…" : "Try Again"}
+              {isFetching ? "Checking collection…" : "Try Again"}
             </Button>
           </div>
         ) : featured.length > 0 ? (
@@ -255,7 +255,7 @@ export default function Home() {
             data-testid="home-catalog-verified-empty"
             className="rounded-lg border border-card-border bg-card p-8 text-center text-muted-foreground"
           >
-            No Shopify products are available for sale right now.
+            No products are approved for ordering right now.
           </div>
         )}
       </section>
@@ -300,7 +300,7 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-16">
           <h2 className="font-display text-3xl text-center text-foreground mb-2">More to Explore</h2>
           <p className="text-center text-muted-foreground mb-10">
-            {availableProducts.length} live products currently available through Shopify.
+            {availableProducts.length} products currently approved for ordering.
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             {categoryPreview.map((product) => (

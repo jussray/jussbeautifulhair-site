@@ -31,3 +31,16 @@ test('origin mismatch, missing mapping and unsafe provider redirect fail closed'
  assert.equal((await handleJussPaySandbox(makeRequest(),{...env,JBH_JUSSPAY_VARIANT_SKUS:'{}'})).status,400);
  assert.equal((await handleJussPaySandbox(makeRequest(),env)).status,502);
 });
+
+test('sandbox discovery is disabled by default and explicitly marked test-only',async()=>{
+ const url='https://jussbeautifulhair.com/api/jusspay/sandbox/checkout';
+ const off=await handleJussPaySandbox(new Request(url),{});
+ assert.equal(off.status,404);
+ const on=await handleJussPaySandbox(new Request(url),{JBH_JUSSPAY_SANDBOX_ENABLED:'true'});
+ assert.deepEqual(await on.json(),{enabled:true,mode:'sandbox'});
+});
+test('provider response without an order receipt is rejected',async()=>{
+ const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123'});}}};
+ const response=await handleJussPaySandbox(makeRequest(),env);
+ assert.equal(response.status,502);
+});

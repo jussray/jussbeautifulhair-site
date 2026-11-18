@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { formatPrice } from "@/lib/catalog";
-import type { StoreProduct } from "@/lib/shopifyCatalog";
+import type { StoreProduct } from "@/lib/saleCatalog";
 
 export function ProductCard({ product }: { product: StoreProduct }) {
   const multi = product.variants.length > 1;

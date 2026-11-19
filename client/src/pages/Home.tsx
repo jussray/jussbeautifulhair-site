@@ -135,11 +135,15 @@ export default function Home() {
 
   return (
     <Layout>
-      <section className="relative bg-primary">
+      <section className="relative bg-primary overflow-hidden">
         <img
           src="/jbh_homepage_hero.jpg"
           alt="Premium hair. Lawless energy."
-          className="w-full h-auto block"
+          className="jbh-hero-breathe w-full h-auto block"
+        />
+        <div
+          aria-hidden="true"
+          className="jbh-hero-shimmer pointer-events-none absolute inset-x-0 top-0 aspect-[16/9]"
         />
         <div className="hidden md:block absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-primary/70 to-transparent pointer-events-none" />
         <div className="hidden md:flex absolute left-8 bottom-8 lg:left-16 lg:bottom-12 gap-3 z-10">
@@ -221,7 +225,18 @@ export default function Home() {
         {isLoading ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5" aria-label="Loading live inventory">
             {Array.from({ length: 4 }, (_, index) => (
-              <div key={index} className="aspect-[3/4] rounded-lg bg-muted animate-pulse" />
+              <div
+                key={index}
+                aria-hidden="true"
+                className="rounded-lg overflow-hidden bg-card border border-card-border"
+              >
+                <div className="aspect-square bg-muted animate-pulse" />
+                <div className="p-4 space-y-2">
+                  <div className="h-3 w-1/3 rounded bg-muted animate-pulse" />
+                  <div className="h-4 w-4/5 rounded bg-muted animate-pulse" />
+                  <div className="h-4 w-1/4 rounded bg-muted animate-pulse" />
+                </div>
+              </div>
             ))}
           </div>
         ) : catalogUnavailable ? (

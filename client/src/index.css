@@ -233,6 +233,47 @@
     transform: translateY(-6px);
     box-shadow: 0 18px 40px -12px rgba(45, 26, 74, 0.28);
   }
+  /* Hero ambient motion: a decoration layer only (transform/opacity).
+     The hero photography is never altered, and the content is fully
+     visible whether or not the animation runs. */
+  .jbh-hero-breathe {
+    animation: jbh-hero-breathe 16s ease-in-out infinite alternate;
+    will-change: transform;
+  }
+  .jbh-hero-shimmer {
+    background: radial-gradient(
+      ellipse 60% 45% at 50% 42%,
+      rgba(207, 161, 95, 0.32),
+      rgba(207, 161, 95, 0) 70%
+    );
+    animation: jbh-hero-shimmer 9s ease-in-out infinite alternate;
+    will-change: opacity;
+  }
+}
+
+@keyframes jbh-hero-breathe {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes jbh-hero-shimmer {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jbh-hero-breathe,
+  .jbh-hero-shimmer {
+    animation: none;
+  }
 }
 
 /**

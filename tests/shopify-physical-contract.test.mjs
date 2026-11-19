@@ -113,5 +113,8 @@ test("customer-facing product surfaces read live Shopify commerce through the JB
 test("legacy Stripe checkout remains isolated as rollback-only server code", () => {
   assert.match(worker, /if \(url\.pathname === "\/api\/checkout"\)/);
   assert.match(worker, /createStripeClient/);
-  assert.doesNotMatch(checkout, /createCheckoutAttemptId|assertApprovedCheckoutRedirect/);
+  // The legacy /api/checkout path stays absent, but the opt-in sandbox
+  // must validate its hosted Stripe URL before browser navigation.
+  assert.doesNotMatch(checkout, /createCheckoutAttemptId/);
+  assert.match(checkout, /sandbox \? assertApprovedCheckoutRedirect\(data\.url!\)/);
 });

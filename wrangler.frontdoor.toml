@@ -3,6 +3,10 @@ main = "worker/entry.ts"
 compatibility_date = "2026-07-14"
 compatibility_flags = ["nodejs_compat"]
 
+# Keep Logpush available if the separately authorized branded front door is deployed.
+# Delivery requires a separately verified account-level job and private destination.
+logpush = true
+
 # Explicit activation config for the branded storefront front door.
 # This file is intentionally separate from wrangler.toml so branch/automatic
 # deploys cannot claim the root hostname before the Cloudflare DNS proxy gate

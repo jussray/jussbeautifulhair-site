@@ -18,9 +18,49 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://jussbeautifulhair.com/" />
     <meta property="og:image" content="https://jussbeautifulhair.com/jbh_cover.jpg" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://jussbeautifulhair.com/#organization",
+          "name": "Juss Beautiful Hair",
+          "url": "https://jussbeautifulhair.com/",
+          "description": "An online hair and beauty storefront featuring human hair bundles, lace closures and frontals.",
+          "logo": "https://jussbeautifulhair.com/jbh_profile.png"
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://jussbeautifulhair.com/#website",
+          "name": "Juss Beautiful Hair",
+          "url": "https://jussbeautifulhair.com/",
+          "publisher": {
+            "@id": "https://jussbeautifulhair.com/#organization"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="jbh-public-discovery" aria-labelledby="jbh-public-discovery-heading">
+        <h1 id="jbh-public-discovery-heading">Juss Beautiful Hair: Human Hair Bundles, Lace Closures and Frontals</h1>
+        <p>Juss Beautiful Hair is an online hair and beauty storefront featuring human hair bundles, transparent-lace closures and frontals. Explore body wave, deep wave, loose wave, straight and curly textures, plus bundle deals, to compare styles before choosing what suits your needs.</p>
+        <p>Find details about textures, length options, installation considerations and care, or use Hair Match for personal shopping guidance. Product prices and availability depend on current Shopify information. When live inventory cannot be verified, the storefront pauses online ordering rather than promising stock it cannot confirm.</p>
+        <nav aria-label="Juss Beautiful Hair public pages">
+          <a href="/shop">Browse hair collection</a>
+          <a href="/hair-match">Hair Match guidance</a>
+          <a href="/about">About Juss Beautiful Hair</a>
+          <a href="/faq">Frequently asked questions</a>
+          <a href="/shipping">Shipping information</a>
+          <a href="/returns">Returns information</a>
+          <a href="/contact">Contact and support</a>
+          <a href="/privacy">Privacy policy</a>
+        </nav>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

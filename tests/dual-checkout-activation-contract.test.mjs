@@ -16,12 +16,12 @@ test("Stripe routes stay disabled by default at the outer Worker boundary", () =
   }
 });
 
-test("Shopify remains the customer checkout and Stripe is not advertised prematurely", () => {
-  assert.match(checkout, /const \[sandbox, setSandbox\] = useState\(false\)/);
-  assert.match(checkout, /response\.ok && \(await response\.json\(\)\)\.mode === "sandbox"/);
-  assert.match(checkout, /fetch\(sandbox \? "\/api\/jusspay\/sandbox\/checkout" : "\/api\/shopify\/cart"/);
-  assert.match(checkout, /assertApprovedShopifyCheckoutRedirect\(data\.checkoutUrl!\)/);
-  assert.match(checkout, /assertApprovedCheckoutRedirect\(data\.url!\)/);
+test("JussPay activates only after explicit runtime readiness discovery", () => {
+  assert.match(checkout, /const \[checkoutMode, setCheckoutMode\] = useState<"shopify" \| "sandbox" \| "live">\("shopify"\)/);
+  assert.match(checkout, /ready\("\/api\/jusspay\/live\/checkout", "live"\)/);
+  assert.match(checkout, /ready\("\/api\/jusspay\/sandbox\/checkout", "sandbox"\)/);
+  assert.match(checkout, /checkoutMode === "live"[\s\S]*"\/api\/jusspay\/live\/checkout"[\s\S]*checkoutMode === "sandbox"[\s\S]*"\/api\/jusspay\/sandbox\/checkout"[\s\S]*"\/api\/shopify\/cart"/);
+  assert.match(checkout, /jussPayMode \? assertApprovedCheckoutRedirect\(data\.url!\) : assertApprovedShopifyCheckoutRedirect\(data\.checkoutUrl!\)/);
   assert.doesNotMatch(checkout, /fetch\("\/api\/checkout"/);
 });
 

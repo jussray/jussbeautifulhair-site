@@ -47,6 +47,14 @@ test('provider response without an order receipt is rejected',async()=>{
  assert.equal(response.status,502);
 });
 
+test('live discovery is explicit and never inherits sandbox enablement',async()=>{
+ const url='https://jussbeautifulhair.com/api/jusspay/live/checkout';
+ const base={JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{fetch:async()=>Response.json({})}};
+ const sandboxOnly=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_SANDBOX_ENABLED:'true'});
+ assert.equal(sandboxOnly.status,404);
+ const live=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true'});
+ assert.deepEqual(await live.json(),{enabled:true,mode:'live'});
+});
 test('live checkout remains off unless independently enabled',async()=>{
  let called=false;
  const req=new Request('https://jussbeautifulhair.com/api/jusspay/live/checkout',{method:'POST',headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(body)});

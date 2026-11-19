@@ -57,9 +57,9 @@ test("product events bind to rendered live product and successful cart mutation"
 
 test("Shopify handoff is observed only after checkout URL approval", () => {
   const approval = checkoutPage.indexOf(
-    "const approvedCheckoutUrl = sandbox ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);",
+    "const approvedCheckoutUrl = jussPayMode ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);",
   );
-  const handoff = checkoutPage.indexOf('event: sandbox ? "checkout_start" : "shopify_handoff"');
+  const handoff = checkoutPage.indexOf('event: jussPayMode ? "checkout_start" : "shopify_handoff"');
   const redirect = checkoutPage.indexOf("window.location.assign(approvedCheckoutUrl)");
 
   assert.ok(checkoutPage.includes('event: "checkout_start"'));

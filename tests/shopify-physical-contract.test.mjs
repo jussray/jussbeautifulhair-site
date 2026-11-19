@@ -64,10 +64,11 @@ test("Shopify vendor catalog uses bounded cursor pagination instead of a fixed o
 });
 
 test("physical checkout sends only Shopify variant IDs and quantities", () => {
-  // Shopify remains the default; sandbox is opt-in only after readiness discovery.
-  assert.match(checkout, /const \[sandbox, setSandbox\] = useState\(false\)/);
-  assert.match(checkout, /response\.ok && \(await response\.json\(\)\)\.mode === "sandbox"/);
-  assert.match(checkout, /fetch\(sandbox \? "\/api\/jusspay\/sandbox\/checkout" : "\/api\/shopify\/cart"/);
+  // Shopify remains the default; JussPay live/sandbox require explicit readiness discovery.
+  assert.match(checkout, /const \[checkoutMode, setCheckoutMode\] = useState<"shopify" \| "sandbox" \| "live">\("shopify"\)/);
+  assert.match(checkout, /ready\("\/api\/jusspay\/live\/checkout", "live"\)/);
+  assert.match(checkout, /ready\("\/api\/jusspay\/sandbox\/checkout", "sandbox"\)/);
+  assert.match(checkout, /const checkoutPath =[\s\S]*"\/api\/jusspay\/live\/checkout"[\s\S]*"\/api\/jusspay\/sandbox\/checkout"[\s\S]*"\/api\/shopify\/cart"/);
   assert.match(checkout, /merchandiseId:\s*item\.variantId/);
   assert.match(checkout, /quantity:\s*item\.qty/);
   assert.match(checkout, /assertApprovedShopifyCheckoutRedirect/);
@@ -116,5 +117,5 @@ test("legacy Stripe checkout remains isolated as rollback-only server code", () 
   // The legacy /api/checkout path stays absent, but the opt-in sandbox
   // must validate its hosted Stripe URL before browser navigation.
   assert.doesNotMatch(checkout, /createCheckoutAttemptId/);
-  assert.match(checkout, /sandbox \? assertApprovedCheckoutRedirect\(data\.url!\)/);
+  assert.match(checkout, /jussPayMode \? assertApprovedCheckoutRedirect\(data\.url!\)/);
 });

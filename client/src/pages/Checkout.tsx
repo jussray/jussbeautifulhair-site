@@ -14,16 +14,36 @@ export default function Checkout() {
   const [, navigate] = useLocation();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sandbox, setSandbox] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState<"shopify" | "sandbox" | "live">("shopify");
+  const jussPayMode = checkoutMode !== "shopify";
   const checkoutAttempt = useRef<{ cart: string; requestId: string } | null>(null);
   const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
 
   useEffect(() => {
     let active = true;
-    fetch("/api/jusspay/sandbox/checkout", { cache: "no-store" })
-      .then(async (response) => response.ok && (await response.json()).mode === "sandbox")
-      .then((enabled) => { if (active) setSandbox(Boolean(enabled)); })
-      .catch(() => { if (active) setSandbox(false); });
+    const discoverCheckoutMode = async () => {
+      const ready = async (path: string, mode: "live" | "sandbox") => {
+        try {
+          const response = await fetch(path, { cache: "no-store" });
+          if (!response.ok) return false;
+          return (await response.json()).mode === mode;
+        } catch {
+          return false;
+        }
+      };
+
+      if (await ready("/api/jusspay/live/checkout", "live")) {
+        if (active) setCheckoutMode("live");
+        return;
+      }
+      if (await ready("/api/jusspay/sandbox/checkout", "sandbox")) {
+        if (active) setCheckoutMode("sandbox");
+        return;
+      }
+      if (active) setCheckoutMode("shopify");
+    };
+
+    void discoverCheckoutMode();
     return () => { active = false; };
   }, []);
 
@@ -59,11 +79,17 @@ export default function Checkout() {
       if (!checkoutAttempt.current || checkoutAttempt.current.cart !== cartFingerprint) {
         checkoutAttempt.current = { cart: cartFingerprint, requestId: crypto.randomUUID() };
       }
-      const response = await fetch(sandbox ? "/api/jusspay/sandbox/checkout" : "/api/shopify/cart", {
+      const checkoutPath =
+        checkoutMode === "live"
+          ? "/api/jusspay/live/checkout"
+          : checkoutMode === "sandbox"
+            ? "/api/jusspay/sandbox/checkout"
+            : "/api/shopify/cart";
+      const response = await fetch(checkoutPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(sandbox ? { requestId: checkoutAttempt.current.requestId, shipping: "standard" } : {}),
+          ...(jussPayMode ? { requestId: checkoutAttempt.current.requestId, shipping: "standard" } : {}),
           lines: items.map((item) => ({
             merchandiseId: item.variantId,
             quantity: item.qty,
@@ -76,13 +102,13 @@ export default function Checkout() {
         url?: string;
         error?: string;
       };
-      if (!response.ok || !(sandbox ? data.url : data.checkoutUrl)) {
+      if (!response.ok || !(jussPayMode ? data.url : data.checkoutUrl)) {
         throw new Error(data.error || "Checkout is temporarily unavailable. Please try again.");
       }
 
-      const approvedCheckoutUrl = sandbox ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);
+      const approvedCheckoutUrl = jussPayMode ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);
       observeFunnel({
-        event: sandbox ? "checkout_start" : "shopify_handoff",
+        event: jussPayMode ? "checkout_start" : "shopify_handoff",
         route: window.location.pathname,
         quantity: totalQuantity,
         valueCents: Math.round(subtotal * 100),
@@ -109,18 +135,28 @@ export default function Checkout() {
       <div className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="font-display text-3xl sm:text-4xl text-foreground mb-2">Checkout</h1>
         <p className="text-muted-foreground mb-8">
-          {sandbox ? "Sandbox checkout uses Stripe test mode. No real payment will be collected." : "Review your items, then continue to Shopify for final availability, shipping, taxes, discounts, and payment."}
+          {checkoutMode === "sandbox"
+            ? "JBH test checkout uses test mode. No real payment will be collected."
+            : checkoutMode === "live"
+              ? "Review your items, then continue to secure Juss Beautiful Hair checkout."
+              : "Review your items, then continue to Shopify for final availability, shipping, taxes, discounts, and payment."}
         </p>
 
         <div className="grid lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-8">
             <section className="rounded-lg border border-card-border bg-card p-6">
-              <h2 className="font-display text-xl text-foreground mb-4">{sandbox ? "JussPay test checkout" : "Secure Shopify checkout"}</h2>
+              <h2 className="font-display text-xl text-foreground mb-4">
+                {checkoutMode === "sandbox" ? "JBH test checkout" : checkoutMode === "live" ? "Secure JBH checkout" : "Secure Shopify checkout"}
+              </h2>
               <div className="flex items-start gap-3 rounded-md bg-secondary/30 px-4 py-4 text-sm text-primary">
                 <Info className="h-5 w-5 shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <p>
-                    {sandbox ? "Test-only checkout. Orders are not automatically sent to vendors." : "Shopify confirms current variant availability and securely collects the information required to complete your order."}
+                    {checkoutMode === "sandbox"
+                      ? "Test-only checkout. Orders are not automatically sent to vendors."
+                      : checkoutMode === "live"
+                        ? "JBH securely collects the information required to complete your order. Payment truth stays server-side."
+                        : "Shopify confirms current variant availability and securely collects the information required to complete your order."}
                   </p>
                   <p>
                     Juss Beautiful Hair does not place payment credentials or customer contact details in the public storefront bundle.
@@ -165,7 +201,11 @@ export default function Checkout() {
                   <span className="text-2xl font-semibold text-foreground">{formatPrice(subtotal)}</span>
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  {sandbox ? "Sandbox prices and shipping are calculated by the server. Displayed subtotal is informational." : "Final order totals are calculated by Shopify before payment."}
+                  {checkoutMode === "sandbox"
+                    ? "Test prices and shipping are calculated by the server. Displayed subtotal is informational."
+                    : checkoutMode === "live"
+                      ? "Final JBH order totals are calculated server-side before payment."
+                      : "Final order totals are calculated by Shopify before payment."}
                 </p>
               </div>
 
@@ -178,7 +218,13 @@ export default function Checkout() {
                 className="mt-6 w-full font-semibold"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                {submitting ? "Opening checkout…" : sandbox ? "Continue to JussPay test checkout" : `Continue to Shopify — ${formatPrice(subtotal)}`}
+                {submitting
+                  ? "Opening checkout…"
+                  : checkoutMode === "sandbox"
+                    ? "Continue to JBH test checkout"
+                    : checkoutMode === "live"
+                      ? `Continue to JBH checkout — ${formatPrice(subtotal)}`
+                      : `Continue to Shopify — ${formatPrice(subtotal)}`}
               </Button>
             </div>
           </div>

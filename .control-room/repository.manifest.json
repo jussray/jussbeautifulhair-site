@@ -83,8 +83,8 @@
         {
           "id": "checkout-posts-to-shopify-worker",
           "path": "client/src/pages/Checkout.tsx",
-          "marker": "fetch(sandbox ? \"/api/jusspay/sandbox/checkout\" : \"/api/shopify/cart\"",
-          "description": "Shopify remains the default checkout Worker; sandbox routing requires explicit discovery and is test-only."
+          "marker": "fetch(checkoutPath",
+          "description": "Shopify remains the default checkout Worker; JussPay live or sandbox routing requires explicit runtime discovery."
         },
         {
           "id": "checkout-sends-shopify-variant-id",
@@ -283,8 +283,8 @@
         {
           "id": "checkout-validates-returned-shopify-url",
           "path": "client/src/pages/Checkout.tsx",
-          "marker": "sandbox ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!)",
-          "description": "Shopify URL and optional sandbox Stripe URL are independently validated before browser navigation."
+          "marker": "jussPayMode ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!)",
+          "description": "Shopify and explicitly enabled JussPay checkout URLs are independently validated before browser navigation."
         },
         {
           "id": "checkout-navigates-only-approved-shopify-url",

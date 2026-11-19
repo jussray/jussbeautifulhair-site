@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
 import { observeFunnel } from "@/lib/funnel";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
+import { spinVideoForHandle } from "@/lib/spinMedia";
 
 export default function Product() {
   const [, params] = useRoute("/product/:id");
@@ -21,6 +22,11 @@ export default function Product() {
   } = useShopifyCatalog();
   const catalogUnavailable = isError || isRefetchError;
   const product = params ? products.find((candidate) => candidate.id === params.id) : undefined;
+  const spinVideo = product ? spinVideoForHandle(product.id) : undefined;
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const { addItem } = useCart();
   const { toast } = useToast();
   const [variantIdx, setVariantIdx] = useState(0);
@@ -151,18 +157,42 @@ export default function Product() {
         </Link>
 
         <div className="grid md:grid-cols-2 gap-10 lg:gap-16">
-          <div className="rounded-lg overflow-hidden bg-muted border border-card-border">
-            {product.image ? (
-              <img
-                src={product.image}
-                alt={product.name}
-                data-testid="img-product"
-                className="w-full aspect-square object-cover"
-              />
-            ) : (
-              <div className="w-full aspect-square grid place-items-center text-muted-foreground">
-                Product image updating
-              </div>
+          <div>
+            <div className="rounded-lg overflow-hidden bg-muted border border-card-border">
+              {product.image ? (
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  data-testid="img-product"
+                  className="w-full aspect-square object-cover"
+                />
+              ) : (
+                <div className="w-full aspect-square grid place-items-center text-muted-foreground">
+                  Product image updating
+                </div>
+              )}
+            </div>
+            {spinVideo && (
+              <figure className="mt-5">
+                <div className="rounded-lg overflow-hidden bg-primary border border-card-border">
+                  <video
+                    src={spinVideo}
+                    poster={product.image || undefined}
+                    autoPlay={!prefersReducedMotion}
+                    muted
+                    loop
+                    playsInline
+                    controls
+                    preload="metadata"
+                    aria-label={`360 degree spin view of ${product.name}`}
+                    data-testid="video-product-spin"
+                    className="block w-full aspect-[2/3] object-cover"
+                  />
+                </div>
+                <figcaption className="mt-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                  360° spin · rendered from the product photo
+                </figcaption>
+              </figure>
             )}
           </div>
 

@@ -3,6 +3,10 @@ main = "worker/entry.ts"
 compatibility_date = "2026-07-14"
 compatibility_flags = ["nodejs_compat"]
 
+# Allow Cloudflare account-level Workers Trace Events Logpush to collect this Worker.
+# Delivery requires a separately verified Logpush job and private destination.
+logpush = true
+
 # Production is served only through the approved custom storefront hostname.
 # Keep both settings explicit so dashboard toggles are not re-enabled on deploy.
 workers_dev = false

@@ -46,3 +46,20 @@ test('provider response without an order receipt is rejected',async()=>{
  const response=await handleJussPaySandbox(makeRequest(),env);
  assert.equal(response.status,502);
 });
+
+test('live checkout remains off unless independently enabled',async()=>{
+ let called=false;
+ const req=new Request('https://jussbeautifulhair.com/api/jusspay/live/checkout',{method:'POST',headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(body)});
+ const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY:{fetch(){called=true;throw Error('must not call');}}};
+ assert.equal((await handleJussPaySandbox(req,env)).status,404);
+ assert.equal(called,false);
+});
+test('live route requires a live checkout URL and does not accept sandbox session',async()=>{
+ const req=new Request('https://jussbeautifulhair.com/api/jusspay/live/checkout',{method:'POST',headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(body)});
+ const env={JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123',orderId:'jbho_test'});}}};
+ const response=await handleJussPaySandbox(req,env);
+ assert.equal(response.status,502);
+ assert.equal((await response.json()).error,'wrong_checkout_mode');
+ const ok=await handleJussPaySandbox(req,{...env,JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_live_123',orderId:'jbho_test'});}}});
+ assert.equal(ok.status,200);assert.equal((await ok.json()).mode,'live');
+});

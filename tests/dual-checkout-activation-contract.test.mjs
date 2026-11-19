@@ -17,8 +17,11 @@ test("Stripe routes stay disabled by default at the outer Worker boundary", () =
 });
 
 test("Shopify remains the customer checkout and Stripe is not advertised prematurely", () => {
-  assert.match(checkout, /fetch\("\/api\/shopify\/cart"/);
-  assert.match(checkout, /assertApprovedShopifyCheckoutRedirect\(data\.checkoutUrl\)/);
+  assert.match(checkout, /const \[sandbox, setSandbox\] = useState\(false\)/);
+  assert.match(checkout, /response\.ok && \(await response\.json\(\)\)\.mode === "sandbox"/);
+  assert.match(checkout, /fetch\(sandbox \? "\/api\/jusspay\/sandbox\/checkout" : "\/api\/shopify\/cart"/);
+  assert.match(checkout, /assertApprovedShopifyCheckoutRedirect\(data\.checkoutUrl!\)/);
+  assert.match(checkout, /assertApprovedCheckoutRedirect\(data\.url!\)/);
   assert.doesNotMatch(checkout, /fetch\("\/api\/checkout"/);
 });
 

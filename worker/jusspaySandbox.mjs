@@ -25,11 +25,23 @@ export async function handleJussPaySandbox(request,env) {
   const live=path==='/api/jusspay/live/checkout';
   if(live ? env.JBH_JUSSPAY_LIVE_ENABLED!=='true' : env.JBH_JUSSPAY_SANDBOX_ENABLED!=='true') return json({error:'not_found'},404);
   if(request.method==='GET') {
-    if(!env.JBH_JUSSPAY || typeof env.JBH_JUSSPAY.fetch!=='function' || !env.JBH_JUSSPAY_STOREFRONT_KEY || env.JBH_JUSSPAY_STOREFRONT_KEY.length<32) return json({error:'sandbox_unavailable'},503);
+    const unavailable=live?'live_unavailable':'sandbox_unavailable';
+    if(!env.JBH_JUSSPAY || typeof env.JBH_JUSSPAY.fetch!=='function' || !env.JBH_JUSSPAY_STOREFRONT_KEY || env.JBH_JUSSPAY_STOREFRONT_KEY.length<32) return json({error:unavailable},503);
     let mapping;
     try { mapping=JSON.parse(env.JBH_JUSSPAY_VARIANT_SKUS||'null'); } catch { return json({error:'mapping_unavailable'},503); }
     if(!mapping || typeof mapping!=='object' || Array.isArray(mapping) || !Object.keys(mapping).length || Object.entries(mapping).some(([variant,sku])=>!VARIANT.test(variant) || typeof sku!=='string' || !SKU.test(sku))) return json({error:'mapping_unavailable'},503);
-    return json({enabled:true,mode:live?'live':'sandbox'});
+    try {
+      const upstream=await env.JBH_JUSSPAY.fetch('https://jusspay.internal/jbh/health',{
+        method:'GET',
+        headers:{'x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY}
+      });
+      if(!upstream.ok) return json({error:unavailable},503);
+      const readiness=await upstream.json();
+      if(!readiness || readiness.ready!==true || readiness.mode!==(live?'live':'sandbox') || readiness.chargesEnabled!==true) return json({error:unavailable},503);
+      return json({enabled:true,mode:live?'live':'sandbox'});
+    } catch {
+      return json({error:unavailable},503);
+    }
   }
   if(request.method!=='POST') return json({error:'method_not_allowed'},405);
   const url=new URL(request.url);

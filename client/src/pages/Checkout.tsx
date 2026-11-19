@@ -7,6 +7,7 @@ import { useCart } from "@/lib/cart";
 import { formatPrice } from "@/lib/catalog";
 import { observeFunnel } from "@/lib/funnel";
 import { assertApprovedShopifyCheckoutRedirect } from "@/lib/shopifyCatalog";
+import { assertApprovedCheckoutRedirect } from "@/lib/checkoutRedirect.mjs";
 
 export default function Checkout() {
   const { items, subtotal } = useCart();
@@ -79,7 +80,7 @@ export default function Checkout() {
         throw new Error(data.error || "Checkout is temporarily unavailable. Please try again.");
       }
 
-      const approvedCheckoutUrl = sandbox ? data.url! : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);
+      const approvedCheckoutUrl = sandbox ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);
       observeFunnel({
         event: sandbox ? "checkout_start" : "shopify_handoff",
         route: window.location.pathname,

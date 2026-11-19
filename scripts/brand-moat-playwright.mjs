@@ -174,13 +174,35 @@ try {
     unavailableText.includes("Live inventory could not be verified"),
     `Homepage did not label failed catalog truth explicitly: ${unavailableText}`,
   );
+  // Amended 2026-11-18: the founder ordered the static collection shown for
+  // browsing when live inventory fails (catalog display fallback), replacing
+  // the former no-stale-prices copy contract. The surviving guarantees are:
+  // ordering is explicitly paused, no availability is promised, the fallback
+  // cards carry no link/button/cart path, and no live Shopify catalog data
+  // from the earlier successful read leaks into the failed state.
   assert(
-    unavailableText.includes("No stale prices or availability are being shown."),
-    "Homepage failed state does not preserve the no-stale-commerce contract.",
+    unavailableText.includes("online ordering is paused") &&
+      unavailableText.includes("browsing only") &&
+      unavailableText.includes("no availability is promised"),
+    `Homepage failed state does not preserve the browsing-only contract: ${unavailableText}`,
   );
   assert(
     await page.getByTestId("button-retry-home-catalog").isVisible(),
     "Homepage failed catalog state is missing a retry action.",
+  );
+  const fallbackGrid = page.getByTestId("home-catalog-fallback");
+  await fallbackGrid.waitFor({ state: "visible", timeout: 15_000 });
+  assert(
+    (await fallbackGrid.locator('[data-testid^="card-display-"]').count()) === 4,
+    "Homepage failed state does not render the four featured display-only products.",
+  );
+  assert(
+    (await fallbackGrid.locator("a, button").count()) === 0,
+    "Display-only fallback cards expose a link or button (cart path).",
+  );
+  assert(
+    /browsing only/i.test(await fallbackGrid.innerText()),
+    "Display-only fallback cards are not labeled browsing-only.",
   );
   const failedHomeText = await page.locator("body").innerText();
   assert(
@@ -205,7 +227,7 @@ try {
         "four brand pillars visible",
         "unsupported certainty absent",
         "Shopify-backed JBH product renders while Untold Stories catalog remains separate",
-        "unusable Shopify catalog response renders an explicit unavailable state with no stale products",
+        "unusable Shopify catalog response renders an explicit unavailable state plus the browsing-only static collection with no cart path and no availability promise",
         "failed Shopify catalog state keeps a real retry action",
         "desktop and mobile have no horizontal overflow",
         "mobile CTA remains visible",

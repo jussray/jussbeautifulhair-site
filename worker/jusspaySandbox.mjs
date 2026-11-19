@@ -21,13 +21,15 @@ export function parseJussPayCart(input, mapping) {
   return {requestId:input.requestId,items:[...quantities].map(([sku,quantity])=>({sku,quantity})),shipping:input.shipping};
 }
 export async function handleJussPaySandbox(request,env) {
-  if(env.JBH_JUSSPAY_SANDBOX_ENABLED!=='true') return json({error:'not_found'},404);
+  const path=new URL(request.url).pathname;
+  const live=path==='/api/jusspay/live/checkout';
+  if(live ? env.JBH_JUSSPAY_LIVE_ENABLED!=='true' : env.JBH_JUSSPAY_SANDBOX_ENABLED!=='true') return json({error:'not_found'},404);
   if(request.method==='GET') {
     if(!env.JBH_JUSSPAY || typeof env.JBH_JUSSPAY.fetch!=='function' || !env.JBH_JUSSPAY_STOREFRONT_KEY || env.JBH_JUSSPAY_STOREFRONT_KEY.length<32) return json({error:'sandbox_unavailable'},503);
     let mapping;
     try { mapping=JSON.parse(env.JBH_JUSSPAY_VARIANT_SKUS||'null'); } catch { return json({error:'mapping_unavailable'},503); }
     if(!mapping || typeof mapping!=='object' || Array.isArray(mapping) || !Object.keys(mapping).length || Object.entries(mapping).some(([variant,sku])=>!VARIANT.test(variant) || typeof sku!=='string' || !SKU.test(sku))) return json({error:'mapping_unavailable'},503);
-    return json({enabled:true,mode:'sandbox'});
+    return json({enabled:true,mode:live?'live':'sandbox'});
   }
   if(request.method!=='POST') return json({error:'method_not_allowed'},405);
   const url=new URL(request.url);
@@ -50,11 +52,12 @@ export async function handleJussPaySandbox(request,env) {
       method:'POST',headers:{'content-type':'application/json','x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY},
       body:JSON.stringify(payload)
     });
-    if(!upstream.ok) return json({error:'sandbox_checkout_unavailable'},502);
+    if(!upstream.ok) return json({error:live?'live_checkout_unavailable':'sandbox_checkout_unavailable'},502);
     const result=await upstream.json();
     if(!result || typeof result.orderId!=='string' || !/^jbho_[A-Za-z0-9_-]+$/.test(result.orderId) || typeof result.url!=='string' || !/^https:\/\/checkout\.stripe\.com\//.test(result.url)) return json({error:'invalid_provider_response'},502);
+    if(!result.url.includes(`/cs_${live?'live':'test'}_`)) return json({error:'wrong_checkout_mode'},502);
     const checkout=new URL(result.url);
     if(checkout.origin!=='https://checkout.stripe.com' || checkout.username || checkout.password || checkout.port || checkout.hash || !/^\/c\//.test(checkout.pathname)) return json({error:'invalid_provider_response'},502);
-    return json({url:checkout.href,mode:'sandbox'});
-  } catch {return json({error:'sandbox_checkout_unavailable'},502);}
+    return json({url:checkout.href,mode:live?'live':'sandbox'});
+  } catch {return json({error:live?'live_checkout_unavailable':'sandbox_checkout_unavailable'},502);}
 }

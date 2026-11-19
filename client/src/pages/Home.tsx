@@ -137,6 +137,7 @@ export default function Home() {
 
   return (
     <Layout>
+      <h1 className="sr-only">Juss Beautiful Hair: Human Hair Bundles, Lace Closures and Frontals</h1>
       <section className="relative bg-primary">
         <img
           src="/jbh_homepage_hero.jpg"

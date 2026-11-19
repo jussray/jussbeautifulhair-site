@@ -103,9 +103,9 @@ test("sitemap advertises real public paths and every active approved JBH product
 
 
 test("public homepage gives answer engines a truthful, static introduction and structured identity", () => {
-  const script = indexHtml.match(/<script type="application\\/ld\\+json">([\\s\\S]*?)<\\/script>/);
+  const script = indexHtml.split('<script type="application/ld+json">')[1]?.split("</script>")[0];
   assert.ok(script, "A static JSON-LD block must be present before client JavaScript");
-  const parsed = JSON.parse(script[1]);
+  const parsed = JSON.parse(script);
   assert.equal(parsed["@context"], "https://schema.org");
   const org = parsed["@graph"].find((entity) => entity["@type"] === "Organization");
   const website = parsed["@graph"].find((entity) => entity["@type"] === "WebSite");
@@ -124,6 +124,6 @@ test("public homepage gives answer engines a truthful, static introduction and s
 test("hydrated home keeps one accessible heading without changing the image-led hero", async () => {
   const home = await readFile(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
   assert.match(home, /<h1 className="sr-only">Juss Beautiful Hair:/);
-  assert.match(home, /src="\\/jbh_homepage_hero.jpg"/);
+  assert.ok(home.includes('src="/jbh_homepage_hero.jpg"'), "The existing homepage hero must remain unchanged");
   assert.doesNotMatch(home, /<h1(?! className="sr-only")/);
 });

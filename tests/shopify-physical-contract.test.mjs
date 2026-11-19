@@ -64,7 +64,10 @@ test("Shopify vendor catalog uses bounded cursor pagination instead of a fixed o
 });
 
 test("physical checkout sends only Shopify variant IDs and quantities", () => {
-  assert.match(checkout, /fetch\("\/api\/shopify\/cart"/);
+  // Shopify remains the default; sandbox is opt-in only after readiness discovery.
+  assert.match(checkout, /const \[sandbox, setSandbox\] = useState\(false\)/);
+  assert.match(checkout, /response\.ok && \(await response\.json\(\)\)\.mode === "sandbox"/);
+  assert.match(checkout, /fetch\(sandbox \? "\/api\/jusspay\/sandbox\/checkout" : "\/api\/shopify\/cart"/);
   assert.match(checkout, /merchandiseId:\s*item\.variantId/);
   assert.match(checkout, /quantity:\s*item\.qty/);
   assert.match(checkout, /assertApprovedShopifyCheckoutRedirect/);

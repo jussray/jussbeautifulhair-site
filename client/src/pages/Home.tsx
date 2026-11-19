@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Truck, Heart, MessageCircle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
+import { DisplayProductCard } from "@/components/DisplayProductCard";
 import { ProductCard } from "@/components/ProductCard";
 import { BrandMoatSection } from "@/components/BrandMoatSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { BRAND } from "@/lib/catalog";
+import { DISPLAY_ONLY_FEATURED } from "@/lib/displayCatalog";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 import { TurnstileChallenge } from "@/components/TurnstileChallenge";
 import { getNewsletterEndpoint } from "@/lib/privateIngress";
@@ -207,8 +209,12 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">Live from Shopify</p>
-            <h2 className="font-display text-3xl sm:text-4xl text-foreground">Featured Hair</h2>
+            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">
+              {catalogUnavailable ? "The Collection" : "Live from Shopify"}
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl text-foreground">
+              {catalogUnavailable ? "Browse the Collection" : "Featured Hair"}
+            </h2>
           </div>
           <Link
             href="/shop"
@@ -225,24 +231,36 @@ export default function Home() {
             ))}
           </div>
         ) : catalogUnavailable ? (
-          <div
-            role="alert"
-            data-testid="home-catalog-unavailable"
-            className="rounded-lg border border-card-border bg-card p-8 text-center"
-          >
-            <h3 className="font-display text-2xl text-foreground">Live inventory could not be verified</h3>
-            <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">
-              Shopify inventory is unavailable right now. No stale prices or availability are being shown.
-            </p>
-            <Button
-              type="button"
-              className="mt-6"
-              data-testid="button-retry-home-catalog"
-              disabled={isFetching}
-              onClick={() => void refetch()}
+          <div>
+            <div
+              role="alert"
+              data-testid="home-catalog-unavailable"
+              className="rounded-lg border border-card-border bg-card p-8 text-center"
             >
-              {isFetching ? "Checking Shopify…" : "Try Again"}
-            </Button>
+              <h3 className="font-display text-2xl text-foreground">Live inventory could not be verified</h3>
+              <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">
+                Shopify inventory is unavailable right now, so online ordering is paused. The
+                collection below is shown for browsing only, at our standard prices — no
+                availability is promised until live inventory is verified again.
+              </p>
+              <Button
+                type="button"
+                className="mt-6"
+                data-testid="button-retry-home-catalog"
+                disabled={isFetching}
+                onClick={() => void refetch()}
+              >
+                {isFetching ? "Checking Shopify…" : "Try Again"}
+              </Button>
+            </div>
+            <div
+              className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-5"
+              data-testid="home-catalog-fallback"
+            >
+              {DISPLAY_ONLY_FEATURED.map((product) => (
+                <DisplayProductCard key={product.id} product={product} />
+              ))}
+            </div>
           </div>
         ) : featured.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">

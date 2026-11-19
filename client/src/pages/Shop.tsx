@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { Layout } from "@/components/Layout";
+import { DisplayProductCard } from "@/components/DisplayProductCard";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/catalog";
+import { DISPLAY_ONLY_PRODUCTS } from "@/lib/displayCatalog";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 
 export default function Shop() {
@@ -26,6 +28,29 @@ export default function Shop() {
     [active, products],
   );
 
+  // Browsing-only fallback: when live inventory cannot be loaded, the static
+  // collection still shows so the shop is never empty. These entries are a
+  // display-only shape with no Shopify IDs, so they can never enter the cart.
+  const fallbackCategories = useMemo(
+    () =>
+      CATEGORIES.filter(
+        (category) =>
+          category === "All" ||
+          DISPLAY_ONLY_PRODUCTS.some((product) => product.category === category),
+      ),
+    [],
+  );
+
+  const fallbackFiltered = useMemo(
+    () =>
+      active === "All"
+        ? DISPLAY_ONLY_PRODUCTS
+        : DISPLAY_ONLY_PRODUCTS.filter((product) => product.category === active),
+    [active],
+  );
+
+  const visibleCategories = isError ? fallbackCategories : categories;
+
   return (
     <Layout>
       <section className="bg-primary text-primary-foreground">
@@ -41,24 +66,22 @@ export default function Shop() {
       </section>
 
       <div className="mx-auto max-w-7xl px-6 py-10">
-        {!isError && (
-          <div className="flex flex-wrap gap-2 justify-center mb-10">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setActive(category)}
-                data-testid={`filter-${category.toLowerCase().replace(/[^a-z]+/g, "-")}`}
-                className={`text-sm px-4 py-2 rounded-full border transition-colors ${
-                  active === category
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-card text-foreground border-border hover:border-primary"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2 justify-center mb-10">
+          {visibleCategories.map((category) => (
+            <button
+              key={category}
+              onClick={() => setActive(category)}
+              data-testid={`filter-${category.toLowerCase().replace(/[^a-z]+/g, "-")}`}
+              className={`text-sm px-4 py-2 rounded-full border transition-colors ${
+                active === category
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card text-foreground border-border hover:border-primary"
+              }`}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
 
         {isLoading && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5" aria-label="Loading live inventory">
@@ -76,14 +99,27 @@ export default function Shop() {
         )}
 
         {isError && (
-          <div className="mx-auto max-w-xl rounded-lg border border-card-border bg-card px-6 py-10 text-center">
-            <h2 className="font-display text-2xl text-foreground">Live inventory is refreshing</h2>
-            <p className="mt-3 text-sm text-muted-foreground">
-              We could not load Shopify inventory just now. No stale prices are being shown.
+          <div data-testid="shop-catalog-fallback">
+            <div className="mx-auto max-w-xl rounded-lg border border-card-border bg-card px-6 py-10 text-center">
+              <h2 className="font-display text-2xl text-foreground">Live inventory is refreshing</h2>
+              <p className="mt-3 text-sm text-muted-foreground">
+                We could not load live Shopify inventory just now, so online ordering is paused.
+                The collection below is shown for browsing only, at our standard prices — no
+                availability is promised until live inventory is verified again.
+              </p>
+              <Button className="mt-6" onClick={() => void refetch()} data-testid="button-retry-catalog">
+                Try Again
+              </Button>
+            </div>
+            <p className="mt-10 text-sm text-muted-foreground mb-6" data-testid="text-fallback-count">
+              {fallbackFiltered.length} {fallbackFiltered.length === 1 ? "product" : "products"} in
+              the collection
             </p>
-            <Button className="mt-6" onClick={() => void refetch()} data-testid="button-retry-catalog">
-              Try Again
-            </Button>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+              {fallbackFiltered.map((product) => (
+                <DisplayProductCard key={product.id} product={product} />
+              ))}
+            </div>
           </div>
         )}
 

@@ -15,6 +15,7 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkoutMode, setCheckoutMode] = useState<"shopify" | "sandbox" | "live">("shopify");
+  const [checkoutModeResolved, setCheckoutModeResolved] = useState(false);
   const jussPayMode = checkoutMode !== "shopify";
   const checkoutAttempt = useRef<{ cart: string; requestId: string } | null>(null);
   const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
@@ -33,14 +34,14 @@ export default function Checkout() {
       };
 
       if (await ready("/api/jusspay/live/checkout", "live")) {
-        if (active) setCheckoutMode("live");
+        if (active) { setCheckoutMode("live"); setCheckoutModeResolved(true); }
         return;
       }
       if (await ready("/api/jusspay/sandbox/checkout", "sandbox")) {
-        if (active) setCheckoutMode("sandbox");
+        if (active) { setCheckoutMode("sandbox"); setCheckoutModeResolved(true); }
         return;
       }
-      if (active) setCheckoutMode("shopify");
+      if (active) { setCheckoutMode("shopify"); setCheckoutModeResolved(true); }
     };
 
     void discoverCheckoutMode();
@@ -71,6 +72,7 @@ export default function Checkout() {
   }
 
   const placeOrder = async () => {
+    if (!checkoutModeResolved || submitting) return;
     setSubmitting(true);
     setError(null);
 
@@ -212,14 +214,16 @@ export default function Checkout() {
               <Button
                 type="button"
                 size="lg"
-                disabled={submitting}
+                disabled={submitting || !checkoutModeResolved}
                 onClick={placeOrder}
                 data-testid="button-place-order"
                 className="mt-6 w-full font-semibold"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                {submitting
-                  ? "Opening checkout…"
+                {!checkoutModeResolved
+                  ? "Checking secure checkout…"
+                  : submitting
+                    ? "Opening checkout…"
                   : checkoutMode === "sandbox"
                     ? "Continue to JBH test checkout"
                     : checkoutMode === "live"

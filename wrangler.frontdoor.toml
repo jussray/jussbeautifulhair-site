@@ -18,6 +18,12 @@ zone_name = "jussbeautifulhair.com"
 [vars]
 STORE_ORIGIN = "https://jussbeautifulhair.com"
 ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
+JBH_JUSSPAY_LIVE_ENABLED = "false"
+JBH_JUSSPAY_SANDBOX_ENABLED = "false"
+
+[[services]]
+binding = "JBH_JUSSPAY"
+service = "jusspay"
 
 # Same production API limiter as the default build config. The frontdoor config
 # must not create an unthrottled alternate deployment path.

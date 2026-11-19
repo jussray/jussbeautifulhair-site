@@ -20,6 +20,7 @@ type AnalyticsEngineDatasetBinding = {
 type Env = BaseEnv & {
   ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
   JBH_JUSSPAY_SANDBOX_ENABLED?: string;
+  JBH_JUSSPAY_LIVE_ENABLED?: string;
   JBH_JUSSPAY_VARIANT_SKUS?: string;
   JBH_JUSSPAY_STOREFRONT_KEY?: string;
   JBH_JUSSPAY?: { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
@@ -429,7 +430,7 @@ export default {
 
     const pathname = new URL(request.url).pathname;
 
-    if (pathname === "/api/jusspay/sandbox/checkout") {
+    if (pathname === "/api/jusspay/sandbox/checkout" || pathname === "/api/jusspay/live/checkout") {
       return handleJussPaySandbox(request, env);
     }
 

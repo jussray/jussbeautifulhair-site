@@ -100,3 +100,30 @@ test("sitemap advertises real public paths and every active approved JBH product
   const productUrls = [...sitemap.matchAll(/<loc>https:\/\/jussbeautifulhair\.com\/product\/([^<]+)<\/loc>/g)].map((match) => match[1]);
   assert.deepEqual(new Set(productUrls), new Set(productHandles));
 });
+
+
+test("public homepage gives answer engines a truthful, static introduction and structured identity", () => {
+  const script = indexHtml.match(/<script type="application\\/ld\\+json">([\\s\\S]*?)<\\/script>/);
+  assert.ok(script, "A static JSON-LD block must be present before client JavaScript");
+  const parsed = JSON.parse(script[1]);
+  assert.equal(parsed["@context"], "https://schema.org");
+  const org = parsed["@graph"].find((entity) => entity["@type"] === "Organization");
+  const website = parsed["@graph"].find((entity) => entity["@type"] === "WebSite");
+  assert.equal(org?.name, "Juss Beautiful Hair");
+  assert.equal(org?.url, canonicalOrigin + "/");
+  assert.equal(website?.publisher?.["@id"], org["@id"]);
+  assert.ok(!JSON.stringify(parsed).match(/"offers"|"price"|"aggregateRating"|"availability"/), "Never invent price, inventory or rating claims");
+  assert.match(indexHtml, /<main id="jbh-public-discovery"/);
+  assert.match(indexHtml, /<h1 id="jbh-public-discovery-heading">Juss Beautiful Hair/);
+  assert.match(indexHtml, /When live inventory cannot be verified/);
+  for (const path of ["/shop", "/hair-match", "/about", "/faq", "/shipping", "/returns", "/contact", "/privacy"]) {
+    assert.ok(indexHtml.includes(`href="${path}"`), `Missing public discovery link: ${path}`);
+  }
+});
+
+test("hydrated home keeps one accessible heading without changing the image-led hero", async () => {
+  const home = await readFile(new URL("../client/src/pages/Home.tsx", import.meta.url), "utf8");
+  assert.match(home, /<h1 className="sr-only">Juss Beautiful Hair:/);
+  assert.match(home, /src="\\/jbh_homepage_hero.jpg"/);
+  assert.doesNotMatch(home, /<h1(?! className="sr-only")/);
+});

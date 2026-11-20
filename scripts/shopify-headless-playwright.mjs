@@ -146,6 +146,16 @@ async function verifyBrandedCartHandoff(browser, viewport, label) {
 
 
 async function configureShopifyCatalogMock(page) {
+  // The local Vite fixture has no Worker. Mirror only the verified default-off
+  // commerce mode so a missing real endpoint is not mistaken for a Shopify error.
+  await page.route("**/api/commerce/catalog", async (route) => {
+    assert(route.request().method() === "GET", "Commerce discovery must be read-only.");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ mode: "shopify", products: [] }),
+    });
+  });
   await page.route("**/api/shopify/catalog", async (route) => {
     await route.fulfill({
       status: 200,

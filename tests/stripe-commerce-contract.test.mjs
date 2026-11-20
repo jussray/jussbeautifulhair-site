@@ -49,3 +49,10 @@ test("Checkout requires server-side approved offer and merchant checks, never cl
  assert.match(checkout,/mixedCart/);
  assert.ok(cart.includes("jbh:"));
 });
+
+test("Shopify browser harness mocks the default-off commerce route without muting console errors",()=>{
+ const script=readFileSync(new URL("../scripts/shopify-headless-playwright.mjs",import.meta.url),"utf8");
+ assert.match(script,/page\.route\("\*\*\/api\/commerce\/catalog"/);
+ assert.match(script,/body: JSON\.stringify\(\{ mode: "shopify", products: \[\] \}\)/);
+ assert.match(script,/assert\(consoleErrors\.length === 0/);
+});

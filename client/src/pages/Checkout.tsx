@@ -16,6 +16,7 @@ export default function Checkout() {
   const [error, setError] = useState<string | null>(null);
   const [checkoutMode, setCheckoutMode] = useState<"shopify" | "sandbox" | "live">("shopify");
   const [checkoutModeResolved, setCheckoutModeResolved] = useState(false);
+  const [legacyShopifyBlocked, setLegacyShopifyBlocked] = useState(false);
   const [stripeCommerceMode, setStripeCommerceMode] = useState<"test" | "live" | null>(null);
   const stripeCart = items.length > 0 && items.every((item) =>
     /^jbh:[a-z0-9][a-z0-9-]{0,99}:[0-9]+$/.test(item.variantId));
@@ -28,7 +29,7 @@ export default function Checkout() {
     let active = true;
     const discoverCheckoutMode = async () => {
       if (stripeCart) {
-        if (active) setCheckoutModeResolved(false);
+        if (active) { setCheckoutModeResolved(false); setLegacyShopifyBlocked(false); }
         try {
           const response = await fetch("/api/commerce/catalog", { cache: "no-store" });
           const result = (await response.json().catch(() => ({}))) as {
@@ -72,6 +73,7 @@ export default function Checkout() {
         if (!response.ok || state.mode !== "shopify") {
           if (active) {
             setCheckoutModeResolved(false);
+            setLegacyShopifyBlocked(true);
             setError("This cart contains legacy Shopify items. Return to the collection for approved JussPay products.");
           }
           return;
@@ -79,10 +81,12 @@ export default function Checkout() {
       } catch {
         if (active) {
           setCheckoutModeResolved(false);
+          setLegacyShopifyBlocked(true);
           setError("Checkout is temporarily unavailable. Your cart has not been charged.");
         }
         return;
       }
+      if (active) setLegacyShopifyBlocked(false);
       const ready = async (path: string, mode: "live" | "sandbox") => {
         try {
           const response = await fetch(path, { cache: "no-store" });
@@ -206,14 +210,16 @@ export default function Checkout() {
             ? "JBH test checkout uses test mode. No real payment will be collected."
             : checkoutMode === "live"
               ? "Review your items, then continue to secure Juss Beautiful Hair checkout."
-              : "Review your items, then continue to Shopify for final availability, shipping, taxes, discounts, and payment."}
+              : legacyShopifyBlocked
+                ? "The old checkout provider is unavailable. Select approved JussPay products to place an order."
+                : "Review your items, then continue to Shopify for final availability, shipping, taxes, discounts, and payment."}
         </p>
 
         <div className="grid lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-8">
             <section className="rounded-lg border border-card-border bg-card p-6">
               <h2 className="font-display text-xl text-foreground mb-4">
-                {stripeCart ? (stripeCommerceMode === "test" ? "Stripe test checkout" : "Secure Stripe Checkout") : checkoutMode === "sandbox" ? "JBH test checkout" : checkoutMode === "live" ? "Secure JBH checkout" : "Secure Shopify checkout"}
+                {stripeCart ? (stripeCommerceMode === "test" ? "Stripe test checkout" : "Secure Stripe Checkout") : checkoutMode === "sandbox" ? "JBH test checkout" : checkoutMode === "live" ? "Secure JBH checkout" : legacyShopifyBlocked ? "Checkout temporarily unavailable" : "Secure Shopify checkout"}
               </h2>
               <div className="flex items-start gap-3 rounded-md bg-secondary/30 px-4 py-4 text-sm text-primary">
                 <Info className="h-5 w-5 shrink-0 mt-0.5" />
@@ -223,7 +229,9 @@ export default function Checkout() {
                       ? "Test-only checkout. Orders are not automatically sent to vendors."
                       : checkoutMode === "live"
                         ? "JBH securely collects the information required to complete your order. Payment truth stays server-side."
-                        : "Shopify confirms current variant availability and securely collects the information required to complete your order."}
+                        : legacyShopifyBlocked
+                          ? "Your saved items have not been charged. Only verified JussPay products can be checked out."
+                          : "Shopify confirms current variant availability and securely collects the information required to complete your order."}
                   </p>
                   <p>
                     Juss Beautiful Hair does not place payment credentials or customer contact details in the public storefront bundle.
@@ -273,7 +281,9 @@ export default function Checkout() {
                     ? "Test prices and shipping are calculated by the server. Displayed subtotal is informational."
                     : checkoutMode === "live"
                       ? "Final JBH order totals are calculated server-side before payment."
-                      : "Final order totals are calculated by Shopify before payment."}
+                      : legacyShopifyBlocked
+                        ? "These saved cart prices are informational; no payment will be placed."
+                        : "Final order totals are calculated by Shopify before payment."}
                 </p>
               </div>
 
@@ -286,7 +296,9 @@ export default function Checkout() {
                 className="mt-6 w-full font-semibold"
               >
                 <Lock className="mr-2 h-4 w-4" />
-                {!checkoutModeResolved
+                {legacyShopifyBlocked
+                  ? "Select approved JussPay products"
+                  : !checkoutModeResolved
                   ? "Checking secure checkout…"
                   : submitting
                     ? "Opening checkout…"

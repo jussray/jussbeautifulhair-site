@@ -65,9 +65,11 @@ test('live discovery is explicit and never inherits sandbox enablement',async()=
  const base={JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{fetch:async()=>Response.json({ready:true,mode:'live',chargesEnabled:true})}};
  const sandboxOnly=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_SANDBOX_ENABLED:'true'});
  assert.equal(sandboxOnly.status,404);
- const live=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true'});
+ const missingCatalogApproval=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true'});
+ assert.equal(missingCatalogApproval.status,404);
+ const live=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live'});
  assert.deepEqual(await live.json(),{enabled:true,mode:'live'});
- const wrongMode=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_JUSSPAY:{fetch:async()=>Response.json({ready:true,mode:'sandbox',chargesEnabled:true})}});
+ const wrongMode=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY:{fetch:async()=>Response.json({ready:true,mode:'sandbox',chargesEnabled:true})}});
  assert.equal(wrongMode.status,503);
  assert.deepEqual(await wrongMode.json(),{error:'live_unavailable'});
 });
@@ -80,7 +82,7 @@ test('live checkout remains off unless independently enabled',async()=>{
 });
 test('live route requires a live checkout URL and does not accept sandbox session',async()=>{
  const req=new Request('https://jussbeautifulhair.com/api/jusspay/live/checkout',{method:'POST',headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(body)});
- const env={JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123',orderId:'jbho_test'});}}};
+ const env={JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123',orderId:'jbho_test'});}}};
  const response=await handleJussPaySandbox(req.clone(),env);
  assert.equal(response.status,502);
  assert.equal((await response.json()).error,'wrong_checkout_mode');

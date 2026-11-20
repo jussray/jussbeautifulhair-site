@@ -40,6 +40,19 @@ test("Test-mode sale catalog cannot appear on either public branded hostname",()
  assert.equal(getStripeCommerceState(env(),products),null);
  assert.equal(commerce(env())?.mode,"test");
 });
+test("Live catalog is branded-only and requires independent JussPay live approval",()=>{
+ const approved=env({JBH_STRIPE_COMMERCE_MODE:"live",JBH_JUSSPAY_LIVE_ENABLED:"true",JBH_JUSSPAY_SANDBOX_ENABLED:"false"});
+ const branded="https://jussbeautifulhair.com/shop";
+ assert.equal(getStripeCommerceState(approved,products,branded)?.mode,"live");
+ assert.equal(getStripeCommerceState(approved,products,"https://www.jussbeautifulhair.com/shop")?.mode,"live");
+ assert.equal(getStripeCommerceState(approved,products,testOrigin),null);
+ assert.equal(getStripeCommerceState(approved,products,"http://jussbeautifulhair.com/shop"),null);
+ assert.equal(getStripeCommerceState(env({JBH_STRIPE_COMMERCE_MODE:"live"}),products,branded),null);
+ assert.equal(getStripeCommerceState(env({JBH_STRIPE_COMMERCE_MODE:"live",JBH_JUSSPAY_LIVE_ENABLED:"false"}),products,branded),null);
+ assert.equal(getStripeCommerceState(approved,products),null);
+ assert.equal(getStripeCommerceState(approved,products,branded)?.catalog[0]?.variants[0]?.price,75);
+});
+
 test("Only explicitly approved server-priced variants can become purchasable through JussPay",()=>{
  const state=commerce(env());
  assert.equal(state?.mode,"test");
@@ -72,8 +85,10 @@ test("First-party checkout uses JussPay's order ledger, never direct legacy Stri
  assert.match(worker,/getStripeCommerceState\(env, PRODUCTS, request\.url\)/);
  assert.match(worker,/handleJussPaySandbox\(/);
  assert.match(worker,/Use the JussPay order-ledger checkout/);
- assert.match(checkout,/stripeCart \? "\/api\/jusspay\/sandbox\/checkout"/);
- assert.match(checkout,/readiness\.mode !== "sandbox"/);
+ assert.match(checkout,/stripeCart \? \(checkoutMode === "live" \? "\/api\/jusspay\/live\/checkout" : "\/api\/jusspay\/sandbox\/checkout"\)/);
+ assert.match(checkout,/readiness\.mode !== paymentMode/);
+ assert.match(worker,/readiness\.mode !== expectedMode/);
+ assert.match(checkout,/const paymentMode = result\.mode === "live" \? "live" : "sandbox"/);
  assert.match(checkout,/requestId: checkoutAttempt\.current\.requestId/);
  assert.match(checkout,/merchandiseId: item\.variantId/);
  assert.doesNotMatch(checkout,/stripeCart \? "\/api\/checkout"/);

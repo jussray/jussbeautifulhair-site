@@ -12,27 +12,19 @@ const outputDir = "artifacts/brand-moat";
 const vitePath = fileURLToPath(
   new URL("../node_modules/vite/bin/vite.js", import.meta.url),
 );
-const shopifyCatalogFixture = {
-  products: [
-    {
-      id: "body-wave-human-hair-bundles",
-      shopifyProductId: "gid://shopify/Product/9719789060339",
-      name: "Body Wave Human Hair Bundles",
-      category: "Bundles",
-      tagline: "Live Shopify inventory",
-      description: "Supplier-backed body wave bundles fulfilled through the connected Shopify catalog.",
-      variants: [
-        {
-          id: "gid://shopify/ProductVariant/50273899900001",
-          option: '14\"',
-          price: 75,
-          availableForSale: true,
-        },
-      ],
-      image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%23f3ede8'/%3E%3C/svg%3E",
-      availableForSale: true,
-    },
-  ],
+const jussPayCatalogFixture = {
+  mode: "live",
+  products: [{
+    id: "bundle-bodywave",
+    shopifyProductId: "jbh:catalog",
+    name: "Lawless Body Wave Bundles",
+    category: "Bundles",
+    tagline: "Verified JussPay product",
+    description: "Approved first-party hair product for the storefront browser proof.",
+    variants: [{id:"jbh:bundle-bodywave:0",option:'14"',price:75,availableForSale:true}],
+    image: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect width='100%25' height='100%25' fill='%23f3ede8'/%3E%3C/svg%3E",
+    availableForSale: true,
+  }],
 };
 let serverOutput = "";
 let catalogMode = "success";
@@ -107,23 +99,18 @@ try {
   await waitForServer();
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+  let legacyCatalogRequests = 0;
   await page.route("**/api/shopify/catalog", async (route) => {
-    if (catalogMode === "failure") {
-      // Use an HTTP-successful but contract-invalid response. The storefront must
-      // still fail closed because `products` is absent, while the browser console
-      // remains clean enough to catch unrelated runtime errors independently.
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ error: "proof fixture: Shopify catalog unreadable" }),
-      });
-      return;
-    }
-
+    legacyCatalogRequests += 1;
+    await route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"shopify_checkout_disabled"})});
+  });
+  await page.route("**/api/commerce/catalog", async (route) => {
     await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(shopifyCatalogFixture),
+      status:200,
+      contentType:"application/json",
+      body:JSON.stringify(catalogMode === "failure"
+        ? {mode:"jusspay_unavailable",products:[]}
+        : jussPayCatalogFixture),
     });
   });
   page.on("console", (message) => {
@@ -138,7 +125,7 @@ try {
   for (const pillar of ["story", "quality", "care", "proof"]) {
     assert(await page.getByTestId(`brand-moat-${pillar}`).isVisible(), `Brand moat pillar ${pillar} is missing.`);
   }
-  await page.getByText("Live from Shopify", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
+  await page.getByText("Verified for Checkout", { exact: true }).waitFor({ state: "visible", timeout: 15_000 });
   await page
     .getByText("Lawless Body Wave Bundles", { exact: true })
     .first()
@@ -147,7 +134,7 @@ try {
   for (const riskyClaim of ["Quality Guaranteed", "never tangles", "lasts 2+ years", "factory pricing"]) {
     assert(!desktopText.includes(riskyClaim), `Unsupported certainty is still public: ${riskyClaim}`);
   }
-  assert(desktopText.includes("Lawless Body Wave Bundles"), "Shopify-backed signature product did not render.");
+  assert(desktopText.includes("Lawless Body Wave Bundles"), "JussPay-backed signature product did not render.");
   assert(!desktopText.includes("Crown Logo Cap"), "Untold Stories product leaked into the hair storefront.");
   await assertNoHorizontalOverflow(page, "desktop homepage");
   await page.screenshot({ path: `${outputDir}/home-desktop.png`, fullPage: true });
@@ -215,6 +202,7 @@ try {
     fullPage: true,
   });
 
+  assert(legacyCatalogRequests===0,"Brand proof unexpectedly contacted Shopify while JussPay was configured.");
   assert(consoleErrors.length === 0, `Browser console errors: ${consoleErrors.join(" | ")}`);
   await writeFile(
     `${outputDir}/manifest.json`,
@@ -226,9 +214,9 @@ try {
       assertions: [
         "four brand pillars visible",
         "unsupported certainty absent",
-        "Shopify-backed JBH product renders while Untold Stories catalog remains separate",
-        "unusable Shopify catalog response renders an explicit unavailable state plus the browsing-only static collection with no cart path and no availability promise",
-        "failed Shopify catalog state keeps a real retry action",
+        "JussPay-approved JBH product renders while Untold Stories catalog remains separate",
+        "unavailable JussPay catalog renders an explicit unavailable state plus the browsing-only static collection with no cart path and no availability promise",
+        "failed JussPay catalog state keeps a real retry action",
         "desktop and mobile have no horizontal overflow",
         "mobile CTA remains visible",
         "browser console remains clean",

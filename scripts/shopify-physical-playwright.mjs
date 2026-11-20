@@ -141,7 +141,21 @@ async function configureFunnelMock(page, evidence) {
   });
 }
 
+// Vite is only a static test server. The live Worker responds with this
+// explicit default-off contract when first-party Stripe commerce is disabled.
+async function configureCommerceDefaultOffMock(page) {
+  await page.route("**/api/commerce/catalog", async (route) => {
+    assert(route.request().method() === "GET", "Commerce discovery must stay read-only.");
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ mode: "shopify", products: [] }),
+    });
+  });
+}
+
 async function configureMocks(page, evidence) {
+  await configureCommerceDefaultOffMock(page);
   await configureFunnelMock(page, evidence);
 
   await page.route("**/api/shopify/catalog", async (route) => {
@@ -183,6 +197,7 @@ async function configureMocks(page, evidence) {
 }
 
 async function configureRefetchTruthMock(page) {
+  await configureCommerceDefaultOffMock(page);
   let failCatalog = false;
   let requests = 0;
 

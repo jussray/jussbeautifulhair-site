@@ -56,3 +56,11 @@ test("Shopify browser harness mocks the default-off commerce route without mutin
  assert.match(script,/body: JSON\.stringify\(\{ mode: "shopify", products: \[\] \}\)/);
  assert.match(script,/assert\(consoleErrors\.length === 0/);
 });
+
+test("Physical browser proof models first-party commerce as default-off without muting console errors",()=>{
+ const script=readFileSync(new URL("../scripts/shopify-physical-playwright.mjs",import.meta.url),"utf8");
+ assert.match(script,/configureCommerceDefaultOffMock\(page\)/);
+ assert.match(script,/page\.route\("\*\*\/api\/commerce\/catalog"/);
+ assert.match(script,/body: JSON\.stringify\(\{ mode: "shopify", products: \[\] \}\)/);
+ assert.match(script,/assert\(consoleErrors\.length === 0/);
+});

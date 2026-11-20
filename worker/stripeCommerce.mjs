@@ -1,25 +1,19 @@
 // Explicit first-party Stripe catalog authority. No approved offers means no checkout.
 // Prices come from the tracked server catalog and must match each manually approved offer.
-const ACCOUNT_ID = /^acct_[A-Za-z0-9]{8,64}$/;
 const PRODUCT_ID = /^[a-z0-9][a-z0-9-]{0,99}$/;
 
 export function getStripeCommerceState(env, products, requestUrl) {
   const mode = env.JBH_STRIPE_COMMERCE_MODE;
-  if (mode === "test" && requestUrl) {
-    let host;
-    try { host = new URL(requestUrl).hostname.toLowerCase(); } catch { return null; }
-    if (host === "jussbeautifulhair.com" || host === "www.jussbeautifulhair.com") return null;
-  }
-  if (mode !== "test" && mode !== "live") return null;
-  if (env.ENABLE_LEGACY_STRIPE_CHECKOUT !== "true") return null;
-  if (!ACCOUNT_ID.test(env.JBH_STRIPE_ACCOUNT_ID || "")) return null;
-  if (mode === "live" && (env.JBH_STRIPE_ACCOUNT_ID !== "acct_1TfbELRp7J40bCrl" ||
-    env.JBH_STRIPE_LIVE_ENABLED !== "true" ||
-    env.JBH_STRIPE_FULFILLMENT_READY !== "true"
-  )) return null;
-
-  const key = env.STRIPE_SECRET_KEY || "";
-  if (!key.startsWith(mode === "live" ? "sk_live_" : "sk_test_")) return null;
+  // This catalog is a test-only front door to the existing JussPay order ledger.
+  // Never permit live checkout through the separate legacy Stripe session handler.
+  if (mode !== "test" || env.JBH_JUSSPAY_SANDBOX_ENABLED !== "true") return null;
+  if (!requestUrl) return null;
+  let host;
+  try { host = new URL(requestUrl).hostname.toLowerCase(); } catch { return null; }
+  if (host === "jussbeautifulhair.com" || host === "www.jussbeautifulhair.com") return null;
+  if (!env.JBH_JUSSPAY || typeof env.JBH_JUSSPAY.fetch !== "function" ||
+      typeof env.JBH_JUSSPAY_STOREFRONT_KEY !== "string" ||
+      env.JBH_JUSSPAY_STOREFRONT_KEY.length < 32) return null;
 
   let approvals;
   try { approvals = JSON.parse(env.JBH_STRIPE_APPROVED_OFFERS || "null"); }
@@ -50,6 +44,20 @@ export function getStripeCommerceState(env, products, requestUrl) {
       price: priceCents / 100,
       availableForSale: true,
     });
+  }
+
+  // Require an exact SKU mapping for every approved variant. No hidden offers.
+  let mapping;
+  try { mapping = JSON.parse(env.JBH_JUSSPAY_VARIANT_SKUS || "null"); }
+  catch { return null; }
+  if (!mapping || typeof mapping !== "object" || Array.isArray(mapping)) return null;
+  const mappingKeys = Object.keys(mapping);
+  if (mappingKeys.length !== seen.size) return null;
+  for (const [id, sku] of Object.entries(mapping)) {
+    if (!/^jbh:[a-z0-9][a-z0-9-]{0,99}:[0-9]+$/.test(id) ||
+        typeof sku !== "string" || !/^[A-Z0-9][A-Z0-9-]{1,63}$/.test(sku)) return null;
+    const suffix = id.slice(4);
+    if (!seen.has(suffix)) return null;
   }
 
   const catalog = products.filter((product) => allow.has(product.id)).map((product) => ({

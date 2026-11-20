@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 import { getProduct, PRODUCTS } from "../shared/catalog";
 import { getStripeCommerceState } from "./stripeCommerce.mjs";
+import { handleJussPaySandbox } from "./jusspaySandbox.mjs";
 
 interface AssetBinding {
   fetch(request: Request): Promise<Response>;
@@ -16,6 +17,11 @@ interface Env {
   JBH_STRIPE_LIVE_ENABLED?: string;
   JBH_STRIPE_FULFILLMENT_READY?: string;
   JBH_STRIPE_APPROVED_OFFERS?: string;
+  JBH_JUSSPAY_SANDBOX_ENABLED?: string;
+  JBH_JUSSPAY_LIVE_ENABLED?: string;
+  JBH_JUSSPAY_VARIANT_SKUS?: string;
+  JBH_JUSSPAY_STOREFRONT_KEY?: string;
+  JBH_JUSSPAY?: { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
   STORE_ORIGIN?: string;
   ALLOWED_STOREFRONT_ORIGINS?: string;
   CONTACT_API_ORIGIN?: string;
@@ -628,6 +634,10 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
 }
 
 async function handleCheckout(request: Request, env: Env): Promise<Response> {
+  // Never create a parallel Stripe session for the JussPay-ledger catalog.
+  if (env.JBH_JUSSPAY_SANDBOX_ENABLED === "true" || env.JBH_JUSSPAY_LIVE_ENABLED === "true") {
+    return json({ error: "Use the JussPay order-ledger checkout" }, 503);
+  }
   const allowedOrigins = getAllowedOrigins(env);
   const storeOrigin = allowedOrigins[0];
   const origin = request.headers.get("Origin");
@@ -861,7 +871,12 @@ export default {
     if (url.pathname === "/api/commerce/catalog") {
       if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
       const commerce = getStripeCommerceState(env, PRODUCTS, request.url);
-      return json({ mode: commerce?.mode || "shopify", products: commerce?.catalog || [] });
+      if (!commerce) return json({ mode: "shopify", products: [] });
+      // Present sellable test products only if JussPay's actual order ledger is ready.
+      const health = await handleJussPaySandbox(
+        new Request(new URL("/api/jusspay/sandbox/checkout", request.url)), env);
+      if (!health.ok) return json({ mode: "shopify", products: [] });
+      return json({ mode: commerce.mode, products: commerce.catalog });
     }
 
     if (url.pathname === "/api/shopify/catalog") {

@@ -12,6 +12,16 @@ test('server maps Shopify variants to approved SKU without trusting client price
  assert.throws(()=>parseJussPayCart({...body,lines:[{merchandiseId:'gid://shopify/ProductVariant/999',quantity:1}]},mapping),/variant_not_approved/);
  assert.throws(()=>parseJussPayCart({...body,lines:[{merchandiseId:variant,quantity:11}]},mapping),/invalid_cart/);
 });
+test('first-party Juss Beautiful Hair variants map only to approved ledger SKUs',()=>{
+ const id='jbh:bundle-bodywave:0';
+ const payload={requestId,shipping:'standard',lines:[{merchandiseId:id,quantity:1}]};
+ const approved={[id]:'JBH-BW-14'};
+ assert.deepEqual(parseJussPayCart(payload,approved),{requestId,shipping:'standard',items:[{sku:'JBH-BW-14',quantity:1}]});
+ assert.throws(()=>parseJussPayCart({...payload,lines:[{merchandiseId:'jbh:bundle-bodywave:1',quantity:1}]},approved),/variant_not_approved/);
+ assert.throws(()=>parseJussPayCart({...payload,lines:[{merchandiseId:id,quantity:1,price:1}]},approved),/invalid_cart/);
+ assert.throws(()=>parseJussPayCart({...payload,lines:[{merchandiseId:'jbh:../secret:0',quantity:1}]},approved),/invalid_cart/);
+});
+
 test('disabled lane does not contact payment provider',async()=>{
  let called=false;const response=await handleJussPaySandbox(makeRequest(),{JBH_JUSSPAY:{fetch(){called=true;throw Error('must not call');}}});
  assert.equal(response.status,404);assert.equal(called,false);

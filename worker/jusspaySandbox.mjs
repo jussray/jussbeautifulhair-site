@@ -1,6 +1,6 @@
 // Disabled-by-default, sandbox-only storefront-to-JussPay boundary.
 // SKU mappings are server-owned; client prices and vendor identifiers are never trusted.
-const VARIANT=/^gid:\/\/shopify\/ProductVariant\/\d+$/;
+const VARIANT=/^(?:gid:\/\/shopify\/ProductVariant\/\d+|jbh:[a-z0-9][a-z0-9-]{0,99}:[0-9]+)$/;
 const SKU=/^[A-Z0-9][A-Z0-9-]{1,63}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const json=(value,status=200)=>new Response(JSON.stringify(value),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});

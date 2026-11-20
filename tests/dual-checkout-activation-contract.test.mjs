@@ -22,7 +22,7 @@ test("JussPay activates only after explicit runtime readiness discovery", () => 
   assert.match(checkout, /ready\("\/api\/jusspay\/sandbox\/checkout", "sandbox"\)/);
   assert.match(checkout, /checkoutMode === "live"[\s\S]*"\/api\/jusspay\/live\/checkout"[\s\S]*checkoutMode === "sandbox"[\s\S]*"\/api\/jusspay\/sandbox\/checkout"[\s\S]*"\/api\/shopify\/cart"/);
   assert.match(checkout, /\(jussPayMode \|\| stripeCart\) \? assertApprovedCheckoutRedirect\(data\.url!\) : assertApprovedShopifyCheckoutRedirect\(data\.checkoutUrl!\)/);
-  assert.match(checkout, /stripeCart \? "\/api\/checkout"/);
+  assert.match(checkout, /stripeCart \? "\/api\/jusspay\/sandbox\/checkout"/);
   assert.match(checkout, /mixedCart/);
   assert.doesNotMatch(checkout, /fetch\("\/api\/checkout"/);
 });

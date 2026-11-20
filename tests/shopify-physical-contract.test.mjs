@@ -72,7 +72,7 @@ test("physical checkout sends only Shopify variant IDs and quantities", () => {
   assert.match(checkout, /merchandiseId:\s*item\.variantId/);
   assert.match(checkout, /quantity:\s*item\.qty/);
   assert.match(checkout, /assertApprovedShopifyCheckoutRedirect/);
-  assert.match(checkout, /stripeCart \? "\/api\/checkout"/);
+  assert.match(checkout, /stripeCart \? "\/api\/jusspay\/sandbox\/checkout"/);
   assert.match(checkout, /mixedCart/);
   assert.match(checkout, /assertApprovedCheckoutRedirect\(data\.url!\)/);
   assert.doesNotMatch(checkout, /fetch\("\/api\/checkout"/);
@@ -121,6 +121,6 @@ test("legacy Stripe checkout remains isolated as rollback-only server code", () 
   // must validate its hosted Stripe URL before browser navigation.
   assert.doesNotMatch(checkout, /createCheckoutAttemptId/);
   assert.match(checkout, /\(jussPayMode \|\| stripeCart\) \? assertApprovedCheckoutRedirect\(data\.url!\)/);
-  assert.match(checkout, /stripeCart \? "\/api\/checkout"/);
+  assert.match(checkout, /stripeCart \? "\/api\/jusspay\/sandbox\/checkout"/);
   assert.match(worker, /getStripeCommerceState\(env, PRODUCTS, request\.url\)/);
 });

@@ -35,16 +35,22 @@ export default function Checkout() {
             mode?: string;
             products?: Array<{ id: string; variants: Array<{ id: string; option: string; price: number }> }>;
           };
-          if (!response.ok || (result.mode !== "test" && result.mode !== "live") || !Array.isArray(result.products)) {
-            throw new Error("Stripe storefront is not enabled");
+          if (!response.ok || result.mode !== "test" || !Array.isArray(result.products)) {
+            throw new Error("JussPay test catalog is not enabled");
           }
           const approved = new Set(result.products.flatMap((product) =>
             product.variants.map((variant) => product.id + ":" + variant.id + ":" + variant.option + ":" + variant.price)));
           if (!items.every((item) => approved.has(item.id + ":" + item.variantId + ":" + item.variant + ":" + item.price))) {
             throw new Error("Cart item approval is no longer current");
           }
+          const health = await fetch("/api/jusspay/sandbox/checkout", { cache: "no-store" });
+          const readiness = (await health.json().catch(() => ({}))) as { enabled?: boolean; mode?: string };
+          if (!health.ok || readiness.enabled !== true || readiness.mode !== "sandbox") {
+            throw new Error("JussPay order ledger is not ready");
+          }
           if (active) {
-            setStripeCommerceMode(result.mode);
+            setStripeCommerceMode("test");
+            setCheckoutMode("sandbox");
             setCheckoutModeResolved(true);
           }
         } catch {
@@ -119,7 +125,7 @@ export default function Checkout() {
         checkoutAttempt.current = { cart: cartFingerprint, requestId: crypto.randomUUID() };
       }
       const checkoutPath =
-        stripeCart ? "/api/checkout" : checkoutMode === "live"
+        stripeCart ? "/api/jusspay/sandbox/checkout" : checkoutMode === "live"
           ? "/api/jusspay/live/checkout"
           : checkoutMode === "sandbox"
             ? "/api/jusspay/sandbox/checkout"
@@ -127,11 +133,9 @@ export default function Checkout() {
       const response = await fetch(checkoutPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(stripeCart ? {
-          checkoutAttemptId: checkoutAttempt.current.requestId,
-          items: items.map((item) => ({ id: item.id, variant: item.variant, quantity: item.qty })),
-        } : {
-          ...(jussPayMode ? { requestId: checkoutAttempt.current.requestId, shipping: "standard" } : {}),
+        body: JSON.stringify({
+          ...((jussPayMode || stripeCart) ?
+            { requestId: checkoutAttempt.current.requestId, shipping: "standard" } : {}),
           lines: items.map((item) => ({
             merchandiseId: item.variantId,
             quantity: item.qty,

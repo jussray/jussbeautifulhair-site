@@ -23,6 +23,9 @@ export function parseJussPayCart(input, mapping) {
 export async function handleJussPaySandbox(request,env) {
   const path=new URL(request.url).pathname;
   const live=path==='/api/jusspay/live/checkout';
+  const publicOrigin=new URL(request.url).origin;
+  if(live && publicOrigin!=='https://jussbeautifulhair.com' &&
+      publicOrigin!=='https://www.jussbeautifulhair.com') return json({error:'not_found'},404);
   // The live route is not an alternate way around catalog approval.
   if(live && env.JBH_STRIPE_COMMERCE_MODE!=='live') return json({error:'not_found'},404);
   if(live ? env.JBH_JUSSPAY_LIVE_ENABLED!=='true' : env.JBH_JUSSPAY_SANDBOX_ENABLED!=='true') return json({error:'not_found'},404);

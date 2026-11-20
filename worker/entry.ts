@@ -1,5 +1,7 @@
 import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json";
 import worker from "./index";
+import { PRODUCTS } from "../shared/catalog";
+import { getStripeCommerceState } from "./stripeCommerce.mjs";
 import { handleJussPaySandbox } from "./jusspaySandbox.mjs";
 import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
 import { enforceJbhRateLimit, type RateLimitBinding } from "./rate-limit";
@@ -431,6 +433,13 @@ export default {
     const pathname = new URL(request.url).pathname;
 
     if (pathname === "/api/jusspay/sandbox/checkout" || pathname === "/api/jusspay/live/checkout") {
+      // Direct POSTs cannot bypass the live catalog and exact approved offers.
+      if (pathname === "/api/jusspay/live/checkout" &&
+          getStripeCommerceState(env, PRODUCTS, request.url)?.mode !== "live") {
+        return Response.json({ error: "not_found" }, {
+          status: 404, headers: { "Cache-Control": "no-store" },
+        });
+      }
       return handleJussPaySandbox(request, env);
     }
 

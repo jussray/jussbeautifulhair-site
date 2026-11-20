@@ -476,6 +476,17 @@ export default {
     // branded Host header so Shopify serves checkout directly (200) instead
     // of 301-canonicalizing back to the primary domain.
     if (isShopifyProxyPath(pathname)) {
+      // The legacy branded proxy must not bypass a JussPay-only storefront.
+      if (env.JBH_COMMERCE_PROVIDER !== "shopify") {
+        return new Response("Legacy checkout unavailable", {
+          status: 404,
+          headers: {
+            "Cache-Control": "no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
       return proxyToShopify(request);
     }
 

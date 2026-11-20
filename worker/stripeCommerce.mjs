@@ -4,13 +4,21 @@ const PRODUCT_ID = /^[a-z0-9][a-z0-9-]{0,99}$/;
 
 export function getStripeCommerceState(env, products, requestUrl) {
   const mode = env.JBH_STRIPE_COMMERCE_MODE;
-  // This catalog is a test-only front door to the existing JussPay order ledger.
-  // Never permit live checkout through the separate legacy Stripe session handler.
-  if (mode !== "test" || env.JBH_JUSSPAY_SANDBOX_ENABLED !== "true") return null;
+  // Both modes use JussPay's order ledger, never the legacy direct Stripe route.
+  // Test products stay off branded hosts; live products require a separate live flag.
+  if (mode !== "test" && mode !== "live") return null;
+  const live = mode === "live";
+  if (live ? env.JBH_JUSSPAY_LIVE_ENABLED !== "true" :
+      env.JBH_JUSSPAY_SANDBOX_ENABLED !== "true") return null;
   if (!requestUrl) return null;
   let host;
-  try { host = new URL(requestUrl).hostname.toLowerCase(); } catch { return null; }
-  if (host === "jussbeautifulhair.com" || host === "www.jussbeautifulhair.com") return null;
+  try {
+    const url = new URL(requestUrl);
+    if (url.protocol !== "https:") return null;
+    host = url.hostname.toLowerCase();
+  } catch { return null; }
+  const branded = host === "jussbeautifulhair.com" || host === "www.jussbeautifulhair.com";
+  if (live ? !branded : branded) return null;
   if (!env.JBH_JUSSPAY || typeof env.JBH_JUSSPAY.fetch !== "function" ||
       typeof env.JBH_JUSSPAY_STOREFRONT_KEY !== "string" ||
       env.JBH_JUSSPAY_STOREFRONT_KEY.length < 32) return null;

@@ -26,6 +26,15 @@ function env(overrides={}) {
   };
 }
 const commerce=(x)=>getStripeCommerceState(x,products,testOrigin);
+test("Hair Match cannot initiate its retired Shopify checkout when JussPay owns commerce",()=>{
+ const hairMatch=readFileSync(new URL("../client/src/pages/HairMatch.tsx",import.meta.url),"utf8");
+ assert.match(hairMatch,/response\.ok && result\.mode === "shopify"/);
+ assert.match(hairMatch,/!legacyCheckoutReady/);
+ assert.match(hairMatch,/hair-match-booking-unavailable/);
+ const proxy=readFileSync(new URL("../worker/entry.ts",import.meta.url),"utf8");
+ assert.match(proxy,/if \(env\.JBH_COMMERCE_PROVIDER !== "shopify"\)/);
+});
+
 test("JussPay-first commerce never silently falls back to frozen Shopify",()=>{
  for(const cfg of [storefrontConfig,frontdoorConfig]) {
    assert.match(cfg,/JBH_COMMERCE_PROVIDER = "jusspay"/);

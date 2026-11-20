@@ -413,11 +413,21 @@ export async function fetchShopifyCatalog(): Promise<StoreProduct[]> {
     headers: { Accept: "application/json" },
     cache: "no-store",
   });
+  if (!commerceResponse.ok) {
+    throw new Error("JussPay catalog discovery is temporarily unavailable.");
+  }
   if (commerceResponse.ok) {
     const commerce = (await commerceResponse.json().catch(() => ({}))) as {
       mode?: unknown;
       products?: unknown;
     };
+    if (commerce.mode === "jusspay_unavailable") {
+      // Browsing-only fallback. Never fall through to the legacy Shopify API.
+      throw new Error("JussPay is preparing the approved catalog for checkout.");
+    }
+    if (commerce.mode !== "shopify" && commerce.mode !== "test" && commerce.mode !== "live") {
+      throw new Error("Unexpected commerce provider response.");
+    }
     if (commerce.mode === "test" || commerce.mode === "live") {
       if (!Array.isArray(commerce.products) || !commerce.products.length ||
           !commerce.products.every(isFirstPartyStoreProduct)) {

@@ -13,6 +13,7 @@ interface Env {
   STRIPE_SECRET_KEY: string;
   ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
   JBH_STRIPE_COMMERCE_MODE?: string;
+  JBH_COMMERCE_PROVIDER?: "jusspay" | "shopify";
   JBH_STRIPE_ACCOUNT_ID?: string;
   JBH_STRIPE_LIVE_ENABLED?: string;
   JBH_STRIPE_FULFILLMENT_READY?: string;
@@ -871,7 +872,11 @@ export default {
     if (url.pathname === "/api/commerce/catalog") {
       if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
       const commerce = getStripeCommerceState(env, PRODUCTS, request.url);
-      if (!commerce) return json({ mode: "shopify", products: [] });
+      // JussPay is the primary commerce provider. A missing approval cannot
+      // silently redirect browsing or checkout back to a frozen Shopify store.
+      const unavailableMode = env.JBH_COMMERCE_PROVIDER === "shopify"
+        ? "shopify" : "jusspay_unavailable";
+      if (!commerce) return json({ mode: unavailableMode, products: [] });
       // Do not expose purchasable products unless the matching JussPay mode
       // independently proves catalog, merchant, webhook, and ledger readiness.
       const expectedMode = commerce.mode === "live" ? "live" : "sandbox";
@@ -879,16 +884,22 @@ export default {
         new Request(new URL(`/api/jusspay/${expectedMode}/checkout`, request.url)), env);
       const readiness = await health.json().catch(() => null);
       if (!health.ok || readiness?.enabled !== true || readiness.mode !== expectedMode) {
-        return json({ mode: "shopify", products: [] });
+        return json({ mode: unavailableMode, products: [] });
       }
       return json({ mode: commerce.mode, products: commerce.catalog });
     }
 
     if (url.pathname === "/api/shopify/catalog") {
+      if (env.JBH_COMMERCE_PROVIDER !== "shopify") {
+        return json({ error: "shopify_checkout_disabled" }, 503);
+      }
       return handleShopifyCatalog(request);
     }
 
     if (url.pathname === "/api/shopify/cart") {
+      if (env.JBH_COMMERCE_PROVIDER !== "shopify") {
+        return json({ error: "shopify_checkout_disabled" }, 503);
+      }
       return handleShopifyCart(request, env);
     }
 

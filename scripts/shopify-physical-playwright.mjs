@@ -157,6 +157,9 @@ async function configureCommerceDefaultOffMock(page) {
 async function proveJussPayNoShopifyFallback(browser, viewport, label, consoleErrors) {
   const page = await browser.newPage({ viewport });
   captureConsoleErrors(page, consoleErrors);
+  // Checkout emits first-party funnel events. Vite has no Worker API, so
+  // preserve a successful telemetry boundary while keeping console errors visible.
+  await configureFunnelMock(page, null);
   let legacyRequests = 0;
   await page.route("**/api/commerce/catalog", async (route) => {
     await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({mode:"jusspay_unavailable",products:[]})});

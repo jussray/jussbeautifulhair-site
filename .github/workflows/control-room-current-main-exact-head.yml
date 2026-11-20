@@ -76,19 +76,29 @@ jobs:
           TRIGGERING_ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
-          prs="$(curl --fail --silent --show-error \
+          # GitHub's commit API includes a full diff. Passing its JSON in an
+          # environment variable can exceed Linux's per-argument size limit.
+          # Keep the response in temporary files and preserve the same
+          # fail-closed provenance verification below.
+          prs_file="$(mktemp)"
+          commit_file="$(mktemp)"
+          trap 'rm -f "$prs_file" "$commit_file"' EXIT
+          curl --fail --silent --show-error \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD_SHA/pulls")"
-          commit="$(curl --fail --silent --show-error \
+            --output "$prs_file" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD_SHA/pulls"
+          curl --fail --silent --show-error \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD_SHA")"
-          PRS_JSON="$prs" COMMIT_JSON="$commit" node --input-type=module <<'NODE'
-          const prs = JSON.parse(process.env.PRS_JSON || "[]");
-          const commit = JSON.parse(process.env.COMMIT_JSON || "{}");
+            --output "$commit_file" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_HEAD_SHA"
+          PRS_FILE="$prs_file" COMMIT_FILE="$commit_file" node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const prs = JSON.parse(readFileSync(process.env.PRS_FILE, "utf8"));
+          const commit = JSON.parse(readFileSync(process.env.COMMIT_FILE, "utf8"));
           const mergedToMain = prs.filter((pr) =>
             pr?.state === "closed" &&
             pr?.merged_at &&

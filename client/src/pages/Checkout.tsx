@@ -297,7 +297,7 @@ export default function Checkout() {
               >
                 <Lock className="mr-2 h-4 w-4" />
                 {legacyShopifyBlocked
-                  ? "Select approved JussPay products"
+                  ? "Checkout unavailable"
                   : !checkoutModeResolved
                   ? "Checking secure checkout…"
                   : submitting
@@ -310,6 +310,18 @@ export default function Checkout() {
                       ? `Continue to JBH checkout — ${formatPrice(subtotal)}`
                       : `Continue to Shopify — ${formatPrice(subtotal)}`}
               </Button>
+              {legacyShopifyBlocked && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="mt-3 w-full min-w-0 whitespace-normal text-center"
+                  data-testid="button-browse-approved-jusspay"
+                  onClick={() => navigate("/shop")}
+                >
+                  Browse approved products
+                </Button>
+              )}
             </div>
           </div>
         </div>

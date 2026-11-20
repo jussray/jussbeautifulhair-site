@@ -42,6 +42,12 @@ test('builds sanitized exact-SHA evidence', () => {
   assert.equal(JSON.stringify(ledger).includes('token'), false);
 });
 
+test('runs the fail-closed runtime-state proof before the exact-head ledger observer', () => {
+  assert.equal((workflow.match(/\bruns-on:/g) ?? []).length, 2);
+  assert.match(workflow, /runtime-state-contract:[\s\S]*?runs-on: ubuntu-22\.04/);
+  assert.match(workflow, /ledger:\s*\n\s*needs: runtime-state-contract/);
+});
+
 test('gates the always-on ledger on independent exact-head runtime proof', () => {
   const jobs = workflow.split('\njobs:\n')[1];
   assert.ok(jobs, 'workflow must define jobs');

@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { Truck, Heart, MessageCircle, ArrowRight, Check, Loader2 } from "lucide-react";
 import { Layout } from "@/components/Layout";
+import { DisplayProductCard } from "@/components/DisplayProductCard";
 import { ProductCard } from "@/components/ProductCard";
 import { BrandMoatSection } from "@/components/BrandMoatSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { BRAND } from "@/lib/catalog";
+import { DISPLAY_ONLY_FEATURED } from "@/lib/displayCatalog";
 import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 import { TurnstileChallenge } from "@/components/TurnstileChallenge";
 import { getNewsletterEndpoint } from "@/lib/privateIngress";
@@ -15,18 +17,18 @@ import { getNewsletterEndpoint } from "@/lib/privateIngress";
 const VALUES = [
   {
     icon: Truck,
-    title: "Live Inventory",
-    body: "Product availability and pricing are read from Shopify so the storefront does not promise stale stock.",
+    title: "Verified Online Shopping",
+    body: "Only approved products with verified prices and checkout readiness can be ordered through JussPay.",
   },
   {
     icon: Heart,
-    title: "Product Facts First",
-    body: "Review current product details, options, pricing, and policies before you choose your install.",
+    title: "Choose Your Fit",
+    body: "Compare texture, length, lace, options, and care details before you choose your install.",
   },
   {
     icon: MessageCircle,
-    title: "Human Support",
-    body: "Questions before or after checkout can be sent to hello@jussbeautifulhair.com.",
+    title: "Ask Before You Buy",
+    body: "Need a second opinion before checkout? Human support is available at hello@jussbeautifulhair.com.",
   },
 ];
 
@@ -184,21 +186,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="border-b border-border bg-card">
-        <div className="mx-auto max-w-7xl px-6 py-12 grid gap-8 sm:grid-cols-3">
-          {VALUES.map((value) => (
-            <div key={value.title} className="flex flex-col items-start">
-              <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-secondary/40 text-primary mb-4">
-                <value.icon className="h-5 w-5" />
-              </div>
-              <h3 className="font-display text-lg text-foreground">{value.title}</h3>
-              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{value.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <BrandMoatSection />
 
       <section className="mx-auto max-w-7xl px-6 pt-12" data-testid="hair-match-home-offer">
         <div className="rounded-2xl border border-gold/30 bg-secondary/20 p-6 sm:p-8 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -221,8 +209,12 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-6 py-16 sm:py-20">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">Live from Shopify</p>
-            <h2 className="font-display text-3xl sm:text-4xl text-foreground">Featured Hair</h2>
+            <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">
+              {catalogUnavailable ? "The Collection" : "Verified for Checkout"}
+            </p>
+            <h2 className="font-display text-3xl sm:text-4xl text-foreground">
+              {catalogUnavailable ? "Browse the Collection" : "Featured Hair"}
+            </h2>
           </div>
           <Link
             href="/shop"
@@ -239,24 +231,36 @@ export default function Home() {
             ))}
           </div>
         ) : catalogUnavailable ? (
-          <div
-            role="alert"
-            data-testid="home-catalog-unavailable"
-            className="rounded-lg border border-card-border bg-card p-8 text-center"
-          >
-            <h3 className="font-display text-2xl text-foreground">Live inventory could not be verified</h3>
-            <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">
-              Shopify inventory is unavailable right now. No stale prices or availability are being shown.
-            </p>
-            <Button
-              type="button"
-              className="mt-6"
-              data-testid="button-retry-home-catalog"
-              disabled={isFetching}
-              onClick={() => void refetch()}
+          <div>
+            <div
+              role="alert"
+              data-testid="home-catalog-unavailable"
+              className="rounded-lg border border-card-border bg-card p-8 text-center"
             >
-              {isFetching ? "Checking Shopify…" : "Try Again"}
-            </Button>
+              <h3 className="font-display text-2xl text-foreground">Live inventory could not be verified</h3>
+              <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">
+                JussPay product availability could not be verified, so online ordering is paused.
+                The collection below is for browsing only; no availability is promised
+                until prices and fulfillment can be verified.
+              </p>
+              <Button
+                type="button"
+                className="mt-6"
+                data-testid="button-retry-home-catalog"
+                disabled={isFetching}
+                onClick={() => void refetch()}
+              >
+                {isFetching ? "Checking availability…" : "Try Again"}
+              </Button>
+            </div>
+            <div
+              className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-5"
+              data-testid="home-catalog-fallback"
+            >
+              {DISPLAY_ONLY_FEATURED.map((product) => (
+                <DisplayProductCard key={product.id} product={product} />
+              ))}
+            </div>
           </div>
         ) : featured.length > 0 ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
@@ -269,7 +273,7 @@ export default function Home() {
             data-testid="home-catalog-verified-empty"
             className="rounded-lg border border-card-border bg-card p-8 text-center text-muted-foreground"
           >
-            No Shopify products are available for sale right now.
+            No approved JussPay products are available for checkout right now.
           </div>
         )}
       </section>
@@ -314,7 +318,7 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-16">
           <h2 className="font-display text-3xl text-center text-foreground mb-2">More to Explore</h2>
           <p className="text-center text-muted-foreground mb-10">
-            {availableProducts.length} live products currently available through Shopify.
+            {availableProducts.length} products currently approved for checkout.
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             {categoryPreview.map((product) => (
@@ -323,6 +327,22 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      <section className="border-b border-border bg-card">
+        <div className="mx-auto max-w-7xl px-6 py-12 grid gap-8 sm:grid-cols-3">
+          {VALUES.map((value) => (
+            <div key={value.title} className="flex flex-col items-start">
+              <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-secondary/40 text-primary mb-4">
+                <value.icon className="h-5 w-5" />
+              </div>
+              <h3 className="font-display text-lg text-foreground">{value.title}</h3>
+              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{value.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <BrandMoatSection />
 
       <section className="bg-secondary/30">
         <div className="mx-auto max-w-2xl px-6 py-16 text-center">

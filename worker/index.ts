@@ -1,6 +1,8 @@
 import Stripe from "stripe";
 import { z } from "zod";
-import { getProduct } from "../shared/catalog";
+import { getProduct, PRODUCTS } from "../shared/catalog";
+import { getStripeCommerceState } from "./stripeCommerce.mjs";
+import { handleJussPaySandbox } from "./jusspaySandbox.mjs";
 
 interface AssetBinding {
   fetch(request: Request): Promise<Response>;
@@ -9,6 +11,18 @@ interface AssetBinding {
 interface Env {
   ASSETS: AssetBinding;
   STRIPE_SECRET_KEY: string;
+  ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
+  JBH_STRIPE_COMMERCE_MODE?: string;
+  JBH_COMMERCE_PROVIDER?: "jusspay" | "shopify";
+  JBH_STRIPE_ACCOUNT_ID?: string;
+  JBH_STRIPE_LIVE_ENABLED?: string;
+  JBH_STRIPE_FULFILLMENT_READY?: string;
+  JBH_STRIPE_APPROVED_OFFERS?: string;
+  JBH_JUSSPAY_SANDBOX_ENABLED?: string;
+  JBH_JUSSPAY_LIVE_ENABLED?: string;
+  JBH_JUSSPAY_VARIANT_SKUS?: string;
+  JBH_JUSSPAY_STOREFRONT_KEY?: string;
+  JBH_JUSSPAY?: { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
   STORE_ORIGIN?: string;
   ALLOWED_STOREFRONT_ORIGINS?: string;
   CONTACT_API_ORIGIN?: string;
@@ -30,7 +44,7 @@ const SHOPIFY_STOREFRONT = Object.freeze({
   vendor: "JBH",
   catalogPageSize: 25,
   catalogMaxPages: 20,
-  checkoutHosts: ["jussbeautifulhair.com", "checkout.jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
+  checkoutHosts: ["jussbeautifulhair.com", "www.jussbeautifulhair.com", "8qp1z2-az.myshopify.com"] as const,
 });
 const SHOPIFY_STOREFRONT_ENDPOINT = `https://${SHOPIFY_STOREFRONT.shopDomain}/api/${SHOPIFY_STOREFRONT.apiVersion}/graphql.json`;
 
@@ -621,6 +635,10 @@ async function handleShopifyCart(request: Request, env: Env): Promise<Response> 
 }
 
 async function handleCheckout(request: Request, env: Env): Promise<Response> {
+  // Never create a parallel Stripe session for the JussPay-ledger catalog.
+  if (env.JBH_JUSSPAY_SANDBOX_ENABLED === "true" || env.JBH_JUSSPAY_LIVE_ENABLED === "true") {
+    return json({ error: "Use the JussPay order-ledger checkout" }, 503);
+  }
   const allowedOrigins = getAllowedOrigins(env);
   const storeOrigin = allowedOrigins[0];
   const origin = request.headers.get("Origin");
@@ -666,6 +684,9 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
   const parsed = checkoutSchema.safeParse(parsedJson);
   if (!parsed.success) return json({ error: "Invalid cart" }, 400, origin);
 
+  const commerce = getStripeCommerceState(env, PRODUCTS, request.url);
+  if (!commerce) return json({ error: "Stripe checkout is not enabled" }, 503, origin);
+
   const canonicalItems = [] as Array<{
     id: string;
     name: string;
@@ -681,7 +702,8 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
       (candidate) => candidate.option === requested.variant,
     );
 
-    if (!product || !variant) {
+    const variantIndex = product?.variants.findIndex((candidate) => candidate.option === requested.variant) ?? -1;
+    if (!product || !variant || !commerce.approved.has(requested.id + ":" + variantIndex)) {
       return json({ error: "Cart contains an unavailable item" }, 400, origin);
     }
 
@@ -735,6 +757,10 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
 
   try {
     const stripe = createStripeClient(env);
+    const merchant = await stripe.accounts.retrieve();
+    if (merchant.id !== env.JBH_STRIPE_ACCOUNT_ID) {
+      return json({ error: "Stripe merchant does not match the approved store" }, 503, origin);
+    }
     const reference = parsed.data.checkoutAttemptId;
     const session = await stripe.checkout.sessions.create(
       {
@@ -843,11 +869,37 @@ export default {
       return json({ ok: true, sha: getReleaseSha(env) });
     }
 
+    if (url.pathname === "/api/commerce/catalog") {
+      if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+      const commerce = getStripeCommerceState(env, PRODUCTS, request.url);
+      // JussPay is the primary commerce provider. A missing approval cannot
+      // silently redirect browsing or checkout back to a frozen Shopify store.
+      const unavailableMode = env.JBH_COMMERCE_PROVIDER === "shopify"
+        ? "shopify" : "jusspay_unavailable";
+      if (!commerce) return json({ mode: unavailableMode, products: [] });
+      // Do not expose purchasable products unless the matching JussPay mode
+      // independently proves catalog, merchant, webhook, and ledger readiness.
+      const expectedMode = commerce.mode === "live" ? "live" : "sandbox";
+      const health = await handleJussPaySandbox(
+        new Request(new URL(`/api/jusspay/${expectedMode}/checkout`, request.url)), env);
+      const readiness = await health.json().catch(() => null);
+      if (!health.ok || readiness?.enabled !== true || readiness.mode !== expectedMode) {
+        return json({ mode: unavailableMode, products: [] });
+      }
+      return json({ mode: commerce.mode, products: commerce.catalog });
+    }
+
     if (url.pathname === "/api/shopify/catalog") {
+      if (env.JBH_COMMERCE_PROVIDER !== "shopify") {
+        return json({ error: "shopify_checkout_disabled" }, 503);
+      }
       return handleShopifyCatalog(request);
     }
 
     if (url.pathname === "/api/shopify/cart") {
+      if (env.JBH_COMMERCE_PROVIDER !== "shopify") {
+        return json({ error: "shopify_checkout_disabled" }, 503);
+      }
       return handleShopifyCart(request, env);
     }
 
@@ -861,6 +913,25 @@ export default {
 
     if (url.pathname.startsWith("/api/")) {
       return json({ error: "Not found" }, 404);
+    }
+
+    // RFC 9116 must never silently resolve to the storefront SPA fallback.
+    if (url.pathname === "/.well-known/security.txt") {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return secureAssetResponse(new Response("Method not allowed", {
+          status: 405,
+          headers: { Allow: "GET, HEAD", "Cache-Control": "no-store" },
+        }), env);
+      }
+      const disclosureAsset = await env.ASSETS.fetch(request);
+      const disclosureType = disclosureAsset.headers.get("content-type")?.toLowerCase() || "";
+      if (!disclosureAsset.ok || !disclosureType.startsWith("text/plain")) {
+        return secureAssetResponse(new Response("Security disclosure unavailable", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+        }), env);
+      }
+      return secureAssetResponse(disclosureAsset, env);
     }
 
     return secureAssetResponse(await env.ASSETS.fetch(request), env);

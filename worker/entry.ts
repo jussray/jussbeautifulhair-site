@@ -1,5 +1,8 @@
 import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json";
 import worker from "./index";
+import { PRODUCTS } from "../shared/catalog";
+import { getStripeCommerceState } from "./stripeCommerce.mjs";
+import { handleJussPaySandbox } from "./jusspaySandbox.mjs";
 import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
 import { enforceJbhRateLimit, type RateLimitBinding } from "./rate-limit";
 import {
@@ -18,6 +21,11 @@ type AnalyticsEngineDatasetBinding = {
 };
 type Env = BaseEnv & {
   ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
+  JBH_JUSSPAY_SANDBOX_ENABLED?: string;
+  JBH_JUSSPAY_LIVE_ENABLED?: string;
+  JBH_JUSSPAY_VARIANT_SKUS?: string;
+  JBH_JUSSPAY_STOREFRONT_KEY?: string;
+  JBH_JUSSPAY?: { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };
   FUNNEL_ANALYTICS?: AnalyticsEngineDatasetBinding;
   JBH_AI_OPERATOR_KEY?: string;
   JBH_RATE_LIMITER?: RateLimitBinding;
@@ -424,6 +432,17 @@ export default {
 
     const pathname = new URL(request.url).pathname;
 
+    if (pathname === "/api/jusspay/sandbox/checkout" || pathname === "/api/jusspay/live/checkout") {
+      // Direct POSTs cannot bypass the live catalog and exact approved offers.
+      if (pathname === "/api/jusspay/live/checkout" &&
+          getStripeCommerceState(env, PRODUCTS, request.url)?.mode !== "live") {
+        return Response.json({ error: "not_found" }, {
+          status: 404, headers: { "Cache-Control": "no-store" },
+        });
+      }
+      return handleJussPaySandbox(request, env);
+    }
+
     if (pathname === VERSION_PATH) {
       return versionResponse(request, env);
     }
@@ -457,6 +476,17 @@ export default {
     // branded Host header so Shopify serves checkout directly (200) instead
     // of 301-canonicalizing back to the primary domain.
     if (isShopifyProxyPath(pathname)) {
+      // The legacy branded proxy must not bypass a JussPay-only storefront.
+      if (env.JBH_COMMERCE_PROVIDER !== "shopify") {
+        return new Response("Legacy checkout unavailable", {
+          status: 404,
+          headers: {
+            "Cache-Control": "no-store",
+            "X-Robots-Tag": "noindex, nofollow",
+            "X-Content-Type-Options": "nosniff",
+          },
+        });
+      }
       return proxyToShopify(request);
     }
 

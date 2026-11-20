@@ -57,14 +57,15 @@ test("product events bind to rendered live product and successful cart mutation"
 
 test("Shopify handoff is observed only after checkout URL approval", () => {
   const approval = checkoutPage.indexOf(
-    "const approvedCheckoutUrl = assertApprovedShopifyCheckoutRedirect(data.checkoutUrl);",
+    "const approvedCheckoutUrl = (jussPayMode || stripeCart) ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);",
   );
-  const handoff = checkoutPage.indexOf('event: "shopify_handoff"');
+  const handoff = checkoutPage.indexOf('event: (jussPayMode || stripeCart) ? "checkout_start" : "shopify_handoff"');
   const redirect = checkoutPage.indexOf("window.location.assign(approvedCheckoutUrl)");
 
   assert.ok(checkoutPage.includes('event: "checkout_start"'));
   assert.ok(checkoutPage.includes('event: "checkout_error"'));
-  assert.ok(approval >= 0, "approved Shopify URL boundary is missing");
+  assert.ok(approval >= 0, "approved Shopify or Stripe URL boundary is missing");
+  assert.ok(checkoutPage.includes("mixedCart"), "mixed-mode carts must fail closed before checkout");
   assert.ok(handoff > approval, "handoff event must follow URL approval");
   assert.ok(redirect > handoff, "browser redirect must follow handoff observation");
 });

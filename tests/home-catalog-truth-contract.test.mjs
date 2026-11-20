@@ -12,9 +12,18 @@ test("homepage keeps loading, failed truth, and verified-empty catalog states di
   assert.match(home, /catalogUnavailable\s*\?\s*\(/);
   assert.match(home, /data-testid="home-catalog-unavailable"/);
   assert.match(home, /Live inventory could not be verified/);
-  assert.match(home, /No stale prices or availability are being shown\./);
+  // Amended 2026-11-15 (catalog display-fallback increment, founder order:
+  // "I want the hair and inventory to show"): while live inventory is
+  // unverified, the homepage now shows the static collection for browsing at
+  // its standard prices, so the old "no prices are being shown" copy no
+  // longer holds. The surviving guarantees are the honest paused-ordering
+  // notice, no availability promise, and no cart path from fallback items —
+  // locked by tests/catalog-display-fallback-contract.test.mjs.
+  assert.match(home, /online ordering is paused/);
+  assert.match(home, /no\s+availability is promised/);
+  assert.match(home, /data-testid="home-catalog-fallback"/);
   assert.match(home, /data-testid="home-catalog-verified-empty"/);
-  assert.match(home, /No Shopify products are available for sale right now\./);
+  assert.match(home, /No approved JussPay products are available for checkout right now\./);
 });
 
 test("initial and refetch errors fail closed before customer-facing products are derived", () => {
@@ -33,5 +42,5 @@ test("homepage catalog failure exposes a real React Query retry", () => {
   assert.match(home, /data-testid="button-retry-home-catalog"/);
   assert.match(home, /disabled=\{isFetching\}/);
   assert.match(home, /onClick=\{\(\) => void refetch\(\)\}/);
-  assert.match(home, /\{isFetching \? "Checking Shopify…" : "Try Again"\}/);
+  assert.match(home, /\{isFetching \? "Checking availability…" : "Try Again"\}/);
 });

@@ -106,6 +106,8 @@ jobs:
     # Preserve ordinary manual ledger dispatches; preflight-only skips commerce tests.
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.browser_token_preflight != true }}
     name: Verify tokenless Shopify checkout bridge
+    outputs:
+      commerce_provider: ${{ steps.provider.outputs.name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -116,6 +118,16 @@ jobs:
 
       - name: Verify exact head
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Read authoritative commerce provider from source config
+        id: provider
+        shell: bash
+        run: |
+          set -euo pipefail
+          provider="$(sed -nE 's/^JBH_COMMERCE_PROVIDER = "(shopify|jusspay)"$/\1/p' wrangler.toml)"
+          test "$provider" = "jusspay" || test "$provider" = "shopify"
+          echo "name=$provider" >> "$GITHUB_OUTPUT"
+          echo "Active commerce provider: $provider"
 
       - uses: actions/setup-node@v4
         with:
@@ -146,8 +158,22 @@ jobs:
       - name: Verify rendered physical Shopify flow
         run: node scripts/shopify-physical-playwright.mjs
 
-      - name: Verify live Shopify catalog and no-payment cart
+      - name: Verify JussPay-first checkout authority on exact head
+        if: steps.provider.outputs.name == 'jusspay'
+        run: node --test tests/stripe-commerce-contract.test.mjs tests/jusspay-sandbox.test.mjs
+
+      # Shopify is a legacy provider. Its HTTP 402 remains separately documented,
+      # but it cannot block a JussPay-only release that never invokes Shopify.
+      - name: Verify live Shopify catalog and no-payment cart (Shopify mode only)
+        if: steps.provider.outputs.name == 'shopify'
         run: node scripts/shopify-physical-live-smoke.mjs
+
+      - name: Record legacy Shopify provider exclusion
+        if: steps.provider.outputs.name == 'jusspay'
+        run: |
+          echo "Commerce provider: JussPay. Shopify checkout smoke is not applicable to this configuration." >> "$GITHUB_STEP_SUMMARY"
+          echo "Known legacy Shopify HTTP 402 remains unresolved; do not claim Shopify availability." >> "$GITHUB_STEP_SUMMARY"
+          echo "This is source/browser candidate proof, not a live-payment or fulfillment proof." >> "$GITHUB_STEP_SUMMARY"
 
       # Never expose Cloudflare credentials to pull_request code. Candidate PRs
       # run local browser, schema, cart and no-payment smoke tests above.

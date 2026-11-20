@@ -14,6 +14,8 @@ command = "npm run build"
 [vars]
 STORE_ORIGIN = "https://jussbeautifulhair.com"
 ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
+# Shopify is no longer the production commerce authority.
+JBH_COMMERCE_PROVIDER = "jusspay"
 JBH_JUSSPAY_LIVE_ENABLED = "false"
 JBH_JUSSPAY_SANDBOX_ENABLED = "false"
 

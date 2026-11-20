@@ -154,6 +154,40 @@ async function configureCommerceDefaultOffMock(page) {
   });
 }
 
+async function proveJussPayNoShopifyFallback(browser, viewport, label, consoleErrors) {
+  const page = await browser.newPage({ viewport });
+  captureConsoleErrors(page, consoleErrors);
+  let legacyRequests = 0;
+  await page.route("**/api/commerce/catalog", async (route) => {
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({mode:"jusspay_unavailable",products:[]})});
+  });
+  await page.route("**/api/shopify/**", async (route) => {
+    legacyRequests += 1;
+    await route.fulfill({status:503,contentType:"application/json",body:JSON.stringify({error:"shopify_checkout_disabled"})});
+  });
+  await page.goto(`${baseURL}/#/shop`,{waitUntil:"domcontentloaded"});
+  await page.getByTestId("shop-catalog-fallback").waitFor({state:"visible"});
+  const catalogText = await page.locator("body").innerText();
+  assert(catalogText.includes("We could not verify a purchasable JussPay catalog"), `${label} did not show JussPay-only browsing state.`);
+  assert(legacyRequests===0, `${label} attempted Shopify after JussPay was unavailable.`);
+  await assertNoHorizontalOverflow(page, `${label} JussPay browsing-only`);
+  await page.screenshot({path:`${outputDir}/jusspay-browsing-only-${label}.png`,fullPage:true});
+  await page.evaluate(() => {
+    sessionStorage.setItem("jbh_cart_v2",JSON.stringify([{
+      id:"body-wave-human-hair-bundles",variantId:"gid://shopify/ProductVariant/50273899900001",
+      name:"Saved legacy item",variant:'14"',price:75,qty:1,image:""
+    }]));
+  });
+  await page.reload({waitUntil:"domcontentloaded"});
+  await page.goto(`${baseURL}/#/checkout`,{waitUntil:"domcontentloaded"});
+  await page.getByText(/This cart contains legacy Shopify items/).waitFor({state:"visible"});
+  assert(await page.getByTestId("button-place-order").isDisabled(),`${label} allowed stale Shopify checkout.`);
+  assert(legacyRequests===0,`${label} invoked a legacy Shopify API on checkout.`);
+  await assertNoHorizontalOverflow(page,`${label} legacy cart disabled`);
+  await page.screenshot({path:`${outputDir}/jusspay-legacy-cart-blocked-${label}.png`,fullPage:true});
+  await page.close();
+  return {legacyRequests,staleCartCheckoutDisabled:true};
+}
 async function configureMocks(page, evidence) {
   await configureCommerceDefaultOffMock(page);
   await configureFunnelMock(page, evidence);
@@ -338,7 +372,7 @@ try {
 
   await desktop.goto(`${baseURL}/#/shop`, { waitUntil: "domcontentloaded" });
   await desktop.getByTestId("card-product-body-wave-human-hair-bundles").waitFor({ state: "visible" });
-  assert((await desktop.locator("body").innerText()).includes("Live hair and beauty inventory"), "Shop page live-inventory copy is missing.");
+  assert((await desktop.locator("body").innerText()).includes("Explore Juss Beautiful Hair"), "Shop page provider-neutral copy is missing.");
   await assertNoHorizontalOverflow(desktop, "desktop shop");
   await desktop.screenshot({ path: `${outputDir}/shop-desktop.png`, fullPage: true });
 
@@ -405,6 +439,11 @@ try {
   await assertNoHorizontalOverflow(mobile, "mobile checkout");
   await mobile.screenshot({ path: `${outputDir}/checkout-mobile.png`, fullPage: true });
 
+  evidence.jussPayPrimary = {
+    desktop: await proveJussPayNoShopifyFallback(browser,{width:1440,height:1100},"desktop",consoleErrors),
+    mobile: await proveJussPayNoShopifyFallback(browser,{width:390,height:844},"mobile",consoleErrors),
+  };
+
   evidence.refetchTruth.desktopCatalogRequests = await proveProductRefetchFailClosed(
     browser,
     { width: 1440, height: 1100 },
@@ -442,6 +481,8 @@ try {
           "a real QueryClient background refetch failure replaces retained Product data with the truthful unavailable/retry surface",
           "failed background refetch exposes no stale price, desktop Add-to-Cart, or mobile Add-to-Cart authority",
           "desktop and mobile Product views both recover after a successful retry",
+          "JussPay unavailable shows browsing-only and never contacts legacy Shopify on desktop or mobile",
+          "legacy Shopify cart checkout is disabled when JussPay owns commerce",
           "desktop and mobile layouts have no horizontal overflow",
           "browser console remained clean outside the intentionally induced catalog 503 window",
         ],

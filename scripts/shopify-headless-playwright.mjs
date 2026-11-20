@@ -283,7 +283,7 @@ async function verifyNewsletterSignup(browser, viewport, label, evidence) {
   await page.screenshot({ path: `${outputDir}/newsletter-${label}.png`, fullPage: true });
   await page.goto(`${baseURL}/privacy`, { waitUntil: "domcontentloaded" });
   assert(
-    (await page.locator("body").innerText()).includes("Last updated: October 11, 2026"),
+    (await page.locator("body").innerText()).includes("Last updated: November 20, 2026"),
     `${label} privacy policy revision date is stale.`,
   );
   await assertNoHorizontalOverflow(page, `${label} privacy policy`);

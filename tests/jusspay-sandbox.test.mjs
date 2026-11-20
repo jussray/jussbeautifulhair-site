@@ -67,7 +67,12 @@ test('live discovery is explicit and never inherits sandbox enablement',async()=
  assert.equal(sandboxOnly.status,404);
  const missingCatalogApproval=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true'});
  assert.equal(missingCatalogApproval.status,404);
- const live=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live'});
+ const enabled={...base,JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live'};
+ const preview=await handleJussPaySandbox(new Request('https://preview.jussb.pages.dev/api/jusspay/live/checkout'),enabled);
+ assert.equal(preview.status,404);
+ const insecure=await handleJussPaySandbox(new Request('http://jussbeautifulhair.com/api/jusspay/live/checkout'),enabled);
+ assert.equal(insecure.status,404);
+ const live=await handleJussPaySandbox(new Request(url),enabled);
  assert.deepEqual(await live.json(),{enabled:true,mode:'live'});
  const wrongMode=await handleJussPaySandbox(new Request(url),{...base,JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY:{fetch:async()=>Response.json({ready:true,mode:'sandbox',chargesEnabled:true})}});
  assert.equal(wrongMode.status,503);

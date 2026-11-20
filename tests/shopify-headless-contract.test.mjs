@@ -71,7 +71,9 @@ test("Hair Match route preserves truthful non-physical-product disclosure", () =
   assert.match(app, /path="\/hair-match"/);
   assert.match(hairMatch, /not an order\s+for physical hair/s);
   assert.match(hairMatch, /no hair product ships from this purchase/);
-  assert.match(hairMatch, /Secure checkout powered by Shopify/);
+  assert.match(hairMatch, /No payment will be collected while booking is unavailable/);
+  assert.match(hairMatch, /response\.ok && result\.mode === "shopify"/);
+  assert.match(hairMatch, /hair-match-booking-unavailable/);
 });
 
 test("Hair Match preferences are complete, unique, bounded, and non-sensitive", () => {
@@ -85,9 +87,9 @@ test("Hair Match preferences are complete, unique, bounded, and non-sensitive", 
   assert.doesNotMatch(hairMatch, /race|ethnicity|medical|health|income|address/i);
 });
 
-test("approved checkout is deploy-ready without unproven build variables", () => {
+test("legacy Hair Match checkout requires verified provider approval without unproven build variables", () => {
   assert.match(hairMatch, /await createHairMatchCheckout\(preferences\)/);
-  assert.match(hairMatch, /disabled=\{submitting\}/);
+  assert.match(hairMatch, /disabled=\{submitting \|\| !providerChecked \|\| !legacyCheckoutReady\}/);
   assert.doesNotMatch(hairMatch, /VITE_SHOPIFY|import\.meta\.env/);
   assert.doesNotMatch(hairMatch, /Checkout opens after the Shopify storefront connection/);
 });

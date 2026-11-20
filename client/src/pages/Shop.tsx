@@ -105,8 +105,8 @@ export default function Shop() {
               <h2 className="font-display text-2xl text-foreground">Live inventory is refreshing</h2>
               <p className="mt-3 text-sm text-muted-foreground">
                 We could not verify a purchasable JussPay catalog, so online ordering is paused.
-                The collection below is for browsing only. Prices and availability must be
-                confirmed before checkout is offered.
+                The collection below is for browsing only; no availability is promised until
+                prices and fulfillment can be verified through JussPay.
               </p>
               <Button className="mt-6" onClick={() => void refetch()} data-testid="button-retry-catalog">
                 Try Again

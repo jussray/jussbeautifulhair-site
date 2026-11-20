@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { getStripeCommerceState } from "../worker/stripeCommerce.mjs";
 import { handleJussPaySandbox } from "../worker/jusspaySandbox.mjs";
+const edge = readFileSync(new URL("../worker/entry.ts", import.meta.url), "utf8");
 
 const products=[{id:"bundle-bodywave",name:"Body Wave",category:"Bundles",tagline:"Wavy",description:"Hair",image:"/products/bundle-bodywave.jpg",variants:[{option:'14"',price:75},{option:'16"',price:85}]}];
 const approve=[{id:"bundle-bodywave",variant:'14"',priceCents:7500}];
@@ -40,6 +41,12 @@ test("Test-mode sale catalog cannot appear on either public branded hostname",()
  assert.equal(getStripeCommerceState(env(),products),null);
  assert.equal(commerce(env())?.mode,"test");
 });
+test("Direct live checkout is blocked by the Worker before JussPay unless the exact offer catalog is approved",()=>{
+ assert.match(edge,/getStripeCommerceState\(env, PRODUCTS, request\.url\)\?\.mode !== "live"/);
+ assert.match(edge,/pathname === "\/api\/jusspay\/live\/checkout"/);
+ assert.match(edge,/status: 404, headers: \{ "Cache-Control": "no-store" \}/);
+});
+
 test("Live catalog is branded-only and requires independent JussPay live approval",()=>{
  const approved=env({JBH_STRIPE_COMMERCE_MODE:"live",JBH_JUSSPAY_LIVE_ENABLED:"true",JBH_JUSSPAY_SANDBOX_ENABLED:"false"});
  const branded="https://jussbeautifulhair.com/shop";

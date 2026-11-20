@@ -872,10 +872,15 @@ export default {
       if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
       const commerce = getStripeCommerceState(env, PRODUCTS, request.url);
       if (!commerce) return json({ mode: "shopify", products: [] });
-      // Present sellable test products only if JussPay's actual order ledger is ready.
+      // Do not expose purchasable products unless the matching JussPay mode
+      // independently proves catalog, merchant, webhook, and ledger readiness.
+      const expectedMode = commerce.mode === "live" ? "live" : "sandbox";
       const health = await handleJussPaySandbox(
-        new Request(new URL("/api/jusspay/sandbox/checkout", request.url)), env);
-      if (!health.ok) return json({ mode: "shopify", products: [] });
+        new Request(new URL(`/api/jusspay/${expectedMode}/checkout`, request.url)), env);
+      const readiness = await health.json().catch(() => null);
+      if (!health.ok || readiness?.enabled !== true || readiness.mode !== expectedMode) {
+        return json({ mode: "shopify", products: [] });
+      }
       return json({ mode: commerce.mode, products: commerce.catalog });
     }
 

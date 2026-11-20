@@ -9,6 +9,11 @@ const products=[{id:"bundle-bodywave",name:"Body Wave",category:"Bundles",taglin
 const approve=[{id:"bundle-bodywave",variant:'14"',priceCents:7500}];
 const variantId="jbh:bundle-bodywave:0";
 const testOrigin="https://preview.jussb.pages.dev/shop";
+const catalogClient = readFileSync(new URL("../client/src/lib/shopifyCatalog.ts",import.meta.url),"utf8");
+const storefrontConfig = readFileSync(new URL("../wrangler.toml",import.meta.url),"utf8");
+const frontdoorConfig = readFileSync(new URL("../wrangler.frontdoor.toml",import.meta.url),"utf8");
+const storefrontShop = readFileSync(new URL("../client/src/pages/Shop.tsx",import.meta.url),"utf8");
+
 function env(overrides={}) {
   return {
     JBH_STRIPE_COMMERCE_MODE:"test",
@@ -21,6 +26,22 @@ function env(overrides={}) {
   };
 }
 const commerce=(x)=>getStripeCommerceState(x,products,testOrigin);
+test("JussPay-first commerce never silently falls back to frozen Shopify",()=>{
+ for(const cfg of [storefrontConfig,frontdoorConfig]) {
+   assert.match(cfg,/JBH_COMMERCE_PROVIDER = "jusspay"/);
+   assert.match(cfg,/JBH_JUSSPAY_LIVE_ENABLED = "false"/);
+   assert.match(cfg,/ENABLE_LEGACY_STRIPE_CHECKOUT = "false"/);
+ }
+ const worker=readFileSync(new URL("../worker/index.ts",import.meta.url),"utf8");
+ assert.match(worker,/env\.JBH_COMMERCE_PROVIDER === "shopify"/);
+ assert.match(worker,/jusspay_unavailable/);
+ assert.match(worker,/shopify_checkout_disabled/);
+ assert.match(catalogClient,/commerce\.mode === "jusspay_unavailable"/);
+ assert.match(catalogClient,/throw new Error\("JussPay is preparing the approved catalog for checkout."\)/);
+ assert.match(catalogClient,/if \(!commerceResponse\.ok\)/);
+ assert.doesNotMatch(storefrontShop,/secure checkout powered by Shopify/);
+});
+
 test("Catalog is off without JussPay ledger authority, approvals, and exact SKU mapping",()=>{
   for(const unsafe of [
     {},

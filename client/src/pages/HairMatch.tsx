@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, CheckCircle2, ShieldCheck, Sparkles } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,35 @@ const SELECT_CLASS =
 export default function HairMatch() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [legacyCheckoutReady, setLegacyCheckoutReady] = useState(false);
+  const [providerChecked, setProviderChecked] = useState(false);
   const [hairGoal, setHairGoal] = useState("not-sure");
   const [preferredLength, setPreferredLength] = useState("not-sure");
   const [budget, setBudget] = useState("not-sure");
   const [maintenance, setMaintenance] = useState("low-maintenance");
 
+  useEffect(() => {
+    let active = true;
+    const checkProvider = async () => {
+      try {
+        const response = await fetch("/api/commerce/catalog", { cache: "no-store" });
+        const result = (await response.json().catch(() => ({}))) as { mode?: unknown };
+        if (active) setLegacyCheckoutReady(response.ok && result.mode === "shopify");
+      } catch {
+        if (active) setLegacyCheckoutReady(false);
+      } finally {
+        if (active) setProviderChecked(true);
+      }
+    };
+    void checkProvider();
+    return () => { active = false; };
+  }, []);
+
   async function startCheckout() {
+    if (!providerChecked || !legacyCheckoutReady) {
+      setError("Hair Match checkout is unavailable while its JussPay booking path is being verified.");
+      return;
+    }
     const preferences: ShopifyCartAttribute[] = [
       { key: "hair_goal", value: hairGoal },
       { key: "preferred_length", value: preferredLength },
@@ -167,20 +190,25 @@ export default function HairMatch() {
                   {error}
                 </p>
               )}
+              {providerChecked && !legacyCheckoutReady && (
+                <p className="mt-4 text-sm text-muted-foreground" role="status" data-testid="hair-match-booking-unavailable">
+                  Hair Match booking is not accepting payment until its JussPay service checkout is verified.
+                </p>
+              )}
 
               <Button
                 size="lg"
                 className="mt-6 w-full font-semibold"
-                disabled={submitting}
+                disabled={submitting || !providerChecked || !legacyCheckoutReady}
                 onClick={startCheckout}
                 data-testid="button-hair-match-checkout"
               >
-                {submitting ? "Opening secure checkout…" : "Reserve My Hair Match"}
+                {submitting ? "Opening secure checkout…" : !providerChecked ? "Verifying checkout…" : !legacyCheckoutReady ? "Booking temporarily unavailable" : "Reserve My Hair Match"}
                 {!submitting && <ArrowRight className="ml-2 h-4 w-4" />}
               </Button>
 
               <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                <ShieldCheck className="h-4 w-4" /> Secure checkout powered by Shopify
+                <ShieldCheck className="h-4 w-4" /> {legacyCheckoutReady ? "Secure legacy checkout verified" : "No payment will be collected while booking is unavailable"}
               </div>
             </aside>
           </div>

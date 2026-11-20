@@ -16,13 +16,46 @@ export default function Checkout() {
   const [error, setError] = useState<string | null>(null);
   const [checkoutMode, setCheckoutMode] = useState<"shopify" | "sandbox" | "live">("shopify");
   const [checkoutModeResolved, setCheckoutModeResolved] = useState(false);
-  const jussPayMode = checkoutMode !== "shopify";
+  const [stripeCommerceMode, setStripeCommerceMode] = useState<"test" | "live" | null>(null);
+  const stripeCart = items.length > 0 && items.every((item) =>
+    /^jbh:[a-z0-9][a-z0-9-]{0,99}:[0-9]+$/.test(item.variantId));
+  const mixedCart = items.some((item) => item.variantId.startsWith("jbh:")) && !stripeCart;
+  const jussPayMode = checkoutMode !== "shopify" && !stripeCart;
   const checkoutAttempt = useRef<{ cart: string; requestId: string } | null>(null);
   const totalQuantity = items.reduce((sum, item) => sum + item.qty, 0);
 
   useEffect(() => {
     let active = true;
     const discoverCheckoutMode = async () => {
+      if (stripeCart) {
+        if (active) setCheckoutModeResolved(false);
+        try {
+          const response = await fetch("/api/commerce/catalog", { cache: "no-store" });
+          const result = (await response.json().catch(() => ({}))) as {
+            mode?: string;
+            products?: Array<{ id: string; variants: Array<{ id: string; option: string; price: number }> }>;
+          };
+          if (!response.ok || (result.mode !== "test" && result.mode !== "live") || !Array.isArray(result.products)) {
+            throw new Error("Stripe storefront is not enabled");
+          }
+          const approved = new Set(result.products.flatMap((product) =>
+            product.variants.map((variant) => product.id + ":" + variant.id + ":" + variant.option + ":" + variant.price)));
+          if (!items.every((item) => approved.has(item.id + ":" + item.variantId + ":" + item.variant + ":" + item.price))) {
+            throw new Error("Cart item approval is no longer current");
+          }
+          if (active) {
+            setStripeCommerceMode(result.mode);
+            setCheckoutModeResolved(true);
+          }
+        } catch {
+          if (active) {
+            setStripeCommerceMode(null);
+            setCheckoutModeResolved(false);
+            setError("Stripe checkout is not ready for these items. Please refresh the collection.");
+          }
+        }
+        return;
+      }
       const ready = async (path: string, mode: "live" | "sandbox") => {
         try {
           const response = await fetch(path, { cache: "no-store" });
@@ -46,7 +79,7 @@ export default function Checkout() {
 
     void discoverCheckoutMode();
     return () => { active = false; };
-  }, []);
+  }, [stripeCart, items.length, items.map((item) => item.id + ":" + item.variantId + ":" + item.variant + ":" + item.price).join("|")]);
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -73,6 +106,10 @@ export default function Checkout() {
 
   const placeOrder = async () => {
     if (!checkoutModeResolved || submitting) return;
+    if (mixedCart) {
+      setError("This cart mixes Stripe and Shopify items. Remove the old items and try again.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -82,7 +119,7 @@ export default function Checkout() {
         checkoutAttempt.current = { cart: cartFingerprint, requestId: crypto.randomUUID() };
       }
       const checkoutPath =
-        checkoutMode === "live"
+        stripeCart ? "/api/checkout" : checkoutMode === "live"
           ? "/api/jusspay/live/checkout"
           : checkoutMode === "sandbox"
             ? "/api/jusspay/sandbox/checkout"
@@ -90,7 +127,10 @@ export default function Checkout() {
       const response = await fetch(checkoutPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+        body: JSON.stringify(stripeCart ? {
+          checkoutAttemptId: checkoutAttempt.current.requestId,
+          items: items.map((item) => ({ id: item.id, variant: item.variant, quantity: item.qty })),
+        } : {
           ...(jussPayMode ? { requestId: checkoutAttempt.current.requestId, shipping: "standard" } : {}),
           lines: items.map((item) => ({
             merchandiseId: item.variantId,
@@ -104,13 +144,13 @@ export default function Checkout() {
         url?: string;
         error?: string;
       };
-      if (!response.ok || !(jussPayMode ? data.url : data.checkoutUrl)) {
+      if (!response.ok || !((jussPayMode || stripeCart) ? data.url : data.checkoutUrl)) {
         throw new Error(data.error || "Checkout is temporarily unavailable. Please try again.");
       }
 
-      const approvedCheckoutUrl = jussPayMode ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);
+      const approvedCheckoutUrl = (jussPayMode || stripeCart) ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!);
       observeFunnel({
-        event: jussPayMode ? "checkout_start" : "shopify_handoff",
+        event: (jussPayMode || stripeCart) ? "checkout_start" : "shopify_handoff",
         route: window.location.pathname,
         quantity: totalQuantity,
         valueCents: Math.round(subtotal * 100),
@@ -137,7 +177,7 @@ export default function Checkout() {
       <div className="mx-auto max-w-5xl px-6 py-12">
         <h1 className="font-display text-3xl sm:text-4xl text-foreground mb-2">Checkout</h1>
         <p className="text-muted-foreground mb-8">
-          {checkoutMode === "sandbox"
+          {stripeCart ? (stripeCommerceMode === "test" ? "Stripe test checkout: no real payment will be collected." : "Review your approved items, then continue to secure Stripe Checkout. Shipping is calculated before payment.") : checkoutMode === "sandbox"
             ? "JBH test checkout uses test mode. No real payment will be collected."
             : checkoutMode === "live"
               ? "Review your items, then continue to secure Juss Beautiful Hair checkout."
@@ -148,13 +188,13 @@ export default function Checkout() {
           <div className="lg:col-span-2 space-y-8">
             <section className="rounded-lg border border-card-border bg-card p-6">
               <h2 className="font-display text-xl text-foreground mb-4">
-                {checkoutMode === "sandbox" ? "JBH test checkout" : checkoutMode === "live" ? "Secure JBH checkout" : "Secure Shopify checkout"}
+                {stripeCart ? (stripeCommerceMode === "test" ? "Stripe test checkout" : "Secure Stripe Checkout") : checkoutMode === "sandbox" ? "JBH test checkout" : checkoutMode === "live" ? "Secure JBH checkout" : "Secure Shopify checkout"}
               </h2>
               <div className="flex items-start gap-3 rounded-md bg-secondary/30 px-4 py-4 text-sm text-primary">
                 <Info className="h-5 w-5 shrink-0 mt-0.5" />
                 <div className="space-y-2">
                   <p>
-                    {checkoutMode === "sandbox"
+                    {stripeCart ? (stripeCommerceMode === "test" ? "Test-only Stripe checkout. Product and shipping details are synthetic until real order evidence is verified." : "Stripe securely collects shipping details. Product prices are verified by the server.") : checkoutMode === "sandbox"
                       ? "Test-only checkout. Orders are not automatically sent to vendors."
                       : checkoutMode === "live"
                         ? "JBH securely collects the information required to complete your order. Payment truth stays server-side."
@@ -166,6 +206,7 @@ export default function Checkout() {
                 </div>
               </div>
               {error && <p className="mt-4 text-sm text-destructive">{error}</p>}
+              {mixedCart && <p className="mt-4 text-sm text-destructive" role="alert">Remove Shopify items before using first-party Stripe checkout.</p>}
             </section>
           </div>
 
@@ -203,7 +244,7 @@ export default function Checkout() {
                   <span className="text-2xl font-semibold text-foreground">{formatPrice(subtotal)}</span>
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  {checkoutMode === "sandbox"
+                  {stripeCart ? "Final order and shipping totals are calculated by the server before Stripe payment." : checkoutMode === "sandbox"
                     ? "Test prices and shipping are calculated by the server. Displayed subtotal is informational."
                     : checkoutMode === "live"
                       ? "Final JBH order totals are calculated server-side before payment."
@@ -214,7 +255,7 @@ export default function Checkout() {
               <Button
                 type="button"
                 size="lg"
-                disabled={submitting || !checkoutModeResolved}
+                disabled={submitting || !checkoutModeResolved || mixedCart}
                 onClick={placeOrder}
                 data-testid="button-place-order"
                 className="mt-6 w-full font-semibold"
@@ -224,7 +265,9 @@ export default function Checkout() {
                   ? "Checking secure checkout…"
                   : submitting
                     ? "Opening checkout…"
-                  : checkoutMode === "sandbox"
+                  : stripeCart
+                    ? (stripeCommerceMode === "test" ? "Continue to Stripe test checkout" : "Continue to secure Stripe checkout")
+                    : checkoutMode === "sandbox"
                     ? "Continue to JBH test checkout"
                     : checkoutMode === "live"
                       ? `Continue to JBH checkout — ${formatPrice(subtotal)}`

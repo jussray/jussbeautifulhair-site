@@ -29,7 +29,8 @@ function isStoredCartItem(value: unknown): value is CartItem {
   return (
     typeof item.id === "string" &&
     typeof item.variantId === "string" &&
-    /^gid:\/\/shopify\/ProductVariant\/\d+$/.test(item.variantId) &&
+    (/^gid:\/\/shopify\/ProductVariant\/\d+$/.test(item.variantId) ||
+      /^jbh:[a-z0-9][a-z0-9-]{0,99}:[0-9]+$/.test(item.variantId)) &&
     typeof item.name === "string" &&
     typeof item.variant === "string" &&
     typeof item.price === "number" &&

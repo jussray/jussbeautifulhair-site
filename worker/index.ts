@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { z } from "zod";
-import { getProduct } from "../shared/catalog";
+import { getProduct, PRODUCTS } from "../shared/catalog";
+import { getStripeCommerceState } from "./stripeCommerce.mjs";
 
 interface AssetBinding {
   fetch(request: Request): Promise<Response>;
@@ -9,6 +10,12 @@ interface AssetBinding {
 interface Env {
   ASSETS: AssetBinding;
   STRIPE_SECRET_KEY: string;
+  ENABLE_LEGACY_STRIPE_CHECKOUT?: string;
+  JBH_STRIPE_COMMERCE_MODE?: string;
+  JBH_STRIPE_ACCOUNT_ID?: string;
+  JBH_STRIPE_LIVE_ENABLED?: string;
+  JBH_STRIPE_FULFILLMENT_READY?: string;
+  JBH_STRIPE_APPROVED_OFFERS?: string;
   STORE_ORIGIN?: string;
   ALLOWED_STOREFRONT_ORIGINS?: string;
   CONTACT_API_ORIGIN?: string;
@@ -666,6 +673,9 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
   const parsed = checkoutSchema.safeParse(parsedJson);
   if (!parsed.success) return json({ error: "Invalid cart" }, 400, origin);
 
+  const commerce = getStripeCommerceState(env, PRODUCTS, request.url);
+  if (!commerce) return json({ error: "Stripe checkout is not enabled" }, 503, origin);
+
   const canonicalItems = [] as Array<{
     id: string;
     name: string;
@@ -681,7 +691,8 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
       (candidate) => candidate.option === requested.variant,
     );
 
-    if (!product || !variant) {
+    const variantIndex = product?.variants.findIndex((candidate) => candidate.option === requested.variant) ?? -1;
+    if (!product || !variant || !commerce.approved.has(requested.id + ":" + variantIndex)) {
       return json({ error: "Cart contains an unavailable item" }, 400, origin);
     }
 
@@ -735,6 +746,10 @@ async function handleCheckout(request: Request, env: Env): Promise<Response> {
 
   try {
     const stripe = createStripeClient(env);
+    const merchant = await stripe.accounts.retrieve();
+    if (merchant.id !== env.JBH_STRIPE_ACCOUNT_ID) {
+      return json({ error: "Stripe merchant does not match the approved store" }, 503, origin);
+    }
     const reference = parsed.data.checkoutAttemptId;
     const session = await stripe.checkout.sessions.create(
       {
@@ -841,6 +856,12 @@ export default {
 
     if (url.pathname === "/version") {
       return json({ ok: true, sha: getReleaseSha(env) });
+    }
+
+    if (url.pathname === "/api/commerce/catalog") {
+      if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+      const commerce = getStripeCommerceState(env, PRODUCTS, request.url);
+      return json({ mode: commerce?.mode || "shopify", products: commerce?.catalog || [] });
     }
 
     if (url.pathname === "/api/shopify/catalog") {

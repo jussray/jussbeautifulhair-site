@@ -10,6 +10,7 @@ import { useShopifyCatalog } from "@/lib/shopifyCatalog";
 export default function Shop() {
   const [active, setActive] = useState("All");
   const { data: products = [], isLoading, isError, refetch } = useShopifyCatalog();
+  const firstPartyCatalog = products.some((product) => product.shopifyProductId === "jbh:catalog");
 
   const categories = useMemo(
     () =>
@@ -60,7 +61,7 @@ export default function Shop() {
           </p>
           <h1 className="font-display text-4xl sm:text-5xl">All Products</h1>
           <p className="mt-3 text-primary-foreground/80 max-w-xl mx-auto">
-            Live hair and beauty inventory, with secure checkout powered by Shopify.
+            {firstPartyCatalog ? "Juss Beautiful Hair products with secure Stripe Checkout, independent of Shopify." : "Live hair and beauty inventory, with secure checkout powered by Shopify."}
           </p>
         </div>
       </section>

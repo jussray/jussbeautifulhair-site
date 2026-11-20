@@ -116,6 +116,10 @@ async function verifyBrandedCartHandoff(browser, viewport, label) {
   const page = await browser.newPage({ viewport });
   captureBrowserErrors(page);
   let navigation = null;
+  // Legacy Shopify proof is permitted only when the public provider says Shopify.
+  await page.route("**/api/commerce/catalog", async (route) => {
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({mode:"shopify",products:[]})});
+  });
 
   await page.route("https://8qp1z2-az.myshopify.com/cart/c/**", async (route) => {
     navigation = route.request().url();
@@ -145,6 +149,31 @@ async function verifyBrandedCartHandoff(browser, viewport, label) {
 }
 
 
+async function verifyJussPayLegacyRoutesBlocked(browser, viewport, label) {
+  const page = await browser.newPage({viewport});
+  captureBrowserErrors(page);
+  let legacyNavigations = 0;
+  await page.route("**/api/commerce/catalog", async (route) => {
+    await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({mode:"jusspay_unavailable",products:[]})});
+  });
+  await page.route("https://8qp1z2-az.myshopify.com/**", async (route) => {
+    legacyNavigations += 1;
+    await route.fulfill({status:503,body:"Legacy Shopify unavailable"});
+  });
+  await page.goto(`${baseURL}/cart/c/saved-${label}?key=old`,{waitUntil:"domcontentloaded"});
+  await page.getByTestId("link-return-to-jusspay-shop").waitFor({state:"visible"});
+  assert(legacyNavigations===0,`${label} legacy checkout redirected despite JussPay provider.`);
+  await assertNoHorizontalOverflow(page,`${label} legacy handoff blocked`);
+  await page.screenshot({path:`${outputDir}/jusspay-legacy-handoff-blocked-${label}.png`,fullPage:true});
+  await page.goto(`${baseURL}/hair-match`,{waitUntil:"domcontentloaded"});
+  await page.getByTestId("hair-match-booking-unavailable").waitFor({state:"visible"});
+  assert(await page.getByTestId("button-hair-match-checkout").isDisabled(),`${label} Hair Match offered Shopify payment under JussPay.`);
+  assert(legacyNavigations===0,`${label} Hair Match attempted the legacy processor.`);
+  await assertNoHorizontalOverflow(page,`${label} Hair Match booking held`);
+  await page.screenshot({path:`${outputDir}/jusspay-hair-match-held-${label}.png`,fullPage:true});
+  await page.close();
+  return {legacyNavigations,hairMatchCheckoutDisabled:true};
+}
 async function configureShopifyCatalogMock(page) {
   // The local Vite fixture has no Worker. Mirror only the verified default-off
   // commerce mode so a missing real endpoint is not mistaken for a Shopify error.
@@ -349,6 +378,8 @@ const evidence = {
   accessTokenPresent: false,
   handoffDesktopNavigation: null,
   handoffMobileNavigation: null,
+  blockedJussPayLegacyDesktop: null,
+  blockedJussPayLegacyMobile: null,
   newsletterSubmissions: [],
   newsletterDesktopPayload: null,
   newsletterMobilePayload: null,
@@ -384,6 +415,13 @@ try {
     browser,
     { width: 390, height: 844 },
     "mobile",
+  );
+
+  evidence.blockedJussPayLegacyDesktop = await verifyJussPayLegacyRoutesBlocked(
+    browser, {width:1440,height:1100}, "desktop",
+  );
+  evidence.blockedJussPayLegacyMobile = await verifyJussPayLegacyRoutesBlocked(
+    browser, {width:390,height:844}, "mobile",
   );
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -423,6 +461,10 @@ try {
 
   const checkoutButton = desktop.getByTestId("button-hair-match-checkout");
   await checkoutButton.waitFor({ state: "visible" });
+  await desktop.waitForFunction(() => {
+    const button = document.querySelector('[data-testid="button-hair-match-checkout"]');
+    return Boolean(button && !button.disabled);
+  });
   assert(await checkoutButton.isEnabled(), "Repository-approved Shopify checkout is disabled.");
   await assertNoHorizontalOverflow(desktop, "desktop Hair Match page");
   await desktop.screenshot({ path: `${outputDir}/hair-match-desktop.png`, fullPage: true });
@@ -472,6 +514,10 @@ try {
 
   await mobile.goto(`${baseURL}/hair-match`, { waitUntil: "domcontentloaded" });
   await mobile.getByTestId("select-hair-goal").waitFor({ state: "visible" });
+  await mobile.waitForFunction(() => {
+    const button = document.querySelector('[data-testid="button-hair-match-checkout"]');
+    return Boolean(button && !button.disabled);
+  });
   assert(
     await mobile.getByTestId("button-hair-match-checkout").isEnabled(),
     "Mobile repository-approved Shopify checkout is disabled.",
@@ -500,6 +546,7 @@ try {
           "privacy policy shows its current revision date without desktop or mobile overflow",
           "direct branded /cart/c/* URLs hand off to canonical Shopify checkout on desktop and mobile",
           "direct branded cart handoff preserves the Shopify cart path and identity key",
+          "JussPay-only mode blocks legacy cart redirects and Hair Match checkout on desktop and mobile",
           "truthful consultation and future-credit disclosure rendered",
           "four bounded non-sensitive preferences sent to the guarded Shopify bridge",
           "approved numeric Shopify variant and quantity sent without client pricing authority",

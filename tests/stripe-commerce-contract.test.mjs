@@ -123,7 +123,7 @@ test("First-party test catalog routes through JussPay health, exact SKU map, and
  });
  assert.equal(calls.length,2);
  const worker=readFileSync(new URL("../worker/index.ts",import.meta.url),"utf8");
- assert.match(worker,/if \(!health\.ok\) return json\(\{ mode: "shopify", products: \[\] \}\)/);
+ assert.match(worker,/if \(!health\.ok \|\| readiness\?\.enabled !== true \|\| readiness\.mode !== expectedMode\)/);
 });
 
 test("Shopify browser harness mocks the default-off commerce route without muting console errors",()=>{

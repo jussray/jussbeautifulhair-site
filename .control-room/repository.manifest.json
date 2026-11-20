@@ -283,8 +283,8 @@
         {
           "id": "checkout-validates-returned-shopify-url",
           "path": "client/src/pages/Checkout.tsx",
-          "marker": "jussPayMode ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!)",
-          "description": "Shopify and explicitly enabled JussPay checkout URLs are independently validated before browser navigation."
+          "marker": "(jussPayMode || stripeCart) ? assertApprovedCheckoutRedirect(data.url!) : assertApprovedShopifyCheckoutRedirect(data.checkoutUrl!)",
+          "description": "Shopify checkout redirects retain Shopify-host validation, while explicitly enabled JussPay or first-party Stripe redirects require exact Stripe-host validation before browser navigation."
         },
         {
           "id": "checkout-navigates-only-approved-shopify-url",

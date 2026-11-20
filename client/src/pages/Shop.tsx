@@ -61,7 +61,7 @@ export default function Shop() {
           </p>
           <h1 className="font-display text-4xl sm:text-5xl">All Products</h1>
           <p className="mt-3 text-primary-foreground/80 max-w-xl mx-auto">
-            {firstPartyCatalog ? "Juss Beautiful Hair products with secure Stripe Checkout, independent of Shopify." : "Live hair and beauty inventory, with secure checkout powered by Shopify."}
+            {firstPartyCatalog ? "Shop approved Juss Beautiful Hair products with secure JussPay checkout." : "Explore Juss Beautiful Hair. Online ordering opens only for verified products."}
           </p>
         </div>
       </section>
@@ -104,9 +104,9 @@ export default function Shop() {
             <div className="mx-auto max-w-xl rounded-lg border border-card-border bg-card px-6 py-10 text-center">
               <h2 className="font-display text-2xl text-foreground">Live inventory is refreshing</h2>
               <p className="mt-3 text-sm text-muted-foreground">
-                We could not load live Shopify inventory just now, so online ordering is paused.
-                The collection below is shown for browsing only, at our standard prices — no
-                availability is promised until live inventory is verified again.
+                We could not verify a purchasable JussPay catalog, so online ordering is paused.
+                The collection below is for browsing only. Prices and availability must be
+                confirmed before checkout is offered.
               </p>
               <Button className="mt-6" onClick={() => void refetch()} data-testid="button-retry-catalog">
                 Try Again

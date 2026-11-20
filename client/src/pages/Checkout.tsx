@@ -64,6 +64,25 @@ export default function Checkout() {
         }
         return;
       }
+      // Existing Shopify carts must not bypass a JussPay-only storefront.
+      // Keep old cart data visible for recovery, but never take payment for it.
+      try {
+        const response = await fetch("/api/commerce/catalog", { cache: "no-store" });
+        const state = (await response.json().catch(() => ({}))) as { mode?: string };
+        if (!response.ok || state.mode !== "shopify") {
+          if (active) {
+            setCheckoutModeResolved(false);
+            setError("This cart contains legacy Shopify items. Return to the collection for approved JussPay products.");
+          }
+          return;
+        }
+      } catch {
+        if (active) {
+          setCheckoutModeResolved(false);
+          setError("Checkout is temporarily unavailable. Your cart has not been charged.");
+        }
+        return;
+      }
       const ready = async (path: string, mode: "live" | "sandbox") => {
         try {
           const response = await fetch(path, { cache: "no-store" });

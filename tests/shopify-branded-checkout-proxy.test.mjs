@@ -150,6 +150,8 @@ test("worker entry routes Shopify-owned paths to the proxy before the SPA fallba
     branchIndex < fallbackIndex,
     "proxy branch must run before the SPA fallback delegation",
   );
+  assert.match(entry, /env\.JBH_COMMERCE_PROVIDER !== "shopify"/);
+  assert.match(entry, /status: 404/);
   assert.match(entry, /return proxyToShopify\(request\)/);
 });
 

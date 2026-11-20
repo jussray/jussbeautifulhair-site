@@ -7,6 +7,7 @@ import { formatPrice } from "@/lib/catalog";
 
 export default function Cart() {
   const { items, updateQty, removeItem, subtotal } = useCart();
+  const stripeCart = items.length > 0 && items.every((item) => item.variantId.startsWith("jbh:"));
 
   if (items.length === 0) {
     return (
@@ -100,7 +101,7 @@ export default function Cart() {
                 </span>
               </div>
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                Shopify confirms current item availability, shipping, discounts, and taxes before payment.
+                {stripeCart ? "Juss Beautiful Hair confirms approved product prices and shipping before Stripe payment." : "Shopify confirms current item availability, shipping, discounts, and taxes before payment."}
               </p>
               <Link href="/checkout">
                 <Button

@@ -106,6 +106,8 @@ jobs:
     # Preserve ordinary manual ledger dispatches; preflight-only skips commerce tests.
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.browser_token_preflight != true }}
     name: Verify tokenless Shopify checkout bridge
+    outputs:
+      commerce_provider: ${{ steps.provider.outputs.name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     steps:
@@ -116,6 +118,16 @@ jobs:
 
       - name: Verify exact head
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
+
+      - name: Read authoritative commerce provider from source config
+        id: provider
+        shell: bash
+        run: |
+          set -euo pipefail
+          provider="$(sed -nE 's/^JBH_COMMERCE_PROVIDER = "(shopify|jusspay)"$/\1/p' wrangler.toml)"
+          test "$provider" = "jusspay" || test "$provider" = "shopify"
+          echo "name=$provider" >> "$GITHUB_OUTPUT"
+          echo "Active commerce provider: $provider"
 
       - uses: actions/setup-node@v4
         with:
@@ -146,8 +158,22 @@ jobs:
       - name: Verify rendered physical Shopify flow
         run: node scripts/shopify-physical-playwright.mjs
 
-      - name: Verify live Shopify catalog and no-payment cart
+      - name: Verify JussPay-first checkout authority on exact head
+        if: steps.provider.outputs.name == 'jusspay'
+        run: node --test tests/stripe-commerce-contract.test.mjs tests/jusspay-sandbox.test.mjs
+
+      # Shopify is a legacy provider. Its HTTP 402 remains separately documented,
+      # but it cannot block a JussPay-only release that never invokes Shopify.
+      - name: Verify live Shopify catalog and no-payment cart (Shopify mode only)
+        if: steps.provider.outputs.name == 'shopify'
         run: node scripts/shopify-physical-live-smoke.mjs
+
+      - name: Record legacy Shopify provider exclusion
+        if: steps.provider.outputs.name == 'jusspay'
+        run: |
+          echo "Commerce provider: JussPay. Shopify checkout smoke is not applicable to this configuration." >> "$GITHUB_STEP_SUMMARY"
+          echo "Known legacy Shopify HTTP 402 remains unresolved; do not claim Shopify availability." >> "$GITHUB_STEP_SUMMARY"
+          echo "This is source/browser candidate proof, not a live-payment or fulfillment proof." >> "$GITHUB_STEP_SUMMARY"
 
       # Never expose Cloudflare credentials to pull_request code. Candidate PRs
       # run local browser, schema, cart and no-payment smoke tests above.
@@ -288,7 +314,7 @@ jobs:
         run: node scripts/frontdoor-live-playwright.mjs
 
       - name: Prove exact deployed Shopify purchase path without payment
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && needs.verify.outputs.commerce_provider == 'shopify'
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
@@ -298,18 +324,45 @@ jobs:
         run: node scripts/shopify-production-playwright.mjs
 
       - name: Prove live catalog image authority without payment
-        if: github.event_name != 'pull_request'
+        if: needs.verify.outputs.commerce_provider == 'shopify'
         env:
           EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
           REQUIRE_EXACT_HEAD: ${{ github.event_name == 'push' }}
         run: node scripts/catalog-images-live-playwright.mjs
 
+      - name: Prove JussPay production provider without issuing payment
+        if: needs.verify.outputs.commerce_provider == 'jusspay'
+        env:
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {mkdir,writeFile} from 'node:fs/promises';
+          const origin = new URL(process.env.LIVE_STOREFRONT_URL).origin;
+          const response = await fetch(origin + '/api/commerce/catalog',{headers:{accept:'application/json'},cache:'no-store'});
+          assert.equal(response.status,200,'JussPay catalog discovery must return HTTP 200');
+          const catalog = await response.json();
+          assert.ok(['live','jusspay_unavailable'].includes(catalog.mode),'Public commerce authority is not JussPay');
+          assert.ok(Array.isArray(catalog.products),'Catalog response must be an array');
+          if(catalog.mode==='jusspay_unavailable') {
+            assert.equal(catalog.products.length,0,'Unready JussPay must not advertise items');
+          } else {
+            assert.ok(catalog.products.length>0,'Live JussPay requires approved catalog entries');
+            assert.ok(catalog.products.every(x=>x.shopifyProductId==='jbh:catalog'&&x.availableForSale===true),'Live catalog has unapproved product');
+          }
+          const legacy = await fetch(origin + '/api/shopify/catalog',{cache:'no-store'});
+          assert.equal(legacy.status,503,'Shopify route must be disabled in JussPay-only production');
+          await mkdir('artifacts/jusspay-production',{recursive:true});
+          await writeFile('artifacts/jusspay-production/provider.json',JSON.stringify({provider:'jusspay',mode:catalog.mode,legacyShopifyDisabled:true,scope:'no-payment-readback',url:origin,observed_at:new Date().toISOString()},null,2));
+          console.log('JussPay provider verified without payment:',catalog.mode);
+          NODE
       - name: Write canonical production receipt
         if: github.event_name == 'push' && success()
         shell: bash
         env:
           RECEIPT_URL: https://jussbeautifulhair.com/version
+          JBH_COMMERCE_PROVIDER: ${{ needs.verify.outputs.commerce_provider }}
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
@@ -320,6 +373,8 @@ jobs:
           if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('Expected a full 40-character release SHA.');
           const url = new URL(process.env.RECEIPT_URL);
           if (url.protocol !== 'https:') throw new Error('Receipt URL must use HTTPS.');
+          const commerceProvider = process.env.JBH_COMMERCE_PROVIDER || '';
+          if (!['shopify','jusspay'].includes(commerceProvider)) throw new Error('Unrecognized commerce authority');
           const repo = process.env.GITHUB_REPOSITORY || '';
           const runId = process.env.GITHUB_RUN_ID || '';
           const runAttempt = process.env.GITHUB_RUN_ATTEMPT || '';
@@ -366,11 +421,11 @@ jobs:
             proof_scope: [
               'exact-provider-build',
               'branded-frontdoor-browser',
-              'shopify-no-payment-production-path',
+              commerceProvider === 'shopify' ? 'shopify-no-payment-production-path' : 'jusspay-public-mode-readback-no-charge',
             ],
             evidence_refs: [
               'artifact://frontdoor-live/manifest.json',
-              'artifact://shopify-production/',
+              commerceProvider === 'shopify' ? 'artifact://shopify-production/' : 'artifact://jusspay-production/provider.json',
               `runtime://${url.host}/version`,
               `github-actions://${repo}/runs/${runId}`,
             ],
@@ -391,6 +446,7 @@ jobs:
           path: |
             artifacts/frontdoor-live/
             artifacts/shopify-production/
+            artifacts/jusspay-production/
             artifacts/production-proof/
             artifacts/catalog-images-live/
           if-no-files-found: error

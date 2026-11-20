@@ -98,11 +98,12 @@ test("read-only image ledger compares Shopify media to JBH images visually, incl
   );
 });
 
-test("exact-head gate runs the live image proof after push and on dispatch, and keeps its evidence", () => {
-  assert.match(workflow, /run: node scripts\/catalog-images-live-playwright\.mjs/);
-  assert.match(
-    workflow,
-    /if: github\.event_name != 'pull_request'\n[\s\S]*?REQUIRE_EXACT_HEAD: \$\{\{ github\.event_name == 'push' \}\}/,
-  );
+test("production evidence selects the active provider and retains Shopify image proof only for Shopify", () => {
+  const production = workflow.slice(workflow.indexOf("  production-proof:"));
+  assert.match(production, /run: node scripts\/catalog-images-live-playwright\.mjs/);
+  assert.match(production, /if: needs\.verify\.outputs\.commerce_provider == 'shopify'/);
+  assert.match(production, /Prove JussPay production provider without issuing payment/);
+  assert.match(production, /if: needs\.verify\.outputs\.commerce_provider == 'jusspay'/);
+  assert.match(production, /artifacts\/jusspay-production\/provider\.json/);
   assert.match(workflow, /artifacts\/catalog-images-live\//);
 });

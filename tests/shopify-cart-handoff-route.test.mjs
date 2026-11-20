@@ -27,6 +27,8 @@ test("handoff preserves Shopify cart identity while pinning the destination host
   assert.match(handoffPage, /pathname\.startsWith\("\/cart\/c\/"\)/);
   assert.match(handoffPage, /target\.pathname = safePath/);
   assert.match(handoffPage, /target\.search = search/);
+  assert.match(handoffPage, /provider\.mode !== "shopify"/);
+  assert.match(handoffPage, /link-return-to-jusspay-shop/);
   assert.match(handoffPage, /window\.location\.replace\(checkoutUrl\)/);
   assert.doesNotMatch(handoffPage, /jussbeautifulhair\.com\/cart\/c\//);
 });

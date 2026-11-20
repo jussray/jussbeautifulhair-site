@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, LoaderCircle, ShoppingBag } from "lucide-react";
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,28 @@ export default function ShopifyCartHandoff() {
     [],
   );
 
+  const [handoffState, setHandoffState] = useState<"checking" | "allowed" | "blocked">("checking");
+
   useEffect(() => {
-    window.location.replace(checkoutUrl);
+    let active = true;
+    const verifyLegacyProvider = async () => {
+      try {
+        const response = await fetch("/api/commerce/catalog", { cache: "no-store" });
+        const provider = (await response.json().catch(() => ({}))) as { mode?: unknown };
+        if (!response.ok || provider.mode !== "shopify") {
+          if (active) setHandoffState("blocked");
+          return;
+        }
+        if (active) {
+          setHandoffState("allowed");
+          window.location.replace(checkoutUrl);
+        }
+      } catch {
+        if (active) setHandoffState("blocked");
+      }
+    };
+    void verifyLegacyProvider();
+    return () => { active = false; };
   }, [checkoutUrl]);
 
   return (
@@ -33,22 +53,32 @@ export default function ShopifyCartHandoff() {
         </div>
         <p className="mt-6 text-xs uppercase tracking-[0.28em] text-gold">Secure Checkout</p>
         <h1 className="mt-3 font-display text-3xl sm:text-4xl text-foreground">
-          Taking you to Shopify checkout
+          {handoffState === "blocked" ? "This legacy checkout link is unavailable" : "Taking you to Shopify checkout"}
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-          Your cart is ready. We are handing this checkout to Shopify so payment and order state stay with the store's secure commerce provider.
+          {handoffState === "blocked"
+            ? "JussPay is the current commerce provider. Return to the collection to select products approved for checkout."
+            : "This legacy Shopify checkout is available only when the store explicitly enables it."}
         </p>
 
-        <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
-          <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
-          Redirecting securely
-        </div>
+        {handoffState === "checking" && (
+          <div className="mt-8 flex items-center justify-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
+            <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+            Verifying checkout provider
+          </div>
+        )}
 
-        <Button asChild size="lg" className="mt-8 font-semibold">
-          <a href={checkoutUrl} data-testid="link-shopify-cart-handoff">
-            Continue to secure checkout <ExternalLink className="ml-2 h-4 w-4" />
-          </a>
-        </Button>
+        {handoffState === "blocked" ? (
+          <Button asChild size="lg" className="mt-8 font-semibold">
+            <a href="/shop" data-testid="link-return-to-jusspay-shop">Browse the collection</a>
+          </Button>
+        ) : handoffState === "allowed" ? (
+          <Button asChild size="lg" className="mt-8 font-semibold">
+            <a href={checkoutUrl} data-testid="link-shopify-cart-handoff">
+              Continue to secure checkout <ExternalLink className="ml-2 h-4 w-4" />
+            </a>
+          </Button>
+        ) : null}
       </section>
     </Layout>
   );

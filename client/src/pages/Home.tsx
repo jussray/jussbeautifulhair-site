@@ -17,8 +17,8 @@ import { getNewsletterEndpoint } from "@/lib/privateIngress";
 const VALUES = [
   {
     icon: Truck,
-    title: "Shop Live Inventory",
-    body: "Prices and availability come from Shopify, so you can shop what is actually available.",
+    title: "Verified Online Shopping",
+    body: "Only approved products with verified prices and checkout readiness can be ordered through JussPay.",
   },
   {
     icon: Heart,
@@ -210,7 +210,7 @@ export default function Home() {
         <div className="flex items-end justify-between mb-8">
           <div>
             <p className="text-xs uppercase tracking-[0.25em] text-gold mb-2">
-              {catalogUnavailable ? "The Collection" : "Live from Shopify"}
+              {catalogUnavailable ? "The Collection" : "Verified for Checkout"}
             </p>
             <h2 className="font-display text-3xl sm:text-4xl text-foreground">
               {catalogUnavailable ? "Browse the Collection" : "Featured Hair"}
@@ -239,9 +239,9 @@ export default function Home() {
             >
               <h3 className="font-display text-2xl text-foreground">Live inventory could not be verified</h3>
               <p className="mt-3 text-sm text-muted-foreground max-w-xl mx-auto">
-                Shopify inventory is unavailable right now, so online ordering is paused. The
-                collection below is shown for browsing only, at our standard prices — no
-                availability is promised until live inventory is verified again.
+                JussPay product availability could not be verified, so online ordering is paused.
+                The collection below is for browsing only; no availability is promised
+                until prices and fulfillment can be verified.
               </p>
               <Button
                 type="button"
@@ -250,7 +250,7 @@ export default function Home() {
                 disabled={isFetching}
                 onClick={() => void refetch()}
               >
-                {isFetching ? "Checking Shopify…" : "Try Again"}
+                {isFetching ? "Checking availability…" : "Try Again"}
               </Button>
             </div>
             <div
@@ -273,7 +273,7 @@ export default function Home() {
             data-testid="home-catalog-verified-empty"
             className="rounded-lg border border-card-border bg-card p-8 text-center text-muted-foreground"
           >
-            No Shopify products are available for sale right now.
+            No approved JussPay products are available for checkout right now.
           </div>
         )}
       </section>
@@ -318,7 +318,7 @@ export default function Home() {
         <section className="mx-auto max-w-7xl px-6 py-16">
           <h2 className="font-display text-3xl text-center text-foreground mb-2">More to Explore</h2>
           <p className="text-center text-muted-foreground mb-10">
-            {availableProducts.length} live products currently available through Shopify.
+            {availableProducts.length} products currently approved for checkout.
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
             {categoryPreview.map((product) => (

@@ -8,6 +8,7 @@ export interface StripeCommerceEnv {
   JBH_STRIPE_APPROVED_OFFERS?: string;
   STRIPE_SECRET_KEY?: string;
   JBH_JUSSPAY_SANDBOX_ENABLED?: string;
+  JBH_JUSSPAY_LIVE_ENABLED?: string;
   JBH_JUSSPAY_STOREFRONT_KEY?: string;
   JBH_JUSSPAY_VARIANT_SKUS?: string;
   JBH_JUSSPAY?: { fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> };

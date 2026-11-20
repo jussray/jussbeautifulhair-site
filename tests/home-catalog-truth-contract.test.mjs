@@ -23,7 +23,7 @@ test("homepage keeps loading, failed truth, and verified-empty catalog states di
   assert.match(home, /no\s+availability is promised/);
   assert.match(home, /data-testid="home-catalog-fallback"/);
   assert.match(home, /data-testid="home-catalog-verified-empty"/);
-  assert.match(home, /No Shopify products are available for sale right now\./);
+  assert.match(home, /No approved JussPay products are available for checkout right now\./);
 });
 
 test("initial and refetch errors fail closed before customer-facing products are derived", () => {
@@ -42,5 +42,5 @@ test("homepage catalog failure exposes a real React Query retry", () => {
   assert.match(home, /data-testid="button-retry-home-catalog"/);
   assert.match(home, /disabled=\{isFetching\}/);
   assert.match(home, /onClick=\{\(\) => void refetch\(\)\}/);
-  assert.match(home, /\{isFetching \? "Checking Shopify…" : "Try Again"\}/);
+  assert.match(home, /\{isFetching \? "Checking availability…" : "Try Again"\}/);
 });

@@ -5,11 +5,12 @@
   "currency": "USD",
   "purpose": "Customer-safe shopping knowledge for JBH hair selection, order qualification, and checkout handoff.",
   "catalog": {
-    "url": "https://jussbeautifulhair.com/api/shopify/catalog",
-    "authority": "live Shopify Storefront data served through the JBH Cloudflare Worker",
-    "offerRule": "Offer only variants where availableForSale is true.",
-    "priceRule": "Quote only the retail price returned for the selected live variant. Prices are per bundle.",
-    "availabilityRule": "Treat checkout as the final availability confirmation. Do not invent stock or scarcity."
+    "url": "https://jussbeautifulhair.com/api/commerce/catalog",
+    "authority": "JussPay-approved first-party catalog served by the JBH Cloudflare Worker. Products are not offered until the public catalog reports mode=live and approved items.",
+    "offerRule": "Offer only availableForSale variants returned by an approved live catalog. If mode=jusspay_unavailable or products is empty, do not offer products or checkout.",
+    "priceRule": "Quote only the retail price returned for a selected approved live variant. Never invent pricing while the catalog is unavailable.",
+    "availabilityRule": "When the public catalog is unavailable, empty, or not live, state that online ordering is unavailable; do not claim inventory, offer purchase links, or imply a checkout can be completed.",
+    "provider": "jusspay"
   },
   "currentBundleTextures": [
     "Body Wave",
@@ -34,7 +35,7 @@
   },
   "checkout": {
     "url": "https://jussbeautifulhair.com",
-    "paymentAndShippingAuthority": "JBH checkout"
+    "paymentAndShippingAuthority": "JussPay checkout only when explicitly enabled and verified; otherwise checkout is unavailable."
   },
   "humanHandoff": [
     "refunds",
@@ -54,5 +55,5 @@
     "disclose internal costs, private sourcing details, credentials, or private project data"
   ],
   "fallback": "If a requested option is unavailable, say so and offer the closest available length in the same texture when useful. Never substitute a different texture without asking.",
-  "updated": "2026-09-04"
+  "updated": "2026-11-21"
 }

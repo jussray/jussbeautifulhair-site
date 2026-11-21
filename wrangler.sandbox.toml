@@ -10,7 +10,7 @@ preview_urls = false
 command = "npm run build"
 
 [vars]
-STORE_ORIGIN = "https://jussbeautifulhair-jbh-sandbox.mcgill-raylene.workers.dev"
+STORE_ORIGIN = "https://REPLACE-WITH-ACCESS-GATED-TEST-HOST.invalid"
 ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
 JBH_COMMERCE_PROVIDER = "jusspay"
 JBH_STRIPE_COMMERCE_MODE = "test"
@@ -23,7 +23,7 @@ service = "jusspay-jbh-sandbox"
 
 [[ratelimits]]
 name = "JBH_RATE_LIMITER"
-namespace_id = "1004"
+namespace_id = "11004"
 simple = { limit = 120, period = 60 }
 
 [assets]

@@ -257,9 +257,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # ~10 min: Workers Builds usually reports within 2 min, but a231ac4
+          # ~10 min at 10-second polling: Workers Builds usually reports within 2 min, but a231ac4
           # reported ~6.5 min after job start and turned a good release red.
-          for attempt in {1..300}; do
+          for attempt in {1..60}; do
             checks="$(curl --fail --silent --show-error \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \
@@ -296,11 +296,11 @@ jobs:
               printf 'Cloudflare Worker build failed for %s\n' "$EXPECTED_HEAD_SHA" >&2
               exit 1
             fi
-            if [ "$attempt" -eq 90 ]; then
+            if [ "$attempt" -eq 60 ]; then
               printf 'Cloudflare Worker build did not complete for %s\n' "$EXPECTED_HEAD_SHA" >&2
               exit 1
             fi
-            sleep 2
+            sleep 10
           done
 
       - name: Prove exact live SHA and branded front door

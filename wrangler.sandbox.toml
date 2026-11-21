@@ -23,7 +23,7 @@ service = "jusspay-jbh-sandbox"
 
 [[ratelimits]]
 name = "JBH_RATE_LIMITER"
-namespace_id = "1004"
+namespace_id = "11004"
 simple = { limit = 120, period = 60 }
 
 [assets]

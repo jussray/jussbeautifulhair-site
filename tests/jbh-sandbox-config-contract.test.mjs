@@ -33,6 +33,15 @@ test("sandbox uses its own rate-limit namespace, not production's 1003", () => {
   assert.notEqual(ns, "1003");
 });
 
+// Cloudflare account inventory checked 2026-11-21: 1003 is JBH production,
+// 1004 belongs to Protect Me Model Two. Re-audit account bindings before
+// changing the reserved sandbox namespace (11004).
+test("sandbox namespace cannot reuse Protect Me Model Two rate-limit counters", () => {
+  const ns = sandbox.match(/namespace_id = "(\d+)"/)?.[1];
+  assert.notEqual(ns, "1004", "1004 belongs to juss-protect-me-2");
+  assert.equal(ns, "11004", "changing 11004 requires a fresh account-wide namespace audit");
+});
+
 test("sandbox origin is not a public workers.dev hostname", () => {
   const origin = vars.match(/^STORE_ORIGIN\s*=\s*"([^"]+)"/m)?.[1] ?? "";
   assert.ok(origin, "STORE_ORIGIN must be set");

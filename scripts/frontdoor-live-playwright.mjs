@@ -127,8 +127,8 @@ try {
   );
   assert(knowledge.brand === "Juss Beautiful Hair", "Meta Business Agent brand drifted.");
   assert(
-    knowledge.catalog?.url === `${baseURL}/api/shopify/catalog`,
-    "Meta Business Agent catalog authority must point to the live JBH Cloudflare Shopify catalog route.",
+    knowledge.catalog?.url === `${baseURL}/api/commerce/catalog`,
+    "Meta Business Agent catalog authority must point to the JBH commerce authority route.",
   );
   assert(
     knowledge.checkout?.url === baseURL,
@@ -241,7 +241,7 @@ try {
           "legacy hash entry URLs migrate to canonical browser paths before customer interaction",
           "Cloudflare Worker security headers prove the Worker served the root response",
           "version route is observed through Chromium navigation, serves application/json for the exact approved main SHA, and labels whether the SHA came from a runtime binding or asset build proof",
-          "Meta Business Agent knowledge contract is live and bound to the branded live Shopify catalog and checkout",
+          "Meta Business Agent knowledge contract is live and bound to the branded JBH commerce authority and checkout",
           "Meta Business Agent knowledge endpoint returns application/json rather than the SPA fallback",
           "Meta Business Agent keeps shipping-address and payment credential collection out of chat",
           "Shopify password-wall markers are absent",

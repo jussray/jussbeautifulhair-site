@@ -75,7 +75,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          for attempt in {1..180}; do
+          for attempt in {1..36}; do
             checks="$(curl --fail --silent --show-error \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GH_TOKEN" \
@@ -114,11 +114,11 @@ jobs:
               printf 'Exact production Shopify proof failed for %s\n' "$EXPECTED_HEAD_SHA" >&2
               exit 1
             fi
-            if [ "$attempt" -eq 180 ]; then
+            if [ "$attempt" -eq 36 ]; then
               printf 'Exact production Shopify proof did not complete for %s\n' "$EXPECTED_HEAD_SHA" >&2
               exit 1
             fi
-            sleep 2
+            sleep 10
           done
 
       - name: Verify production Cloudflare credentials are present

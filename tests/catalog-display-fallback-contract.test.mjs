@@ -72,6 +72,10 @@ test("shop renders the browsing-only collection when the live catalog fetch fail
   assert.match(shop, /data-testid="shop-catalog-fallback"/);
   assert.match(shop, /online ordering is paused/);
   assert.match(shop, /no\s+availability is promised/);
+  assert.match(shop, /Online orders are temporarily paused/);
+  assert.doesNotMatch(shop, /JussPay catalog/);
+  assert.match(shop, /href="mailto:hello@jussbeautifulhair\.com\?subject=JBH%20Product%20Question"/);
+  assert.match(shop, /data-testid="link-shop-product-inquiry"/);
   assert.match(shop, /data-testid="button-retry-catalog"/);
   assert.match(shop, /fallbackFiltered\.map\(\(product\) => \(\s+<DisplayProductCard/);
   assert.match(shop, /DISPLAY_ONLY_PRODUCTS\.filter\(\(product\) => product\.category === active\)/);

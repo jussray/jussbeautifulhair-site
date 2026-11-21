@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseJussPayCart,handleJussPaySandbox} from '../worker/jusspaySandbox.mjs';
+import {parseJussPayCart,handleJussPaySandbox,proxyJussPayWebhook} from '../worker/jusspaySandbox.mjs';
 const variant='gid://shopify/ProductVariant/12345';
 const requestId='b7f332cd-7930-42a9-8f9d-3f1c777a5f4b';
 const body={requestId,shipping:'standard',lines:[{merchandiseId:variant,quantity:2}]};
@@ -93,4 +93,26 @@ test('live route requires a live checkout URL and does not accept sandbox sessio
  assert.equal((await response.json()).error,'wrong_checkout_mode');
  const ok=await handleJussPaySandbox(req.clone(),{...env,JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_live_123',orderId:'jbho_test'});}}});
  assert.equal(ok.status,200);assert.equal((await ok.json()).mode,'live');
+});
+
+
+test('public webhook proxy preserves Stripe signature and raw body',async()=>{
+ const raw='{"id":"evt_live_123","type":"checkout.session.completed"}';
+ let forwarded;
+ const env={JBH_JUSSPAY:{async fetch(request){forwarded=request;return new Response('ok',{status:200,headers:{'cache-control':'no-store'}});}}};
+ const request=new Request('https://jussbeautifulhair.com/api/jusspay/webhook',{method:'POST',headers:{'stripe-signature':'t=123,v1=abc','content-type':'application/json'},body:raw});
+ const response=await proxyJussPayWebhook(request,env);
+ assert.equal(response.status,200);
+ assert.equal(new URL(forwarded.url).pathname,'/jbh/webhook');
+ assert.equal(forwarded.headers.get('stripe-signature'),'t=123,v1=abc');
+ assert.equal(forwarded.headers.get('content-type'),'application/json');
+ assert.equal(await forwarded.text(),raw);
+});
+
+test('public webhook proxy is POST-only and fails closed without the private service binding',async()=>{
+ assert.equal((await proxyJussPayWebhook(new Request('https://jussbeautifulhair.com/api/jusspay/webhook'),{})).status,405);
+ const post=new Request('https://jussbeautifulhair.com/api/jusspay/webhook',{method:'POST',body:'{}'});
+ const response=await proxyJussPayWebhook(post,{});
+ assert.equal(response.status,503);
+ assert.deepEqual(await response.json(),{error:'webhook_unavailable'});
 });

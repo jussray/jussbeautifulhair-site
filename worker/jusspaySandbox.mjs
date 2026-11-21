@@ -20,6 +20,15 @@ export function parseJussPayCart(input, mapping) {
   }
   return {requestId:input.requestId,items:[...quantities].map(([sku,quantity])=>({sku,quantity})),shipping:input.shipping};
 }
+export async function proxyJussPayWebhook(request,env) {
+  if(request.method!=='POST') return json({error:'method_not_allowed'},405);
+  if(!env.JBH_JUSSPAY || typeof env.JBH_JUSSPAY.fetch!=='function') return json({error:'webhook_unavailable'},503);
+  try {
+    return await env.JBH_JUSSPAY.fetch(new Request('https://jusspay.internal/jbh/webhook',request));
+  } catch {
+    return json({error:'webhook_unavailable'},503);
+  }
+}
 export async function handleJussPaySandbox(request,env) {
   const path=new URL(request.url).pathname;
   const live=path==='/api/jusspay/live/checkout';

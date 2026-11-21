@@ -5,11 +5,11 @@
   "currency": "USD",
   "purpose": "Customer-safe shopping knowledge for JBH hair selection, order qualification, and checkout handoff.",
   "catalog": {
-    "url": "https://jussbeautifulhair.com/api/shopify/catalog",
-    "authority": "live Shopify Storefront data served through the JBH Cloudflare Worker",
-    "offerRule": "Offer only variants where availableForSale is true.",
-    "priceRule": "Quote only the retail price returned for the selected live variant. Prices are per bundle.",
-    "availabilityRule": "Treat checkout as the final availability confirmation. Do not invent stock or scarcity."
+    "url": "https://jussbeautifulhair.com/api/commerce/catalog",
+    "authority": "JBH commerce authority served through the Cloudflare Worker. Live offers are exposed only when JussPay and fulfillment authority are ready.",
+    "offerRule": "Offer only products returned by this endpoint. If products is empty or mode is jusspay_unavailable, do not claim live availability or checkout readiness.",
+    "priceRule": "Quote only the retail price returned for an approved live product. Never reuse a stale price from chat or a spreadsheet.",
+    "availabilityRule": "Treat this endpoint and checkout as the live authority. Never invent stock, scarcity, supplier readiness, or delivery timing."
   },
   "currentBundleTextures": [
     "Body Wave",
@@ -53,6 +53,6 @@
     "promise a custom color or custom price without owner approval",
     "disclose internal costs, private sourcing details, credentials, or private project data"
   ],
-  "fallback": "If a requested option is unavailable, say so and offer the closest available length in the same texture when useful. Never substitute a different texture without asking.",
-  "updated": "2026-09-04"
+  "fallback": "If the live commerce endpoint returns no approved products or mode=jusspay_unavailable, help the customer choose hair and collect only non-sensitive preference/contact details, but do not quote live availability or promise checkout. Escalate the sale to the owner.",
+  "updated": "2026-11-21"
 }

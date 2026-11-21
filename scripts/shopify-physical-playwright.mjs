@@ -171,7 +171,10 @@ async function proveJussPayNoShopifyFallback(browser, viewport, label, consoleEr
   await page.goto(`${baseURL}/#/shop`,{waitUntil:"domcontentloaded"});
   await page.getByTestId("shop-catalog-fallback").waitFor({state:"visible"});
   const catalogText = await page.locator("body").innerText();
-  assert(catalogText.includes("We could not verify a purchasable JussPay catalog"), `${label} did not show JussPay-only browsing state.`);
+  assert(catalogText.includes("Online orders are temporarily paused"), `${label} did not show the branded browsing-only state.`);
+  assert(!catalogText.includes("JussPay"), "Browsing-only UI exposed internal processor details.");
+  const inquiryHref = await page.getByTestId("link-shop-product-inquiry").getAttribute("href");
+  assert(inquiryHref?.startsWith("mailto:hello@jussbeautifulhair.com"), "Browsing-only UI lacks a direct email inquiry path.");
   assert(legacyRequests===0, `${label} attempted Shopify after JussPay was unavailable.`);
   await assertNoHorizontalOverflow(page, `${label} JussPay browsing-only`);
   await page.screenshot({path:`${outputDir}/jusspay-browsing-only-${label}.png`,fullPage:true});

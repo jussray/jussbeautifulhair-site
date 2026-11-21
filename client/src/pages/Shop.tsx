@@ -102,15 +102,24 @@ export default function Shop() {
         {isError && (
           <div data-testid="shop-catalog-fallback">
             <div className="mx-auto max-w-xl rounded-lg border border-card-border bg-card px-6 py-10 text-center">
-              <h2 className="font-display text-2xl text-foreground">Live inventory is refreshing</h2>
+              <h2 className="font-display text-2xl text-foreground">Online orders are temporarily paused</h2>
               <p className="mt-3 text-sm text-muted-foreground">
-                We could not verify a purchasable JussPay catalog, so online ordering is paused.
-                The collection below is for browsing only; no availability is promised until
-                prices and fulfillment can be verified through JussPay.
+                For now, online ordering is paused while we confirm inventory, prices, and
+                delivery. The collection below is for browsing only; no availability is promised
+                until each item is verified.
               </p>
-              <Button className="mt-6" onClick={() => void refetch()} data-testid="button-retry-catalog">
-                Try Again
-              </Button>
+              <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <Button onClick={() => void refetch()} data-testid="button-retry-catalog">
+                  Check Availability Again
+                </Button>
+                <a
+                  href="mailto:hello@jussbeautifulhair.com?subject=JBH%20Product%20Question"
+                  className="text-sm font-semibold text-primary underline underline-offset-4 hover:no-underline"
+                  data-testid="link-shop-product-inquiry"
+                >
+                  Ask about a product
+                </a>
+              </div>
             </div>
             <p className="mt-10 text-sm text-muted-foreground mb-6" data-testid="text-fallback-count">
               {fallbackFiltered.length} {fallbackFiltered.length === 1 ? "product" : "products"} in

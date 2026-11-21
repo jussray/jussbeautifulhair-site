@@ -23,6 +23,8 @@ jobs:
     name: "Base Freshness"
     runs-on: ubuntu-latest
     steps:
+      - name: Install upstream Git security release before checkout
+        uses: jussray/founder-control-room/.github/actions/refresh-git-security@0a739664e85443fb79cfe58202e2eea6ce01d7ff
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}
@@ -43,6 +45,8 @@ jobs:
     name: "Typecheck"
     runs-on: ubuntu-latest
     steps:
+      - name: Install upstream Git security release before checkout
+        uses: jussray/founder-control-room/.github/actions/refresh-git-security@0a739664e85443fb79cfe58202e2eea6ce01d7ff
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}
@@ -65,6 +69,8 @@ jobs:
     name: "Lint"
     runs-on: ubuntu-latest
     steps:
+      - name: Install upstream Git security release before checkout
+        uses: jussray/founder-control-room/.github/actions/refresh-git-security@0a739664e85443fb79cfe58202e2eea6ce01d7ff
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}
@@ -87,6 +93,8 @@ jobs:
     name: "Unit Tests"
     runs-on: ubuntu-latest
     steps:
+      - name: Install upstream Git security release before checkout
+        uses: jussray/founder-control-room/.github/actions/refresh-git-security@0a739664e85443fb79cfe58202e2eea6ce01d7ff
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}
@@ -120,6 +128,8 @@ jobs:
     name: "AI Skills — Sales + Devil Contract"
     runs-on: ubuntu-latest
     steps:
+      - name: Install upstream Git security release before checkout
+        uses: jussray/founder-control-room/.github/actions/refresh-git-security@0a739664e85443fb79cfe58202e2eea6ce01d7ff
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}
@@ -140,6 +150,8 @@ jobs:
     name: "Deployment Boundary"
     runs-on: ubuntu-latest
     steps:
+      - name: Install upstream Git security release before checkout
+        uses: jussray/founder-control-room/.github/actions/refresh-git-security@0a739664e85443fb79cfe58202e2eea6ce01d7ff
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}
@@ -171,6 +183,8 @@ jobs:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
+      - name: Install upstream Git security release before checkout
+        uses: jussray/founder-control-room/.github/actions/refresh-git-security@0a739664e85443fb79cfe58202e2eea6ce01d7ff
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.EXPECTED_HEAD_SHA }}

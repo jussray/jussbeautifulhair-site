@@ -236,6 +236,29 @@ jobs:
       - name: Verify exact trusted main head
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
 
+      - name: Verify Cloudflare Browser Run credential inputs
+        # Fail closed before downloading Node dependencies or Chromium.
+        # Values are masked Actions secrets; never print secret contents.
+        shell: bash
+        env:
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if ! test -n "$CLOUDFLARE_ACCOUNT_ID"; then
+            echo "::error::Missing CLOUDFLARE_ACCOUNT_ID in Actions/Production secrets."
+            exit 1
+          fi
+          if ! [[ "$CLOUDFLARE_ACCOUNT_ID" =~ ^[0-9a-fA-F]{32}$ ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID format is invalid."
+            exit 1
+          fi
+          if ! test -n "$CLOUDFLARE_BROWSER_RUN_TOKEN"; then
+            echo "::error::Missing CLOUDFLARE_BROWSER_RUN_TOKEN in Actions/Production secrets."
+            exit 1
+          fi
+          echo "Cloudflare browser credential inputs present; live CDP handshake still required."
+
       - uses: actions/setup-node@v4
         with:
           node-version: "24"

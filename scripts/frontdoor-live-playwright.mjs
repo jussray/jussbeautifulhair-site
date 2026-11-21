@@ -127,8 +127,12 @@ try {
   );
   assert(knowledge.brand === "Juss Beautiful Hair", "Meta Business Agent brand drifted.");
   assert(
-    knowledge.catalog?.url === `${baseURL}/api/shopify/catalog`,
-    "Meta Business Agent catalog authority must point to the live JBH Cloudflare Shopify catalog route.",
+    knowledge.catalog?.url === `${baseURL}/api/commerce/catalog`,
+    "Meta Business Agent catalog authority must point to the configured first-party JussPay catalog route.",
+  );
+  assert(
+    knowledge.catalog?.provider === "jusspay",
+    "Meta Business Agent provider must match the configured JussPay commerce authority.",
   );
   assert(
     knowledge.checkout?.url === baseURL,

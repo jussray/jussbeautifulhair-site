@@ -311,7 +311,16 @@ jobs:
           JBH_PROOF_BROWSER_MODE: cloudflare-cdp
           CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/frontdoor-live-playwright.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${CLOUDFLARE_BROWSER_RUN_TOKEN}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID}" ]; then
+            echo "Using Cloudflare Browser Run for live Playwright proof."
+            node scripts/frontdoor-live-playwright.mjs
+          else
+            echo "Cloudflare Browser Run secrets are absent; using the same live Playwright proof with local Chromium."
+            JBH_PROOF_BROWSER_MODE=local node scripts/frontdoor-live-playwright.mjs
+          fi
 
       - name: Prove exact deployed Shopify purchase path without payment
         if: github.event_name == 'push' && needs.verify.outputs.commerce_provider == 'shopify'

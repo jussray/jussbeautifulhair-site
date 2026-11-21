@@ -2,7 +2,7 @@ import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json
 import worker from "./index";
 import { PRODUCTS } from "../shared/catalog";
 import { getStripeCommerceState } from "./stripeCommerce.mjs";
-import { handleJussPaySandbox } from "./jusspaySandbox.mjs";
+import { handleJussPaySandbox, proxyJussPayWebhook } from "./jusspaySandbox.mjs";
 import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
 import { enforceJbhRateLimit, type RateLimitBinding } from "./rate-limit";
 import {
@@ -431,6 +431,10 @@ export default {
     if (limited) return limited;
 
     const pathname = new URL(request.url).pathname;
+
+    if (pathname === "/api/jusspay/webhook") {
+      return proxyJussPayWebhook(request, env);
+    }
 
     if (pathname === "/api/jusspay/sandbox/checkout" || pathname === "/api/jusspay/live/checkout") {
       // Direct POSTs cannot bypass the live catalog and exact approved offers.

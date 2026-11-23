@@ -255,11 +255,13 @@ test("main commerce gate waits for the exact Worker build and emits verified onl
   assert.doesNotMatch(mainShopifyWorkflow, /wrangler[^\n]*deploy/i);
 });
 
-test("front-door Wrangler config remains one route for the branded root", () => {
+test("front-door Wrangler config preserves existing same-Worker routes and adds the apex", () => {
   const routeBlocks = frontdoorConfig.match(/^\s*\[\[routes\]\]\s*$/gm) ?? [];
-  assert.equal(routeBlocks.length, 1);
+  assert.equal(routeBlocks.length, 4);
   assert.match(frontdoorConfig, /^pattern\s*=\s*\"jussbeautifulhair\.com\/\*\"\s*$/m);
-  assert.match(frontdoorConfig, /^zone_name\s*=\s*\"jussbeautifulhair\.com\"\s*$/m);
+  assert.match(frontdoorConfig, /^pattern\s*=\s*\"\*\.jussbeautifulhair\.com\/\*\"\s*$/m);
+  assert.match(frontdoorConfig, /^pattern\s*=\s*\"app\.jussbeautifulhair\.com\"\s*$/m);
+  assert.match(frontdoorConfig, /^pattern\s*=\s*\"www\.jussbeautifulhair\.com\"\s*$/m);
   assert.match(frontdoorConfig, /run_worker_first\s*=\s*true/);
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
 });

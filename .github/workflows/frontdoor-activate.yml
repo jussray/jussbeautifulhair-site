@@ -209,6 +209,6 @@ jobs:
           name: frontdoor-live-${{ env.EXPECTED_HEAD_SHA }}
           path: |
             artifacts/frontdoor-live/
-            artifacts/shopify-production/
+            artifacts/jusspay-production/
           if-no-files-found: warn
           retention-days: 30

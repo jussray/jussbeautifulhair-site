@@ -157,12 +157,12 @@ test("JussPay production provider proof is exact-deploy bound and never submits 
   assert.ok(frontdoorProofIndex >= 0, "Front-door live proof is missing.");
   assert.ok(jusspayProofIndex > frontdoorProofIndex, "JussPay provider proof must run after exact front-door proof.");
   assert.ok(rollbackIndex > jusspayProofIndex, "JussPay provider proof must remain inside the post-activation rollback boundary.");
-  assert.match(activationWorkflow, /api\\/commerce\\/catalog/);
-  assert.match(activationWorkflow, /jusspay_unavailable/);
-  assert.match(activationWorkflow, /api\\/shopify\\/catalog/);
-  assert.match(activationWorkflow, /legacyShopifyDisabled:true/);
-  assert.doesNotMatch(activationWorkflow, /node scripts\\/shopify-production-playwright\\.mjs/);
-  assert.match(activationWorkflow, /scope:'no-payment-readback'/);
+  assert.ok(activationWorkflow.includes("/api/commerce/catalog"));
+  assert.ok(activationWorkflow.includes("jusspay_unavailable"));
+  assert.ok(activationWorkflow.includes("/api/shopify/catalog"));
+  assert.ok(activationWorkflow.includes("legacyShopifyDisabled:true"));
+  assert.ok(!activationWorkflow.includes("node scripts/shopify-production-playwright.mjs"));
+  assert.ok(activationWorkflow.includes("scope:'no-payment-readback'"));
 });
 test("candidate proof never receives Cloudflare credentials and release proof runs on trusted push", () => {
   const smokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");

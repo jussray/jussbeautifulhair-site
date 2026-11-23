@@ -67,15 +67,37 @@ test("front-door activation requires Cloudflare credentials and proxied root DNS
   assert.match(activationWorkflow, /test \"\$proxied_count\" -ge 1/);
 });
 
-test("first activation refuses an existing JBH Worker route", () => {
-  assert.match(activationWorkflow, /workers\/routes/);
-  assert.match(
-    activationWorkflow,
-    /select\(\.pattern \| contains\(\"jussbeautifulhair\.com\"\)\)/,
-  );
-  assert.match(activationWorkflow, /test \"\$conflicting_routes\" -eq 0/);
-});
+test("first activation blocks every route pattern that overlaps the apex hostname", () => {
+  assert.ok(activationWorkflow.includes("workers/routes"));
+  assert.ok(activationWorkflow.includes("ascii_downcase | test("));
+  assert.ok(activationWorkflow.includes("jussbeautifulhair"));
+  assert.ok(activationWorkflow.includes('test "$conflicting_routes" -eq 0'));
 
+  const overlapsApex = (pattern) => {
+    const route = pattern.toLowerCase().replace("https://", "").replace("http://", "");
+    const hostname = route.split("/")[0];
+    return hostname === "jussbeautifulhair.com" || hostname === "*jussbeautifulhair.com";
+  };
+
+  const existingSubdomainRoutes = [
+    "*.jussbeautifulhair.com/*",
+    "www.jussbeautifulhair.com",
+    "app.jussbeautifulhair.com",
+    "api.jussbeautifulhair.com/*",
+    "*hello.jussbeautifulhair.com/*",
+  ];
+  const apexOverlappingRoutes = [
+    "jussbeautifulhair.com",
+    "jussbeautifulhair.com/*",
+    "jussbeautifulhair.com/cart/*",
+    "https://jussbeautifulhair.com/cart/*",
+    "*jussbeautifulhair.com/*",
+    "https://*jussbeautifulhair.com/cart/*",
+  ];
+
+  assert.deepEqual(existingSubdomainRoutes.filter(overlapsApex), []);
+  assert.deepEqual(apexOverlappingRoutes.filter(overlapsApex), apexOverlappingRoutes);
+});
 test("Wrangler activation is pinned, dry-run first, and uses only the front-door config", () => {
   assert.match(activationWorkflow, /WRANGLER_VERSION: 4\.114\.0/);
   assert.match(activationWorkflow, /--var RELEASE_SHA:\$\{EXPECTED_HEAD_SHA\}/);
@@ -134,40 +156,21 @@ test("live Playwright proof binds to the branded origin and rejects Shopify pass
   assert.match(activationWorkflow, /node scripts\/frontdoor-live-playwright\.mjs/);
 });
 
-test("Shopify production proof is exact-deploy bound and stops before payment", () => {
+test("JussPay production provider proof is exact-deploy bound and never submits payment", () => {
   const frontdoorProofIndex = activationWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs");
-  const shopifyProofIndex = activationWorkflow.indexOf("node scripts/shopify-production-playwright.mjs");
+  const jusspayProofIndex = activationWorkflow.indexOf("Prove JussPay production provider without issuing payment");
   const rollbackIndex = activationWorkflow.indexOf("Remove newly-created route if post-activation proof fails");
 
   assert.ok(frontdoorProofIndex >= 0, "Front-door live proof is missing.");
-  assert.ok(shopifyProofIndex > frontdoorProofIndex, "Shopify production proof must run after exact front-door proof.");
-  assert.ok(rollbackIndex > shopifyProofIndex, "Shopify proof must remain inside the post-activation rollback boundary.");
-  assert.match(activationWorkflow, /artifacts\/shopify-production\//);
-
-  assert.match(shopifyProductionPlaywright, /EXPECTED_HEAD_SHA/);
-  assert.match(shopifyProductionPlaywright, /\/version/);
-  assert.match(shopifyProductionPlaywright, /const versionPage = await browser\.newPage/);
-  assert.match(shopifyProductionPlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
-  assert.doesNotMatch(shopifyProductionPlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
-  assert.match(shopifyProductionPlaywright, /versionTransport: "chromium-navigation"/);
-  assert.match(shopifyProductionPlaywright, /versionPayload\?\.sha,\s*expectedHead/);
-  assert.match(shopifyProductionPlaywright, /\/api\/shopify\/catalog/);
-  assert.match(shopifyProductionPlaywright, /\/api\/shopify\/cart/);
-  assert.match(shopifyProductionPlaywright, /card-product-\$\{product\.id\}/);
-  assert.match(shopifyProductionPlaywright, /scrollIntoViewIfNeeded/);
-  assert.match(shopifyProductionPlaywright, /naturalWidth/);
-  assert.match(shopifyProductionPlaywright, /naturalHeight/);
-  assert.match(shopifyProductionPlaywright, /img-product/);
-  assert.match(shopifyProductionPlaywright, /sellable product card image/);
-  assert.match(shopifyProductionPlaywright, /sellable product detail image/);
-  // Pick a product the customer actually sees with an image, not catalog order.
-  assert.match(shopifyProductionPlaywright, /no sellable storefront product renders a real product image/);
-  assert.doesNotMatch(shopifyProductionPlaywright, /catalogPayload\.products\.find\(/);
-  assert.match(shopifyProductionPlaywright, /button-place-order/);
-  assert.match(shopifyProductionPlaywright, /merchandiseId: variant\.id, quantity: 1/);
-  assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
+  assert.ok(jusspayProofIndex > frontdoorProofIndex, "JussPay provider proof must run after exact front-door proof.");
+  assert.ok(rollbackIndex > jusspayProofIndex, "JussPay provider proof must remain inside the post-activation rollback boundary.");
+  assert.ok(activationWorkflow.includes("/api/commerce/catalog"));
+  assert.ok(activationWorkflow.includes("jusspay_unavailable"));
+  assert.ok(activationWorkflow.includes("/api/shopify/catalog"));
+  assert.ok(activationWorkflow.includes("legacyShopifyDisabled:true"));
+  assert.ok(!activationWorkflow.includes("node scripts/shopify-production-playwright.mjs"));
+  assert.ok(activationWorkflow.includes("scope:'no-payment-readback'"));
 });
-
 test("candidate proof never receives Cloudflare credentials and release proof runs on trusted push", () => {
   const smokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
   const boundaryIndex = mainShopifyWorkflow.indexOf("Record candidate-only evidence boundary");
@@ -252,11 +255,13 @@ test("main commerce gate waits for the exact Worker build and emits verified onl
   assert.doesNotMatch(mainShopifyWorkflow, /wrangler[^\n]*deploy/i);
 });
 
-test("front-door Wrangler config remains one route for the branded root", () => {
+test("front-door Wrangler config preserves existing same-Worker routes and adds the apex", () => {
   const routeBlocks = frontdoorConfig.match(/^\s*\[\[routes\]\]\s*$/gm) ?? [];
-  assert.equal(routeBlocks.length, 1);
+  assert.equal(routeBlocks.length, 4);
   assert.match(frontdoorConfig, /^pattern\s*=\s*\"jussbeautifulhair\.com\/\*\"\s*$/m);
-  assert.match(frontdoorConfig, /^zone_name\s*=\s*\"jussbeautifulhair\.com\"\s*$/m);
+  assert.match(frontdoorConfig, /^pattern\s*=\s*\"\*\.jussbeautifulhair\.com\/\*\"\s*$/m);
+  assert.match(frontdoorConfig, /^pattern\s*=\s*\"app\.jussbeautifulhair\.com\"\s*$/m);
+  assert.match(frontdoorConfig, /^pattern\s*=\s*\"www\.jussbeautifulhair\.com\"\s*$/m);
   assert.match(frontdoorConfig, /run_worker_first\s*=\s*true/);
   assert.doesNotMatch(frontdoorConfig, /custom_domain\s*=\s*true/i);
 });

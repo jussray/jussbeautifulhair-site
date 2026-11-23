@@ -41,3 +41,16 @@ not_found_handling = "single-page-application"
 # Public storefront security and Content-Signal headers are applied by worker/index.ts.
 # Run the Worker before every asset response so those headers cannot be bypassed.
 run_worker_first = true
+
+# Preserve the existing same-Worker subdomain routes during this activation.
+[[routes]]
+pattern = "*.jussbeautifulhair.com/*"
+zone_name = "jussbeautifulhair.com"
+
+[[routes]]
+pattern = "app.jussbeautifulhair.com"
+zone_name = "jussbeautifulhair.com"
+
+[[routes]]
+pattern = "www.jussbeautifulhair.com"
+zone_name = "jussbeautifulhair.com"

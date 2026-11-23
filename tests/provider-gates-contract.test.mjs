@@ -61,7 +61,10 @@ test("front-door carrier remains readback-first, exact-head, browser-proved, and
   assert.match(frontdoorWorkflow, /expected_main_sha:/);
   assert.match(frontdoorWorkflow, /test \"\$EXPECTED_HEAD_SHA\" = \"\$actual\"/);
   assert.match(frontdoorWorkflow, /node scripts\/frontdoor-live-playwright\.mjs/);
-  assert.match(frontdoorWorkflow, /node scripts\/shopify-production-playwright\.mjs/);
+  assert.match(frontdoorWorkflow, /Prove JussPay production provider without issuing payment/);
+  assert.ok(frontdoorWorkflow.includes("legacyShopifyDisabled:true"));
+  assert.ok(!frontdoorWorkflow.includes("node scripts/shopify-production-playwright.mjs"));
+  assert.ok(providerGates.gates.find((gate) => gate.id === "branded-frontdoor-provider-activation")?.completionRequires?.some((item) => item.includes("JussPay production-provider readback")));
   assert.match(frontdoorWorkflow, /Remove newly-created route if post-activation proof fails/);
   assert.match(frontdoorWorkflow, /if: failure\(\) && steps\.activate_route\.outcome == 'success'/);
 });

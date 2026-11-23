@@ -72,23 +72,6 @@ function forbidMatch(text, pattern, message) {
   if (pattern.test(text)) failures.push(message);
 }
 
-function readSingleTomlArrayTable(text, tableName) {
-  const marker = new RegExp(`^\\s*\\[\\[${tableName}\\]\\]\\s*$`, "gm");
-  const matches = [...text.matchAll(marker)];
-  if (matches.length !== 1) return { count: matches.length, entries: [] };
-
-  const start = (matches[0].index ?? 0) + matches[0][0].length;
-  const tail = text.slice(start);
-  const nextTableIndex = tail.search(/^\s*\[[^\]]+\]\s*$/m);
-  const block = nextTableIndex >= 0 ? tail.slice(0, nextTableIndex) : tail;
-  const entries = block
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"));
-
-  return { count: 1, entries };
-}
-
 const wrangler = await read("wrangler.toml");
 requireMatch(
   wrangler,
@@ -148,22 +131,26 @@ forbidMatch(
   "wrangler.frontdoor.toml must not route the storefront through workers.dev.",
 );
 
-const frontdoorRoute = readSingleTomlArrayTable(frontdoorConfig, "routes");
-if (frontdoorRoute.count !== 1) {
-  failures.push("wrangler.frontdoor.toml must contain exactly one [[routes]] block.");
-} else {
-  const expectedRouteEntries = new Set([
-    'pattern = "jussbeautifulhair.com/*"',
-    'zone_name = "jussbeautifulhair.com"',
-  ]);
-  const exactRoute =
-    frontdoorRoute.entries.length === expectedRouteEntries.size &&
-    frontdoorRoute.entries.every((entry) => expectedRouteEntries.has(entry));
-  if (!exactRoute) {
-    failures.push(
-      "The sole front-door route must contain only pattern = \"jussbeautifulhair.com/*\" and zone_name = \"jussbeautifulhair.com\".",
-    );
-  }
+const expectedFrontdoorRoutes = new Set([
+  "jussbeautifulhair.com/*",
+  "*.jussbeautifulhair.com/*",
+  "app.jussbeautifulhair.com",
+  "www.jussbeautifulhair.com",
+]);
+const frontdoorRouteBlocks = [...frontdoorConfig.matchAll(/^\\s*\\[\\[routes\\]\\]\\s*$/gm)];
+const frontdoorRoutePatterns = [...frontdoorConfig.matchAll(/^pattern\\s*=\\s*"([^"]+)"\\s*$/gm)].map((match) => match[1]);
+const frontdoorRouteZones = [...frontdoorConfig.matchAll(/^zone_name\\s*=\\s*"([^"]+)"\\s*$/gm)].map((match) => match[1]);
+const exactFrontdoorRoutes =
+  frontdoorRouteBlocks.length === expectedFrontdoorRoutes.size &&
+  frontdoorRoutePatterns.length === expectedFrontdoorRoutes.size &&
+  frontdoorRoutePatterns.every((pattern) => expectedFrontdoorRoutes.has(pattern)) &&
+  new Set(frontdoorRoutePatterns).size === expectedFrontdoorRoutes.size &&
+  frontdoorRouteZones.length === expectedFrontdoorRoutes.size &&
+  frontdoorRouteZones.every((zone) => zone === "jussbeautifulhair.com");
+if (!exactFrontdoorRoutes) {
+  failures.push(
+    "wrangler.frontdoor.toml must preserve the three existing jussbeautifulhair-site subdomain routes and add only the apex route.",
+  );
 }
 
 const commandFiles = [
@@ -312,5 +299,5 @@ if (failures.length) {
 }
 
 console.log(
-  "JBH deployment boundary verified: default deploy cannot claim the branded hostname, explicit front-door route is pinned to jussbeautifulhair.com/*, previews disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts detected.",
+  "JBH deployment boundary verified: default deploy cannot claim the branded hostname, explicit front-door route set preserves the existing storefront subdomains and adds jussbeautifulhair.com/*, previews disabled, current KV API routes only, and no private, Vercel, database, or numeric order-lookup artifacts detected.",
 );

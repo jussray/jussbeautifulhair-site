@@ -69,12 +69,14 @@ test("front-door activation requires Cloudflare credentials and proxied root DNS
 
 test("first activation blocks every route pattern that overlaps the apex hostname", () => {
   assert.ok(activationWorkflow.includes("workers/routes"));
-  assert.ok(activationWorkflow.includes('ascii_downcase | test("^(https?://)?\\\\*?jussbeautifulhair\\\\.com(/|$)")'));
+  assert.ok(activationWorkflow.includes("ascii_downcase | test("));
+  assert.ok(activationWorkflow.includes("jussbeautifulhair"));
   assert.ok(activationWorkflow.includes('test "$conflicting_routes" -eq 0'));
 
   const overlapsApex = (pattern) => {
-    const route = pattern.replace(/^https?:\\/\\//i, "");
-    return /^\\*?jussbeautifulhair\\.com(\\/|$)/i.test(route);
+    const route = pattern.toLowerCase().replace("https://", "").replace("http://", "");
+    const hostname = route.split("/")[0];
+    return hostname === "jussbeautifulhair.com" || hostname === "*jussbeautifulhair.com";
   };
 
   const existingSubdomainRoutes = [

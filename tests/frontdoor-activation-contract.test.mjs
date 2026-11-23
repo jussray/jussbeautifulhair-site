@@ -68,13 +68,12 @@ test("front-door activation requires Cloudflare credentials and proxied root DNS
 });
 
 test("first activation blocks only apex-overlapping JBH Worker routes", () => {
-  assert.match(activationWorkflow, /workers\\/routes/);
-  assert.match(
-    activationWorkflow,
-    /select\\(\\.pattern == "jussbeautifulhair\\.com\\/\\*" or \\.pattern == "jussbeautifulhair\\.com" or \\.pattern == "\\*jussbeautifulhair\\.com\\/\\*"\\)/,
-  );
-  assert.doesNotMatch(activationWorkflow, /pattern \\| contains\\("jussbeautifulhair\\.com"\\)/);
-  assert.match(activationWorkflow, /test "\\$conflicting_routes" -eq 0/);
+  assert.ok(activationWorkflow.includes("workers/routes"));
+  assert.ok(activationWorkflow.includes(
+    'select(.pattern == "jussbeautifulhair.com/*" or .pattern == "jussbeautifulhair.com" or .pattern == "*jussbeautifulhair.com/*")',
+  ));
+  assert.ok(!activationWorkflow.includes('pattern | contains("jussbeautifulhair.com")'));
+  assert.ok(activationWorkflow.includes('test "$conflicting_routes" -eq 0'));
 
   const apexConflictPatterns = [
     "jussbeautifulhair.com/*",

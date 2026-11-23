@@ -72,8 +72,10 @@ test("first activation blocks every route pattern that overlaps the apex hostnam
   assert.ok(activationWorkflow.includes('ascii_downcase | test("^(https?://)?\\\\*?jussbeautifulhair\\\\.com(/|$)")'));
   assert.ok(activationWorkflow.includes('test "$conflicting_routes" -eq 0'));
 
-  const overlapsApex = (pattern) =>
-    /^(https?:\\/\\/)?\\*?jussbeautifulhair\\.com(\\/|$)/i.test(pattern);
+  const overlapsApex = (pattern) => {
+    const route = pattern.replace(/^https?:\\/\\//i, "");
+    return /^\\*?jussbeautifulhair\\.com(\\/|$)/i.test(route);
+  };
 
   const existingSubdomainRoutes = [
     "*.jussbeautifulhair.com/*",

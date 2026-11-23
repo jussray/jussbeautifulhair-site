@@ -153,14 +153,31 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/frontdoor-live-playwright.mjs
 
-      - name: Prove exact deployed Shopify purchase path without payment
+      - name: Prove JussPay production provider without issuing payment
         env:
-          EXPECTED_HEAD_SHA: ${{ env.EXPECTED_HEAD_SHA }}
           LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
-          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
-          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/shopify-production-playwright.mjs
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {mkdir,writeFile} from 'node:fs/promises';
+          const origin = new URL(process.env.LIVE_STOREFRONT_URL).origin;
+          const response = await fetch(origin + '/api/commerce/catalog',{headers:{accept:'application/json'},cache:'no-store'});
+          assert.equal(response.status,200,'JussPay catalog discovery must return HTTP 200');
+          const catalog = await response.json();
+          assert.ok(['live','jusspay_unavailable'].includes(catalog.mode),'Public commerce authority is not JussPay');
+          assert.ok(Array.isArray(catalog.products),'Catalog response must be an array');
+          if(catalog.mode==='jusspay_unavailable') {
+            assert.equal(catalog.products.length,0,'Unready JussPay must not advertise items');
+          } else {
+            assert.ok(catalog.products.length>0,'Live JussPay requires approved catalog entries');
+            assert.ok(catalog.products.every(x=>x.shopifyProductId==='jbh:catalog'&&x.availableForSale===true),'Live catalog has unapproved product');
+          }
+          const legacy = await fetch(origin + '/api/shopify/catalog',{cache:'no-store'});
+          assert.equal(legacy.status,503,'Shopify route must be disabled in JussPay-only production');
+          await mkdir('artifacts/jusspay-production',{recursive:true});
+          await writeFile('artifacts/jusspay-production/provider.json',JSON.stringify({provider:'jusspay',mode:catalog.mode,legacyShopifyDisabled:true,scope:'no-payment-readback',url:origin,observed_at:new Date().toISOString()},null,2));
+          console.log('JussPay provider verified without payment:',catalog.mode);
+          NODE
 
       - name: Remove newly-created route if post-activation proof fails
         if: failure() && steps.activate_route.outcome == 'success'

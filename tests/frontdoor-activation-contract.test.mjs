@@ -67,19 +67,14 @@ test("front-door activation requires Cloudflare credentials and proxied root DNS
   assert.match(activationWorkflow, /test \"\$proxied_count\" -ge 1/);
 });
 
-test("first activation blocks only apex-overlapping JBH Worker routes", () => {
+test("first activation blocks every route pattern that overlaps the apex hostname", () => {
   assert.ok(activationWorkflow.includes("workers/routes"));
-  assert.ok(activationWorkflow.includes(
-    'select(.pattern == "jussbeautifulhair.com/*" or .pattern == "jussbeautifulhair.com" or .pattern == "*jussbeautifulhair.com/*")',
-  ));
-  assert.ok(!activationWorkflow.includes('pattern | contains("jussbeautifulhair.com")'));
+  assert.ok(activationWorkflow.includes('ascii_downcase | test("^(https?://)?\\\\*?jussbeautifulhair\\\\.com(/|$)")'));
   assert.ok(activationWorkflow.includes('test "$conflicting_routes" -eq 0'));
 
-  const apexConflictPatterns = [
-    "jussbeautifulhair.com/*",
-    "jussbeautifulhair.com",
-    "*jussbeautifulhair.com/*",
-  ];
+  const overlapsApex = (pattern) =>
+    /^(https?:\\/\\/)?\\*?jussbeautifulhair\\.com(\\/|$)/i.test(pattern);
+
   const existingSubdomainRoutes = [
     "*.jussbeautifulhair.com/*",
     "www.jussbeautifulhair.com",
@@ -87,9 +82,17 @@ test("first activation blocks only apex-overlapping JBH Worker routes", () => {
     "api.jussbeautifulhair.com/*",
     "*hello.jussbeautifulhair.com/*",
   ];
-  const isApexConflict = (pattern) => apexConflictPatterns.includes(pattern);
-  assert.deepEqual(existingSubdomainRoutes.filter(isApexConflict), []);
-  assert.deepEqual(apexConflictPatterns.filter(isApexConflict), apexConflictPatterns);
+  const apexOverlappingRoutes = [
+    "jussbeautifulhair.com",
+    "jussbeautifulhair.com/*",
+    "jussbeautifulhair.com/cart/*",
+    "https://jussbeautifulhair.com/cart/*",
+    "*jussbeautifulhair.com/*",
+    "https://*jussbeautifulhair.com/cart/*",
+  ];
+
+  assert.deepEqual(existingSubdomainRoutes.filter(overlapsApex), []);
+  assert.deepEqual(apexOverlappingRoutes.filter(overlapsApex), apexOverlappingRoutes);
 });
 test("Wrangler activation is pinned, dry-run first, and uses only the front-door config", () => {
   assert.match(activationWorkflow, /WRANGLER_VERSION: 4\.114\.0/);

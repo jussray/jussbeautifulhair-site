@@ -107,7 +107,7 @@ jobs:
             -H "Content-Type: application/json" \
             "https://api.cloudflare.com/client/v4/zones/$zone_id/workers/routes")"
           test "$(jq -r '.success' <<<"$routes_json")" = "true"
-          conflicting_routes="$(jq '[.result[] | select(.pattern == "jussbeautifulhair.com/*" or .pattern == "jussbeautifulhair.com" or .pattern == "*jussbeautifulhair.com/*")] | length' <<<"$routes_json")"
+          conflicting_routes="$(jq '[.result[] | select((.pattern | ascii_downcase | test("^(https?://)?\\*?jussbeautifulhair\\.com(/|$)")))] | length' <<<"$routes_json")"
           test "$conflicting_routes" -eq 0
           echo "Cloudflare preflight verified: root DNS is proxied and no JBH route already exists."
 

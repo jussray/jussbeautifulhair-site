@@ -137,15 +137,35 @@ const expectedFrontdoorRoutes = new Set([
   "app.jussbeautifulhair.com",
   "www.jussbeautifulhair.com",
 ]);
-const frontdoorRouteBlocks = [...frontdoorConfig.matchAll(/^\\s*\\[\\[routes\\]\\]\\s*$/gm)];
-const frontdoorRoutePatterns = [...frontdoorConfig.matchAll(/^pattern\\s*=\\s*"([^"]+)"\\s*$/gm)].map((match) => match[1]);
-const frontdoorRouteZones = [...frontdoorConfig.matchAll(/^zone_name\\s*=\\s*"([^"]+)"\\s*$/gm)].map((match) => match[1]);
+const frontdoorRouteBlocks = [];
+let currentFrontdoorRoute = null;
+for (const line of frontdoorConfig.split(/\\r?\\n/)) {
+  const trimmed = line.trim();
+  if (trimmed === "[[routes]]") {
+    if (currentFrontdoorRoute) frontdoorRouteBlocks.push(currentFrontdoorRoute);
+    currentFrontdoorRoute = [];
+    continue;
+  }
+  if (currentFrontdoorRoute && trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    frontdoorRouteBlocks.push(currentFrontdoorRoute);
+    currentFrontdoorRoute = null;
+  }
+  if (currentFrontdoorRoute && trimmed && !trimmed.startsWith("#")) {
+    currentFrontdoorRoute.push(trimmed);
+  }
+}
+if (currentFrontdoorRoute) frontdoorRouteBlocks.push(currentFrontdoorRoute);
+const tomlString = (entries, key) => {
+  const prefix = key + ' = "';
+  const line = entries.find((entry) => entry.startsWith(prefix));
+  return line?.endsWith('"') ? line.slice(prefix.length, -1) : null;
+};
+const frontdoorRoutePatterns = frontdoorRouteBlocks.map((entries) => tomlString(entries, "pattern"));
+const frontdoorRouteZones = frontdoorRouteBlocks.map((entries) => tomlString(entries, "zone_name"));
 const exactFrontdoorRoutes =
   frontdoorRouteBlocks.length === expectedFrontdoorRoutes.size &&
-  frontdoorRoutePatterns.length === expectedFrontdoorRoutes.size &&
   frontdoorRoutePatterns.every((pattern) => expectedFrontdoorRoutes.has(pattern)) &&
   new Set(frontdoorRoutePatterns).size === expectedFrontdoorRoutes.size &&
-  frontdoorRouteZones.length === expectedFrontdoorRoutes.size &&
   frontdoorRouteZones.every((zone) => zone === "jussbeautifulhair.com");
 if (!exactFrontdoorRoutes) {
   failures.push(

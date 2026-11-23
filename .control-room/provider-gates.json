@@ -20,14 +20,14 @@
       "supportingSource": [
         "wrangler.frontdoor.toml",
         "scripts/frontdoor-live-playwright.mjs",
-        "scripts/shopify-production-playwright.mjs"
+        ".github/workflows/frontdoor-activate.yml"
       ],
       "completionRequires": [
         "Cloudflare root DNS proxy readback",
         "exactly one canonical jussbeautifulhair.com Worker route owned by jussbeautifulhair-site",
         "live /version identity equal to the approved exact SHA",
         "desktop and mobile branded storefront proof",
-        "Shopify no-payment purchase-path proof",
+        "JussPay production-provider readback with Shopify checkout disabled and no payment submitted",
         "retained provider ownership receipt"
       ],
       "conditionalMutation": "Use the existing founder-authorized first-activation workflow only when read-only provider state proves the canonical route is absent."

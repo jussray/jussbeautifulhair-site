@@ -139,7 +139,7 @@ const expectedFrontdoorRoutes = new Set([
 ]);
 const frontdoorRouteBlocks = [];
 let currentFrontdoorRoute = null;
-for (const line of frontdoorConfig.split(/\\r?\\n/)) {
+for (const line of frontdoorConfig.split(/\r?\n/)) {
   const trimmed = line.trim();
   if (trimmed === "[[routes]]") {
     if (currentFrontdoorRoute) frontdoorRouteBlocks.push(currentFrontdoorRoute);

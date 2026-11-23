@@ -149,40 +149,21 @@ test("live Playwright proof binds to the branded origin and rejects Shopify pass
   assert.match(activationWorkflow, /node scripts\/frontdoor-live-playwright\.mjs/);
 });
 
-test("Shopify production proof is exact-deploy bound and stops before payment", () => {
+test("JussPay production provider proof is exact-deploy bound and never submits payment", () => {
   const frontdoorProofIndex = activationWorkflow.indexOf("node scripts/frontdoor-live-playwright.mjs");
-  const shopifyProofIndex = activationWorkflow.indexOf("node scripts/shopify-production-playwright.mjs");
+  const jusspayProofIndex = activationWorkflow.indexOf("Prove JussPay production provider without issuing payment");
   const rollbackIndex = activationWorkflow.indexOf("Remove newly-created route if post-activation proof fails");
 
   assert.ok(frontdoorProofIndex >= 0, "Front-door live proof is missing.");
-  assert.ok(shopifyProofIndex > frontdoorProofIndex, "Shopify production proof must run after exact front-door proof.");
-  assert.ok(rollbackIndex > shopifyProofIndex, "Shopify proof must remain inside the post-activation rollback boundary.");
-  assert.match(activationWorkflow, /artifacts\/shopify-production\//);
-
-  assert.match(shopifyProductionPlaywright, /EXPECTED_HEAD_SHA/);
-  assert.match(shopifyProductionPlaywright, /\/version/);
-  assert.match(shopifyProductionPlaywright, /const versionPage = await browser\.newPage/);
-  assert.match(shopifyProductionPlaywright, /versionPage\.goto\(\`\$\{baseURL\}\/version\`/);
-  assert.doesNotMatch(shopifyProductionPlaywright, /await fetch\(\`\$\{baseURL\}\/version\`/);
-  assert.match(shopifyProductionPlaywright, /versionTransport: "chromium-navigation"/);
-  assert.match(shopifyProductionPlaywright, /versionPayload\?\.sha,\s*expectedHead/);
-  assert.match(shopifyProductionPlaywright, /\/api\/shopify\/catalog/);
-  assert.match(shopifyProductionPlaywright, /\/api\/shopify\/cart/);
-  assert.match(shopifyProductionPlaywright, /card-product-\$\{product\.id\}/);
-  assert.match(shopifyProductionPlaywright, /scrollIntoViewIfNeeded/);
-  assert.match(shopifyProductionPlaywright, /naturalWidth/);
-  assert.match(shopifyProductionPlaywright, /naturalHeight/);
-  assert.match(shopifyProductionPlaywright, /img-product/);
-  assert.match(shopifyProductionPlaywright, /sellable product card image/);
-  assert.match(shopifyProductionPlaywright, /sellable product detail image/);
-  // Pick a product the customer actually sees with an image, not catalog order.
-  assert.match(shopifyProductionPlaywright, /no sellable storefront product renders a real product image/);
-  assert.doesNotMatch(shopifyProductionPlaywright, /catalogPayload\.products\.find\(/);
-  assert.match(shopifyProductionPlaywright, /button-place-order/);
-  assert.match(shopifyProductionPlaywright, /merchandiseId: variant\.id, quantity: 1/);
-  assert.match(shopifyProductionPlaywright, /no order or payment was submitted/);
+  assert.ok(jusspayProofIndex > frontdoorProofIndex, "JussPay provider proof must run after exact front-door proof.");
+  assert.ok(rollbackIndex > jusspayProofIndex, "JussPay provider proof must remain inside the post-activation rollback boundary.");
+  assert.match(activationWorkflow, /api\\/commerce\\/catalog/);
+  assert.match(activationWorkflow, /jusspay_unavailable/);
+  assert.match(activationWorkflow, /api\\/shopify\\/catalog/);
+  assert.match(activationWorkflow, /legacyShopifyDisabled:true/);
+  assert.doesNotMatch(activationWorkflow, /node scripts\\/shopify-production-playwright\\.mjs/);
+  assert.match(activationWorkflow, /scope:'no-payment-readback'/);
 });
-
 test("candidate proof never receives Cloudflare credentials and release proof runs on trusted push", () => {
   const smokeIndex = mainShopifyWorkflow.indexOf("Verify live Shopify catalog and no-payment cart");
   const boundaryIndex = mainShopifyWorkflow.indexOf("Record candidate-only evidence boundary");

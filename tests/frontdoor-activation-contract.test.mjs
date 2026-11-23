@@ -67,15 +67,31 @@ test("front-door activation requires Cloudflare credentials and proxied root DNS
   assert.match(activationWorkflow, /test \"\$proxied_count\" -ge 1/);
 });
 
-test("first activation refuses an existing JBH Worker route", () => {
-  assert.match(activationWorkflow, /workers\/routes/);
+test("first activation blocks only apex-overlapping JBH Worker routes", () => {
+  assert.match(activationWorkflow, /workers\\/routes/);
   assert.match(
     activationWorkflow,
-    /select\(\.pattern \| contains\(\"jussbeautifulhair\.com\"\)\)/,
+    /select\\(\\.pattern == "jussbeautifulhair\\.com\\/\\*" or \\.pattern == "jussbeautifulhair\\.com" or \\.pattern == "\\*jussbeautifulhair\\.com\\/\\*"\\)/,
   );
-  assert.match(activationWorkflow, /test \"\$conflicting_routes\" -eq 0/);
-});
+  assert.doesNotMatch(activationWorkflow, /pattern \\| contains\\("jussbeautifulhair\\.com"\\)/);
+  assert.match(activationWorkflow, /test "\\$conflicting_routes" -eq 0/);
 
+  const apexConflictPatterns = [
+    "jussbeautifulhair.com/*",
+    "jussbeautifulhair.com",
+    "*jussbeautifulhair.com/*",
+  ];
+  const existingSubdomainRoutes = [
+    "*.jussbeautifulhair.com/*",
+    "www.jussbeautifulhair.com",
+    "app.jussbeautifulhair.com",
+    "api.jussbeautifulhair.com/*",
+    "*hello.jussbeautifulhair.com/*",
+  ];
+  const isApexConflict = (pattern) => apexConflictPatterns.includes(pattern);
+  assert.deepEqual(existingSubdomainRoutes.filter(isApexConflict), []);
+  assert.deepEqual(apexConflictPatterns.filter(isApexConflict), apexConflictPatterns);
+});
 test("Wrangler activation is pinned, dry-run first, and uses only the front-door config", () => {
   assert.match(activationWorkflow, /WRANGLER_VERSION: 4\.114\.0/);
   assert.match(activationWorkflow, /--var RELEASE_SHA:\$\{EXPECTED_HEAD_SHA\}/);

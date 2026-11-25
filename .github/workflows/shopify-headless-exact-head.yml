@@ -236,6 +236,28 @@ jobs:
       - name: Verify exact trusted main head
         run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD_SHA"
 
+      - name: Verify Cloudflare Browser Run credential inputs
+        # Fail closed before npm/Chromium. Never print secret values.
+        shell: bash
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! test -n "$CLOUDFLARE_ACCOUNT_ID"; then
+            echo "::error::Missing CLOUDFLARE_ACCOUNT_ID in repository or Production environment secrets."
+            exit 1
+          fi
+          if ! [[ "$CLOUDFLARE_ACCOUNT_ID" =~ ^[0-9a-fA-F]{32}$ ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID must be a 32-character hexadecimal account identifier."
+            exit 1
+          fi
+          if ! test -n "$CLOUDFLARE_BROWSER_RUN_TOKEN"; then
+            echo "::error::Missing CLOUDFLARE_BROWSER_RUN_TOKEN in repository or Production environment secrets."
+            exit 1
+          fi
+          echo "Browser Run inputs present; authenticated CDP connection is still required."
+
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -311,16 +333,7 @@ jobs:
           JBH_PROOF_BROWSER_MODE: cloudflare-cdp
           CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -n "${CLOUDFLARE_BROWSER_RUN_TOKEN}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID}" ]; then
-            echo "Using Cloudflare Browser Run for live Playwright proof."
-            node scripts/frontdoor-live-playwright.mjs
-          else
-            echo "Cloudflare Browser Run secrets are absent; using the same live Playwright proof with local Chromium."
-            JBH_PROOF_BROWSER_MODE=local node scripts/frontdoor-live-playwright.mjs
-          fi
+        run: node scripts/frontdoor-live-playwright.mjs
 
       - name: Prove exact deployed Shopify purchase path without payment
         if: github.event_name == 'push' && needs.verify.outputs.commerce_provider == 'shopify'

@@ -1,0 +1,179 @@
+name: JBH Approved Automatic Front Door Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  LIVE_STOREFRONT_URL: https://jussbeautifulhair.com
+  WRANGLER_VERSION: 4.114.0
+
+concurrency:
+  group: jbh-production-frontdoor-auto-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Gate, deploy, and prove the existing branded front door
+    runs-on: ubuntu-22.04
+    environment: Production
+    timeout-minutes: 30
+    steps:
+      - name: Check out the exact pushed main commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+
+      - name: Require founder-enabled automatic deployment
+        env:
+          AUTO_DEPLOY_AUTHORIZATION: ${{ secrets.JBH_FRONTDOOR_AUTO_DEPLOY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$GITHUB_SHA"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test "$AUTO_DEPLOY_AUTHORIZATION" = "enabled"
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_BROWSER_RUN_TOKEN"
+          echo "Automatic deployment is authorized for exact main SHA $actual."
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run typecheck, tests, build, and deployment boundary
+        run: |
+          npm run check
+          npm test
+          npm run verify:deploy
+
+      - name: Confirm proxied DNS and the already-active canonical route
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          zone_json="$(curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-urlencode "name=jussbeautifulhair.com" \
+            "https://api.cloudflare.com/client/v4/zones")"
+          test "$(jq -r '.success' <<<"$zone_json")" = "true"
+          zone_id="$(jq -r '[.result[] | select(.name == "jussbeautifulhair.com")] | first | .id // empty' <<<"$zone_json")"
+          test -n "$zone_id"
+          echo "CLOUDFLARE_ZONE_ID=$zone_id" >> "$GITHUB_ENV"
+
+          dns_json="$(curl --fail-with-body --silent --show-error --get \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data-urlencode "name=jussbeautifulhair.com" \
+            "https://api.cloudflare.com/client/v4/zones/$zone_id/dns_records")"
+          test "$(jq -r '.success' <<<"$dns_json")" = "true"
+          proxied_count="$(jq '[.result[] | select(.name == "jussbeautifulhair.com" and .proxied == true)] | length' <<<"$dns_json")"
+          test "$proxied_count" -ge 1
+
+          routes_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/zones/$zone_id/workers/routes")"
+          test "$(jq -r '.success' <<<"$routes_json")" = "true"
+          for pattern in "jussbeautifulhair.com/*" "*.jussbeautifulhair.com/*" "app.jussbeautifulhair.com" "www.jussbeautifulhair.com"; do
+            count="$(jq --arg pattern "$pattern" '[.result[] | select(.pattern == $pattern and .script == "jussbeautifulhair-site")] | length' <<<"$routes_json")"
+            test "$count" -eq 1
+          done
+          echo "All four expected JBH routes already exist on jussbeautifulhair-site; this workflow will not create or remove routes."
+
+      - name: Dry-run the exact front-door Worker build
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.frontdoor.toml --var RELEASE_SHA:${GITHUB_SHA} --dry-run --outdir .wrangler/frontdoor-dry-run
+
+      - name: Deploy the exact approved main SHA to the existing Worker routes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.frontdoor.toml --var RELEASE_SHA:${GITHUB_SHA}
+
+      - name: Reconfirm route ownership after deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          routes_json="$(curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            -H "Content-Type: application/json" \
+            "https://api.cloudflare.com/client/v4/zones/$CLOUDFLARE_ZONE_ID/workers/routes")"
+          test "$(jq -r '.success' <<<"$routes_json")" = "true"
+          for pattern in "jussbeautifulhair.com/*" "*.jussbeautifulhair.com/*" "app.jussbeautifulhair.com" "www.jussbeautifulhair.com"; do
+            count="$(jq --arg pattern "$pattern" '[.result[] | select(.pattern == $pattern and .script == "jussbeautifulhair-site")] | length' <<<"$routes_json")"
+            test "$count" -eq 1
+          done
+
+      - name: Install pinned live browser verifier
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.61.1
+
+      - name: Install Chromium
+        run: npm exec -- playwright install --with-deps chromium
+
+      - name: Prove the exact deployed SHA in live desktop and mobile browsers
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+          JBH_PROOF_BROWSER_MODE: cloudflare-cdp
+          CLOUDFLARE_BROWSER_RUN_TOKEN: ${{ secrets.CLOUDFLARE_BROWSER_RUN_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/frontdoor-live-playwright.mjs
+
+      - name: Verify JussPay catalog and Shopify-off state without submitting payment
+        env:
+          LIVE_STOREFRONT_URL: ${{ env.LIVE_STOREFRONT_URL }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {mkdir,writeFile} from 'node:fs/promises';
+          const origin = new URL(process.env.LIVE_STOREFRONT_URL).origin;
+          const response = await fetch(origin + '/api/commerce/catalog',{headers:{accept:'application/json'},cache:'no-store'});
+          assert.equal(response.status,200,'JussPay catalog discovery must return HTTP 200');
+          const catalog = await response.json();
+          assert.ok(['live','jusspay_unavailable'].includes(catalog.mode),'Public commerce authority is not JussPay');
+          assert.ok(Array.isArray(catalog.products),'Catalog response must be an array');
+          if(catalog.mode==='jusspay_unavailable') {
+            assert.equal(catalog.products.length,0,'Unready JussPay must not advertise items');
+          } else {
+            assert.ok(catalog.products.length>0,'Live JussPay requires approved catalog entries');
+            assert.ok(catalog.products.every(x=>x.shopifyProductId==='jbh:catalog'&&x.availableForSale===true),'Live catalog has unapproved product');
+          }
+          const legacy = await fetch(origin + '/api/shopify/catalog',{cache:'no-store'});
+          assert.equal(legacy.status,503,'Shopify route must remain disabled in JussPay-only production');
+          await mkdir('artifacts/jusspay-production',{recursive:true});
+          await writeFile('artifacts/jusspay-production/provider.json',JSON.stringify({provider:'jusspay',mode:catalog.mode,legacyShopifyDisabled:true,scope:'no-payment-readback',url:origin,observed_at:new Date().toISOString()},null,2));
+          console.log('JussPay provider verified without payment:',catalog.mode);
+          NODE
+
+      - name: Upload exact-SHA deployment proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jbh-auto-frontdoor-${{ github.sha }}
+          path: |
+            artifacts/frontdoor-live/
+            artifacts/jusspay-production/
+          if-no-files-found: warn
+          retention-days: 30

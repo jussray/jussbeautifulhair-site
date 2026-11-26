@@ -11,14 +11,14 @@ const sandbox = await readFile(new URL("../wrangler.sandbox.toml", import.meta.u
 const topLevel = sandbox.split("[vars]")[0];
 const vars = sandbox.split("[vars]")[1]?.split(/\n\[/)[0] ?? "";
 
-test("sandbox Worker has no public or preview routes", () => {
-  assert.match(topLevel, /^workers_dev\s*=\s*false\s*$/m);
-  assert.match(topLevel, /^preview_urls\s*=\s*false\s*$/m);
+test("sandbox Worker uses Access-protected preview URLs, never a public workers.dev host", () => {
+  assert.match(topLevel, /^workers_dev\\s*=\\s*false\\s*$/m);
+  assert.match(topLevel, /^preview_urls\\s*=\\s*true\\s*$/m);
 });
 
 test("sandbox never enables live or legacy commerce", () => {
   assert.match(vars, /^JBH_JUSSPAY_LIVE_ENABLED\s*=\s*"false"\s*$/m);
-  assert.match(vars, /^JBH_JUSSPAY_SANDBOX_ENABLED\s*=\s*"false"\s*$/m);
+  assert.match(vars, /^JBH_JUSSPAY_SANDBOX_ENABLED\\s*=\\s*"true"\\s*$/m);
   assert.match(vars, /^JBH_STRIPE_COMMERCE_MODE\s*=\s*"test"\s*$/m);
   assert.match(vars, /^ENABLE_LEGACY_STRIPE_CHECKOUT\s*=\s*"false"\s*$/m);
 });

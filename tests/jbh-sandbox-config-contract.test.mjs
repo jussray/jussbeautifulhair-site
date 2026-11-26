@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-// Contract for the isolated JBH sandbox storefront config. It must never be
-// publicly routable, never run live commerce, and never share production
-// bindings (service, rate-limit namespace, production origin).
+// Contract for the isolated JBH sandbox storefront config. Only Cloudflare
+// preview URLs are enabled, protected by the account's All preview URLs Access
+// application. It must never expose workers.dev or live commerce, and must not
+// share production bindings (service, rate-limit namespace, production origin).
 const sandbox = await readFile(new URL("../wrangler.sandbox.toml", import.meta.url), "utf8");
 
 const topLevel = sandbox.split("[vars]")[0];

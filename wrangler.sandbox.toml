@@ -4,7 +4,8 @@ main = "worker/entry.ts"
 compatibility_date = "2026-07-14"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = false
-preview_urls = false
+# Cloudflare Access account policy 'All preview URLs' restricts this test host to founder owner mailboxes.
+preview_urls = true
 
 [build]
 command = "npm run build"
@@ -15,7 +16,7 @@ ENABLE_LEGACY_STRIPE_CHECKOUT = "false"
 JBH_COMMERCE_PROVIDER = "jusspay"
 JBH_STRIPE_COMMERCE_MODE = "test"
 JBH_JUSSPAY_LIVE_ENABLED = "false"
-JBH_JUSSPAY_SANDBOX_ENABLED = "false"
+JBH_JUSSPAY_SANDBOX_ENABLED = "true"
 
 [[services]]
 binding = "JBH_JUSSPAY"

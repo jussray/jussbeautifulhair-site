@@ -1,6 +1,16 @@
 name: JBH Approved Automatic Front Door Deploy
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/frontdoor-auto-deploy.yml"
+      - "wrangler.frontdoor.toml"
+      - "worker/**"
+      - "scripts/frontdoor-live-playwright.mjs"
+      - "scripts/jbh-live-browser.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "tests/**"
   push:
     branches:
       - main
@@ -18,7 +28,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    name: Validate automation contract without touching production
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run verify:deploy
+
   deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     name: Gate, deploy, and prove the existing branded front door
     runs-on: ubuntu-22.04
     environment: Production

@@ -78,7 +78,7 @@ export async function handleJussPaySandbox(request,env) {
   if(!await upstreamReady(env,live))return json({error:live?'live_unavailable':'sandbox_unavailable'},503);
   try {
     const upstream=await env.JBH_JUSSPAY.fetch('https://jusspay.internal/jbh/checkout',{
-      method:'POST',headers:{'content-type':'application/json','x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY},
+      method:'POST',headers:{'content-type':'application/json','x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY,'x-jbh-checkout-mode':live?'live':'sandbox'},
       body:JSON.stringify(payload)
     });
     if(!upstream.ok) return json({error:live?'live_checkout_unavailable':'sandbox_checkout_unavailable'},502);

@@ -155,10 +155,16 @@ test("First-party test catalog routes through JussPay health, exact SKU map, and
  const payment=await handleJussPaySandbox(request,configured);
  assert.equal(payment.status,200);
  assert.equal((await payment.json()).mode,"sandbox");
- assert.deepEqual(JSON.parse(calls[1].opts.body),{
+ assert.deepEqual(calls.map(c=>[c.url,c.opts.method]),[
+   ["https://jusspay.internal/jbh/health","GET"],
+   ["https://jusspay.internal/jbh/health","GET"],
+   ["https://jusspay.internal/jbh/checkout","POST"]
+ ]);
+ assert.deepEqual(JSON.parse(calls[2].opts.body),{
    requestId:attempt,shipping:"standard",items:[{sku:"JBH-BW-14",quantity:1}]
  });
- assert.equal(calls.length,2);
+ assert.equal(calls[2].opts.headers["x-jbh-checkout-mode"],"sandbox");
+ assert.equal(calls.length,3);
  const worker=readFileSync(new URL("../worker/index.ts",import.meta.url),"utf8");
  assert.match(worker,/if \(!health\.ok \|\| readiness\?\.enabled !== true \|\| readiness\.mode !== expectedMode\)/);
 });

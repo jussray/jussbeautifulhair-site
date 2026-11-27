@@ -81,9 +81,44 @@ export async function handleJussPaySandbox(request,env) {
     if(!upstream.ok) return json({error:live?'live_checkout_unavailable':'sandbox_checkout_unavailable'},502);
     const result=await upstream.json();
     if(!result || typeof result.orderId!=='string' || !/^jbho_[A-Za-z0-9_-]+$/.test(result.orderId) || typeof result.url!=='string' || !/^https:\/\/checkout\.stripe\.com\//.test(result.url)) return json({error:'invalid_provider_response'},502);
-    if(!result.url.includes(`/cs_${live?'live':'test'}_`)) return json({error:'wrong_checkout_mode'},502);
-    const checkout=new URL(result.url);
-    if(checkout.origin!=='https://checkout.stripe.com' || checkout.username || checkout.password || checkout.port || checkout.hash || !/^\/c\//.test(checkout.pathname)) return json({error:'invalid_provider_response'},502);
+    let checkout;
+    try { checkout=new URL(result.url); } catch { return json({error:'invalid_provider_response'},502); }
+    const session=/^\/c\/pay\/cs_(live|test)_[A-Za-z0-9]{1,200}$/.exec(checkout.pathname);
+    // Stripe returns an opaque page-initialization fragment. Preserve it on
+    // Stripe's exact session route rather than treating it as a redirect.
+    const fragment=checkout.hash;
+    if(checkout.origin!=='https://checkout.stripe.com' || checkout.username || checkout.password || checkout.port ||
+       checkout.search || !session || fragment.length>8192 ||
+       (fragment && !/^#[A-Za-z0-9._~%+=\/-]+$/.test(fragment))) return json({error:'invalid_provider_response'},502);
+    if(session[1] !== (live?'live':'test')) return json({error:'wrong_checkout_mode'},502);
     return json({url:checkout.href,mode:live?'live':'sandbox'});
   } catch {return json({error:live?'live_checkout_unavailable':'sandbox_checkout_unavailable'},502);}
+}
+
+export async function readJussPayOrderState(request,env) {
+  const url=new URL(request.url);
+  const reply=(state,status=200)=>new Response(JSON.stringify({state}),{status,headers:{
+    'content-type':'application/json; charset=utf-8','cache-control':'no-store',
+    'x-content-type-options':'nosniff','referrer-policy':'no-referrer','x-robots-tag':'noindex, nofollow'
+  }});
+  if(request.method!=='GET')return reply('unavailable',405);
+  if(!['https://jussbeautifulhair.com','https://www.jussbeautifulhair.com'].includes(url.origin) ||
+     env.JBH_STRIPE_COMMERCE_MODE!=='live')return reply('unavailable',404);
+  const id=url.pathname.slice('/api/jusspay/orders/'.length);
+  if(!id.startsWith('jbho_')||!UUID.test(id.slice(5)))return reply('unavailable',404);
+  if(typeof env.JBH_JUSSPAY?.fetch!=='function'||!(env.JBH_JUSSPAY_STOREFRONT_KEY?.length>=32))return reply('unavailable',503);
+  try {
+    const result=await env.JBH_JUSSPAY.fetch('https://jusspay.internal/jbh/orders/'+id,{
+      method:'GET',headers:{'x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY}
+    });
+    if(!result.ok)return reply('unavailable',result.status===404?404:503);
+    const order=await result.json();
+    if(order?.id!==id)return reply('unavailable',503);
+    // Only send a coarse order state. Never forward upstream order or contact fields.
+    if(order.status==='paid')return reply('paid');
+    if(order.status==='pending')return reply('pending');
+    if(['refunded','partially_refunded','disputed','expired','payment_failed','failed'].includes(order.status))
+      return reply('review');
+    return reply('unavailable',503);
+  } catch { return reply('unavailable',503); }
 }

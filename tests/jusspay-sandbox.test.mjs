@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseJussPayCart,handleJussPaySandbox,proxyJussPayWebhook} from '../worker/jusspaySandbox.mjs';
+import {parseJussPayCart,handleJussPaySandbox,proxyJussPayWebhook,readJussPayOrderState} from '../worker/jusspaySandbox.mjs';
 const variant='gid://shopify/ProductVariant/12345';
 const requestId='b7f332cd-7930-42a9-8f9d-3f1c777a5f4b';
 const body={requestId,shipping:'standard',lines:[{merchandiseId:variant,quantity:2}]};
@@ -115,4 +115,55 @@ test('public webhook proxy is POST-only and fails closed without the private ser
  const response=await proxyJussPayWebhook(post,{});
  assert.equal(response.status,503);
  assert.deepEqual(await response.json(),{error:'webhook_unavailable'});
+});
+
+test('live multi-item cart keeps Stripe opaque checkout fragment and rejects mode spoofing',async()=>{
+ const first='jbh:wig-13x6-bob:0',second='jbh:wig-upart-deepwave:0';
+ const payload={requestId,shipping:'standard',lines:[{merchandiseId:first,quantity:1},{merchandiseId:second,quantity:2}]};
+ const req=()=>new Request('https://jussbeautifulhair.com/api/jusspay/live/checkout',{method:'POST',
+  headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(payload)});
+ let url='https://checkout.stripe.com/c/pay/cs_live_example123#opaque%2Fcheckout%3D';
+ let forwarded;
+ const env={JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',
+  JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify({[first]:'JBH-BOB-10',[second]:'JBH-UPART-20'}),
+  JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),
+  JBH_JUSSPAY:{async fetch(_path,init){forwarded=JSON.parse(init.body);return Response.json({url,orderId:'jbho_fixture'});}}};
+ const ok=await handleJussPaySandbox(req(),env);
+ assert.equal(ok.status,200);
+ assert.deepEqual(await ok.json(),{url,mode:'live'});
+ assert.deepEqual(forwarded,{requestId,shipping:'standard',items:[{sku:'JBH-BOB-10',quantity:1},{sku:'JBH-UPART-20',quantity:2}]});
+ url='https://checkout.stripe.com/c/pay/cs_test_example123#/cs_live_fake';
+ assert.equal((await (await handleJussPaySandbox(req(),env)).json()).error,'wrong_checkout_mode');
+ for(const value of ['https://checkout.stripe.com/c/redirect/cs_live_fake',
+  'https://checkout.stripe.com.evil.example/c/pay/cs_live_fake',
+  'https://checkout.stripe.com/c/pay/cs_live_fake?redirect=https://evil.example']){
+  url=value;
+  assert.equal((await handleJussPaySandbox(req(),env)).status,502);
+ }
+});
+
+test('checkout return reads only the exact live order and never exposes order details',async()=>{
+ const id='jbho_'+requestId;
+ const make=(host='https://jussbeautifulhair.com', order=id, method='GET')=>new Request(host+'/api/jusspay/orders/'+order,{method});
+ let state='pending',reportedId=id,calls=0;
+ const config={JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(path,options){
+  assert.equal(path,'https://jusspay.internal/jbh/orders/'+id);
+  assert.equal(options.method,'GET');
+  calls++;
+  return Response.json({id:reportedId,status:state,items:[{name:'private fixture'}],total:13500});
+ }}};
+ const invalid=await readJussPayOrderState(make(undefined,'jbho_not-valid'),config);
+ assert.equal(invalid.status,404);
+ assert.equal((await readJussPayOrderState(make('https://preview.example'),config)).status,404);
+ assert.equal((await readJussPayOrderState(make(),{...config,JBH_STRIPE_COMMERCE_MODE:'test'})).status,404);
+ assert.equal((await readJussPayOrderState(make(undefined,id,'POST'),config)).status,405);
+ assert.equal(calls,0);
+ assert.deepEqual(await (await readJussPayOrderState(make(),config)).json(),{state:'pending'});
+ state='paid'; const paid=await readJussPayOrderState(make(),config);
+ assert.equal(paid.headers.get('cache-control'),'no-store');
+ assert.deepEqual(await paid.json(),{state:'paid'});
+ reportedId='a-different-order';
+ assert.equal((await readJussPayOrderState(make(),config)).status,503);
+ reportedId=id;state='refunded';
+ assert.deepEqual(await (await readJussPayOrderState(make(),config)).json(),{state:'review'});
 });

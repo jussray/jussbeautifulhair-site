@@ -13,6 +13,7 @@ import Cart from "@/pages/Cart";
 import ShopifyCartHandoff from "@/pages/ShopifyCartHandoff";
 import Checkout from "@/pages/Checkout";
 import HairMatch from "@/pages/HairMatch";
+import JussPaySuccess from "@/pages/JussPaySuccess";
 import SuccessPage from "@/pages/success";
 import About from "@/pages/About";
 import FAQ from "@/pages/FAQ";
@@ -23,7 +24,7 @@ import Privacy from "@/pages/Privacy";
 import Terms from "@/pages/Terms";
 
 const CANONICAL_ORIGIN = "https://jussbeautifulhair.com";
-const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/success"]);
+const NON_INDEXABLE_ROUTES = new Set(["/cart", "/checkout", "/checkout/success", "/success"]);
 
 function isNonIndexableRoute(pathname: string): boolean {
   return NON_INDEXABLE_ROUTES.has(pathname) || pathname.startsWith("/cart/c/");
@@ -79,6 +80,7 @@ function AppRouter() {
       <Route path="/product/:id" component={Product} />
       <Route path="/cart/c/:cartId" component={ShopifyCartHandoff} />
       <Route path="/cart" component={Cart} />
+      <Route path="/checkout/success" component={JussPaySuccess} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/hair-match" component={HairMatch} />
       <Route path="/success" component={SuccessPage} />

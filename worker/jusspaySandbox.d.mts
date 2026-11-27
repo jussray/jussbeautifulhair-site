@@ -1,3 +1,4 @@
 export declare function parseJussPayCart(input: unknown, mapping: unknown): {requestId:string;items:{sku:string;quantity:number}[];shipping:'standard'|'express'};
 export declare function handleJussPaySandbox(request: Request, env: {JBH_JUSSPAY_SANDBOX_ENABLED?:string;JBH_JUSSPAY_LIVE_ENABLED?:string;JBH_STRIPE_COMMERCE_MODE?:string;JBH_JUSSPAY_VARIANT_SKUS?:string;JBH_JUSSPAY_STOREFRONT_KEY?:string;JBH_JUSSPAY?:{fetch(input:RequestInfo|URL,init?:RequestInit):Promise<Response>}}):Promise<Response>;
 export declare function proxyJussPayWebhook(request: Request, env: {JBH_JUSSPAY?:{fetch(input:RequestInfo|URL,init?:RequestInit):Promise<Response>}}):Promise<Response>;
+export declare function readJussPayOrderState(request: Request, env: {JBH_STRIPE_COMMERCE_MODE?:string;JBH_JUSSPAY_STOREFRONT_KEY?:string;JBH_JUSSPAY?:{fetch(input:RequestInfo|URL,init?:RequestInit):Promise<Response>}}):Promise<Response>;

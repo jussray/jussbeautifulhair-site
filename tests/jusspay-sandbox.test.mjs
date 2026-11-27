@@ -181,3 +181,16 @@ test('checkout POST fails before requesting a session when upstream payment mode
    }
  }
 });
+
+test('session creation carries the exact expected mode to the JussPay order engine',async()=>{
+ for(const mode of ['live','sandbox']){
+  const calls=[];
+  const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(path,init){
+    calls.push({path,method:init.method,headers:init.headers});
+    return init.method==='GET'?Response.json({ready:true,mode,chargesEnabled:true}):Response.json({url:'https://checkout.stripe.com/c/pay/cs_'+(mode==='live'?'live':'test')+'_fixture',orderId:'jbho_fixture'});
+  }}};
+  const request=new Request('https://jussbeautifulhair.com/api/jusspay/'+mode+'/checkout',{method:'POST',headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(body)});
+  assert.equal((await handleJussPaySandbox(request,env)).status,200);
+  assert.equal(calls[1].headers['x-jbh-checkout-mode'],mode);
+ }
+});

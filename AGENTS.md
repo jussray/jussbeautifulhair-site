@@ -136,3 +136,8 @@ never parked as a report. Never merge over a blocked mandatory gate or a
 red exact head. A credential- or founder-gated red gets a full diagnosis
 plus the one unblocking action named — never silence, never a faked fix.
 Full charter: `.github/agents/reds-implant.agent.md`.
+
+
+## Cinematic composition standard (staged)
+
+For authorized storefront page, customer journey, checkout handoff, and visual agent changes, apply the product-specific **one cohesive cinematic composition** standard. Inspect the approved Juss Beautiful Hair design and current rendered routes first; keep Shopify commerce, legal content, accessibility, performance, auth and security boundaries unchanged. No generic parent-brand replacement, no invented imagery or product claims. Require exact-head desktop/mobile screenshots, keyboard and reduced-motion review, tests, and separate founder release approval. The standalone governance details are in the canonical **draft** `jussray/founder-control-room/skills/cinematic-composition/SKILL.md` on `feat/cinematic-composition-contract-20261104`; this instruction is not a runtime integration or launch approval.

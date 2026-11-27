@@ -53,7 +53,7 @@ test("static shell keeps a branded root fallback while app rewrites discovery me
 test("browser history is authoritative while legacy entry routes migrate forward", () => {
   assert.doesNotMatch(app, /useHashLocation/);
   assert.match(app, /useLocation/);
-  assert.match(app, /NON_INDEXABLE_ROUTES = new Set\(\["\/cart", "\/checkout", "\/success"\]\)/);
+  assert.match(app, /NON_INDEXABLE_ROUTES = new Set\(\["\/cart", "\/checkout", "\/checkout\/success", "\/success"\]\)/);
   assert.match(main, /window\.location\.hash\.startsWith\("#\/"\)/);
   assert.match(main, /window\.history\.replaceState\(null, "", legacyHashRoute\)/);
   assert.match(main, /window\.addEventListener\("hashchange", migrateLegacyHashRoute\)/);

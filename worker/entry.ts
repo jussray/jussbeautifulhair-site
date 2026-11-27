@@ -2,7 +2,7 @@ import metaAgentKnowledge from "../client/public/.well-known/jbh-meta-agent.json
 import worker from "./index";
 import { PRODUCTS } from "../shared/catalog";
 import { getStripeCommerceState } from "./stripeCommerce.mjs";
-import { handleJussPaySandbox, proxyJussPayWebhook } from "./jusspaySandbox.mjs";
+import { handleJussPaySandbox, proxyJussPayWebhook, readJussPayOrderState } from "./jusspaySandbox.mjs";
 import { invokeJbhProvider, jbhProviderStates } from "./provider-runtime";
 import { enforceJbhRateLimit, type RateLimitBinding } from "./rate-limit";
 import {
@@ -432,6 +432,10 @@ export default {
 
     const pathname = new URL(request.url).pathname;
 
+    if (pathname.startsWith("/api/jusspay/orders/")) {
+      return readJussPayOrderState(request, env);
+    }
+
     if (pathname === "/api/jusspay/webhook") {
       return proxyJussPayWebhook(request, env);
     }
@@ -494,6 +498,14 @@ export default {
       return proxyToShopify(request);
     }
 
+    if (pathname === "/checkout/success") {
+      const response = await worker.fetch(request, env);
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", "no-store");
+      headers.set("Referrer-Policy", "no-referrer");
+      headers.set("X-Robots-Tag", "noindex, nofollow");
+      return new Response(response.body, { status: response.status, headers });
+    }
     return allowCloudflareWebAnalytics(await worker.fetch(request, env));
   },
 };

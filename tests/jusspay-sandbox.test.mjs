@@ -28,7 +28,7 @@ test('disabled lane does not contact payment provider',async()=>{
 });
 test('sandbox service binding receives only SKU quantities and idempotency ID',async()=>{
  let forwarded;
- const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(url,init){forwarded={url,init};return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123',orderId:'jbho_test'});}}};
+ const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(url,init){if(init.method==='GET')return Response.json({ready:true,mode:'sandbox',chargesEnabled:true});forwarded={url,init};return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123',orderId:'jbho_test'});}}};
  const response=await handleJussPaySandbox(makeRequest(),env);
  assert.equal(response.status,200);assert.equal((await response.json()).mode,'sandbox');
  assert.equal(forwarded.url,'https://jusspay.internal/jbh/checkout');
@@ -36,7 +36,7 @@ test('sandbox service binding receives only SKU quantities and idempotency ID',a
  assert.equal(forwarded.init.headers['x-jbh-storefront-key'],'x'.repeat(32));
 });
 test('origin mismatch, missing mapping and unsafe provider redirect fail closed',async()=>{
- const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://evil.example/c/pay/123'});}}};
+ const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(_url,init){if(init.method==='GET')return Response.json({ready:true,mode:'sandbox',chargesEnabled:true});return Response.json({url:'https://evil.example/c/pay/123'});}}};
  assert.equal((await handleJussPaySandbox(makeRequest(body,'https://evil.example'),env)).status,403);
  assert.equal((await handleJussPaySandbox(makeRequest(),{...env,JBH_JUSSPAY_VARIANT_SKUS:'{}'})).status,400);
  assert.equal((await handleJussPaySandbox(makeRequest(),env)).status,502);
@@ -55,7 +55,7 @@ test('sandbox discovery is disabled by default and explicitly marked test-only',
  assert.equal(upstreams[0].init.headers['x-jbh-storefront-key'],'x'.repeat(32));
 });
 test('provider response without an order receipt is rejected',async()=>{
- const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123'});}}};
+ const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(_url,init){if(init.method==='GET')return Response.json({ready:true,mode:'sandbox',chargesEnabled:true});return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123'});}}};
  const response=await handleJussPaySandbox(makeRequest(),env);
  assert.equal(response.status,502);
 });
@@ -87,11 +87,11 @@ test('live checkout remains off unless independently enabled',async()=>{
 });
 test('live route requires a live checkout URL and does not accept sandbox session',async()=>{
  const req=new Request('https://jussbeautifulhair.com/api/jusspay/live/checkout',{method:'POST',headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(body)});
- const env={JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123',orderId:'jbho_test'});}}};
+ const env={JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(_url,init){if(init.method==='GET')return Response.json({ready:true,mode:'live',chargesEnabled:true});return Response.json({url:'https://checkout.stripe.com/c/pay/cs_test_123',orderId:'jbho_test'});}}};
  const response=await handleJussPaySandbox(req.clone(),env);
  assert.equal(response.status,502);
  assert.equal((await response.json()).error,'wrong_checkout_mode');
- const ok=await handleJussPaySandbox(req.clone(),{...env,JBH_JUSSPAY:{async fetch(){return Response.json({url:'https://checkout.stripe.com/c/pay/cs_live_123',orderId:'jbho_test'});}}});
+ const ok=await handleJussPaySandbox(req.clone(),{...env,JBH_JUSSPAY:{async fetch(_url,init){if(init.method==='GET')return Response.json({ready:true,mode:'live',chargesEnabled:true});return Response.json({url:'https://checkout.stripe.com/c/pay/cs_live_123',orderId:'jbho_test'});}}});
  assert.equal(ok.status,200);assert.equal((await ok.json()).mode,'live');
 });
 
@@ -127,7 +127,7 @@ test('live multi-item cart keeps Stripe opaque checkout fragment and rejects mod
  const env={JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',
   JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify({[first]:'JBH-BOB-10',[second]:'JBH-UPART-20'}),
   JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),
-  JBH_JUSSPAY:{async fetch(_path,init){forwarded=JSON.parse(init.body);return Response.json({url,orderId:'jbho_fixture'});}}};
+  JBH_JUSSPAY:{async fetch(_path,init){if(init.method==='GET')return Response.json({ready:true,mode:'live',chargesEnabled:true});forwarded=JSON.parse(init.body);return Response.json({url,orderId:'jbho_fixture'});}}};
  const ok=await handleJussPaySandbox(req(),env);
  assert.equal(ok.status,200);
  assert.deepEqual(await ok.json(),{url,mode:'live'});

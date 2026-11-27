@@ -1,4 +1,4 @@
-// Disabled-by-default, sandbox-only storefront-to-JussPay boundary.
+// Disabled-by-default, explicitly mode-gated storefront-to-JussPay boundary.
 // SKU mappings are server-owned; client prices and vendor identifiers are never trusted.
 const VARIANT=/^(?:gid:\/\/shopify\/ProductVariant\/\d+|jbh:[a-z0-9][a-z0-9-]{0,99}:[0-9]+)$/;
 const SKU=/^[A-Z0-9][A-Z0-9-]{1,63}$/;
@@ -29,6 +29,17 @@ export async function proxyJussPayWebhook(request,env) {
     return json({error:'webhook_unavailable'},503);
   }
 }
+async function upstreamReady(env,live) {
+  try {
+    const response=await env.JBH_JUSSPAY.fetch('https://jusspay.internal/jbh/health',{
+      method:'GET',headers:{'x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY},
+      signal:AbortSignal.timeout(8000)
+    });
+    if(!response.ok)return false;
+    const state=await response.json();
+    return state?.ready===true&&state.mode===(live?'live':'sandbox')&&state.chargesEnabled===true;
+  }catch{return false;}
+}
 export async function handleJussPaySandbox(request,env) {
   const path=new URL(request.url).pathname;
   const live=path==='/api/jusspay/live/checkout';
@@ -44,18 +55,8 @@ export async function handleJussPaySandbox(request,env) {
     let mapping;
     try { mapping=JSON.parse(env.JBH_JUSSPAY_VARIANT_SKUS||'null'); } catch { return json({error:'mapping_unavailable'},503); }
     if(!mapping || typeof mapping!=='object' || Array.isArray(mapping) || !Object.keys(mapping).length || Object.entries(mapping).some(([variant,sku])=>!VARIANT.test(variant) || typeof sku!=='string' || !SKU.test(sku))) return json({error:'mapping_unavailable'},503);
-    try {
-      const upstream=await env.JBH_JUSSPAY.fetch('https://jusspay.internal/jbh/health',{
-        method:'GET',
-        headers:{'x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY}
-      });
-      if(!upstream.ok) return json({error:unavailable},503);
-      const readiness=await upstream.json();
-      if(!readiness || readiness.ready!==true || readiness.mode!==(live?'live':'sandbox') || readiness.chargesEnabled!==true) return json({error:unavailable},503);
-      return json({enabled:true,mode:live?'live':'sandbox'});
-    } catch {
-      return json({error:unavailable},503);
-    }
+    if(!await upstreamReady(env,live))return json({error:unavailable},503);
+    return json({enabled:true,mode:live?'live':'sandbox'});
   }
   if(request.method!=='POST') return json({error:'method_not_allowed'},405);
   const url=new URL(request.url);
@@ -73,6 +74,8 @@ export async function handleJussPaySandbox(request,env) {
     const code=error instanceof Error?error.message:'invalid_cart';
     return json({error:code},code==='mapping_unavailable'?503:400);
   }
+  // Validate the upstream lane before any session-creation request.
+  if(!await upstreamReady(env,live))return json({error:live?'live_unavailable':'sandbox_unavailable'},503);
   try {
     const upstream=await env.JBH_JUSSPAY.fetch('https://jusspay.internal/jbh/checkout',{
       method:'POST',headers:{'content-type':'application/json','x-jbh-storefront-key':env.JBH_JUSSPAY_STOREFRONT_KEY},

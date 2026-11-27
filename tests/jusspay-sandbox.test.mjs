@@ -167,3 +167,17 @@ test('checkout return reads only the exact live order and never exposes order de
  reportedId=id;state='refunded';
  assert.deepEqual(await (await readJussPayOrderState(make(),config)).json(),{state:'review'});
 });
+
+test('checkout POST fails before requesting a session when upstream payment mode or readiness differs',async()=>{
+ const paths=['sandbox','live'];
+ for(const lane of paths){
+   for(const state of [{ready:true,mode:lane==='live'?'sandbox':'live',chargesEnabled:true},{ready:false,mode:lane,chargesEnabled:true},{ready:true,mode:lane,chargesEnabled:false}]){
+     const calls=[];
+     const env={JBH_JUSSPAY_SANDBOX_ENABLED:'true',JBH_JUSSPAY_LIVE_ENABLED:'true',JBH_STRIPE_COMMERCE_MODE:'live',JBH_JUSSPAY_VARIANT_SKUS:JSON.stringify(mapping),JBH_JUSSPAY_STOREFRONT_KEY:'x'.repeat(32),JBH_JUSSPAY:{async fetch(path,init){calls.push([String(path),init.method]);return Response.json(state);}}};
+     const request=new Request('https://jussbeautifulhair.com/api/jusspay/'+lane+'/checkout',{method:'POST',headers:{origin:'https://jussbeautifulhair.com','content-type':'application/json'},body:JSON.stringify(body)});
+     const res=await handleJussPaySandbox(request,env);
+     assert.equal(res.status,503);
+     assert.deepEqual(calls,[['https://jusspay.internal/jbh/health','GET']]);
+   }
+ }
+});
